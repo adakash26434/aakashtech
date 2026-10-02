@@ -62,7 +62,7 @@ $navItems = [
         <button @click="sidebarOpen = true" :aria-expanded="sidebarOpen" aria-controls="client-sidebar" aria-label="Open navigation" class="lg:hidden text-white p-2">
             <i class="portal-icon portal-menu-icon" data-lucide="menu" aria-hidden="true"></i>
         </button>
-        <div class="hidden lg:block"><span class="text-slate-500 text-sm">Aakash Technologies · Client</span></div>
+        <div class="hidden lg:block"><span class="text-slate-500 text-sm"><?= e($identity['name']) ?> · Client</span></div>
         <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">
             <i class="portal-icon" data-lucide="external-link" aria-hidden="true"></i>
             View Site

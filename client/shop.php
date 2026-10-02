@@ -62,9 +62,12 @@ foreach (billing_load_plans($conn) as $plan) {
                             </div>
                             <p class="text-slate-500 text-sm mb-4"><?= e($plan['summary']) ?></p>
                             <?php if ((float) $plan['price'] > 0): ?>
-                                <p class="font-heading font-bold text-white text-xl mb-4"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></p>
+                                <?php $shopBill = billing_vat_bill(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0)); ?>
+                                <p class="font-heading font-bold text-white text-xl mb-1"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></p>
+                                <p class="text-slate-500 text-xs mb-4">Bill <?= e(billing_money_label($shopBill['total'])) ?> after 13% VAT</p>
                             <?php elseif ($startBand): ?>
-                                <p class="font-heading font-bold text-white text-xl mb-2">Starts from <?= billing_rate_markup($startBand['unit_price'], isset($startBand['offer_price']) ? $startBand['offer_price'] : 0, true, ' each') ?></p>
+                                <p class="font-heading font-bold text-white text-xl mb-1">Starts from <?= billing_rate_markup($startBand['unit_price'], isset($startBand['offer_price']) ? $startBand['offer_price'] : 0, true, ' each') ?></p>
+                                <p class="text-slate-500 text-xs mb-2">The bill adds 13% VAT to the quantity total.</p>
                                 <ul class="text-slate-500 text-xs space-y-1 mb-4">
                                     <?php foreach ($bands as $band): ?>
                                         <li><?= number_format($band['min_qty']) ?>–<?= number_format($band['max_qty']) ?> · <?= billing_rate_markup($band['unit_price'], isset($band['offer_price']) ? $band['offer_price'] : 0, true) ?><?= !empty($band['is_start']) ? ' · starts from' : '' ?></li>

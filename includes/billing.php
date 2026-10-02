@@ -391,7 +391,7 @@ function billing_setting($conn, $key)
     $stmt = $conn->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
     $stmt->bind_param('s', $key);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     return $row ? (string) $row['setting_value'] : '';
 }
@@ -403,7 +403,7 @@ function billing_set_setting($conn, $key, $value)
         $check = $conn->prepare('SELECT id FROM site_settings WHERE setting_key = ?');
         $check->bind_param('s', $key);
         $check->execute();
-        $exists = $check->get_result()->fetch_assoc();
+        $exists = db_fetch_assoc($check);
         $check->close();
         if ($exists) {
             $stmt = $conn->prepare('UPDATE site_settings SET setting_value = ? WHERE setting_key = ?');
@@ -832,7 +832,7 @@ function site_ensure_public_settings($conn)
         $stmt = $conn->prepare('SELECT id FROM site_settings WHERE setting_key = ?');
         $stmt->bind_param('s', $key);
         $stmt->execute();
-        $exists = $stmt->get_result()->fetch_assoc();
+        $exists = db_fetch_assoc($stmt);
         $stmt->close();
         if (!$exists) {
             billing_set_setting($conn, $key, $value);
@@ -1258,7 +1258,7 @@ function billing_save_portal_login($conn, $clientId, $username, $password)
     $exists = $conn->prepare('SELECT id FROM client_users WHERE id = ?');
     $exists->bind_param('i', $clientId);
     $exists->execute();
-    $found = $exists->get_result()->fetch_assoc();
+    $found = db_fetch_assoc($exists);
     $exists->close();
     if (!$found) {
         return 'That client was not found.';
@@ -1631,7 +1631,7 @@ function billing_find_plan($conn, $code)
     $stmt = $conn->prepare('SELECT * FROM service_plans WHERE code = ? AND is_active = 1 LIMIT 1');
     $stmt->bind_param('s', $code);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     return $row ? billing_normalize_plan($row) : null;
 }
@@ -1851,7 +1851,7 @@ function billing_ensure_wallet($conn, $clientId)
     $stmt = $conn->prepare('SELECT client_id FROM client_wallets WHERE client_id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     if ($row) {
         return;
@@ -1911,7 +1911,7 @@ function billing_add_units($conn, $clientId, $kind, $quantity)
     $stmt = $conn->prepare('SELECT balance FROM client_units WHERE client_id = ? AND unit_kind = ?');
     $stmt->bind_param('is', $clientId, $kind);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     if ($row) {
         $stmt = $conn->prepare('UPDATE client_units SET balance = balance + ? WHERE client_id = ? AND unit_kind = ?');
@@ -2648,7 +2648,7 @@ function billing_approve_topup($conn, $entryId)
     $stmt = $conn->prepare("SELECT id, client_id, amount FROM wallet_entries WHERE id = ? AND kind = 'topup' AND status = 'pending'");
     $stmt->bind_param('i', $entryId);
     $stmt->execute();
-    $entry = $stmt->get_result()->fetch_assoc();
+    $entry = db_fetch_assoc($stmt);
     $stmt->close();
     if (!$entry) {
         return false;
@@ -2714,11 +2714,7 @@ function billing_process_renewals($conn, $clientId = null)
         $stmt->bind_param('s', $today);
     }
     $stmt->execute();
-    $rows = array();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-    }
+    $rows = db_fetch_all($stmt);
     $stmt->close();
 
     foreach ($rows as $row) {

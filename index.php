@@ -364,7 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         </article>
                     <?php endforeach; ?>
                 </div>
-                <p class="service-pricing-disclaimer">SMS and voice rates fall as the quantity rises. Domain, hosting, server care, and Zoho email renew from the wallet.</p>
+                <p class="service-pricing-disclaimer">These are list prices. The bill adds 13% VAT. SMS and voice rates fall as the quantity rises. Domain, hosting, server care, and Zoho email renew that bill from the wallet.</p>
             </div>
         </section>
 

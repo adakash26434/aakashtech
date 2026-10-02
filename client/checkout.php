@@ -118,9 +118,16 @@ function checkout_value($values, $key)
                 </div>
             <?php endif; ?>
             <?php if ($short): ?>
-                <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-300 text-sm">
-                    Your wallet has <?= e(billing_money_label($balance)) ?>. Add at least <?= e(billing_money_label(max(0, $due - $balance))) ?> and submit this same form again.
-                    <a class="underline" href="wallet.php?amount=<?= (int) ceil(max(0, $due - $balance)) ?>">Add funds</a>
+                <?php $checkoutMethods = billing_payment_methods($conn); ?>
+                <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-300 text-sm space-y-2">
+                    <p>Your wallet has <?= e(billing_money_label($balance)) ?>. Add at least <?= e(billing_money_label(max(0, $due - $balance))) ?> and submit this same form again. <a class="underline" href="wallet.php?amount=<?= (int) ceil(max(0, $due - $balance)) ?>">Add funds</a></p>
+                    <?php if ($checkoutMethods): ?>
+                        <?php foreach ($checkoutMethods as $checkoutMethod): ?>
+                            <p class="whitespace-pre-wrap"><?= e($checkoutMethod['label']) ?>: <?= e($checkoutMethod['detail']) ?></p>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p>Payment details are not published yet.</p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 

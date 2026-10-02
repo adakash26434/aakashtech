@@ -68,7 +68,8 @@ $navItems = [
             <i class="portal-icon portal-menu-icon" data-lucide="menu" aria-hidden="true"></i>
         </button>
         <div class="hidden lg:block">
-            <span class="text-slate-500 text-sm">Aakash Technologies · Admin</span>
+            <?php $adminIdentity = site_portal_identity($conn); ?>
+            <span class="text-slate-500 text-sm"><?= e($adminIdentity['name']) ?> · Admin</span>
         </div>
         <div class="flex items-center gap-3">
             <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">

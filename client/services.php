@@ -73,7 +73,7 @@ $balance = billing_balance($conn, $cid);
                     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                         <?php if (!empty($s['start_date'])): ?><span>Started <?= e(date('M d, Y', strtotime($s['start_date']))) ?></span><?php endif; ?>
                         <?php if (!empty($s['next_renewal'])): ?><span>Next renewal <?= e(date('M d, Y', strtotime($s['next_renewal']))) ?></span><?php endif; ?>
-                        <?php if ((float) $s['price'] > 0): ?><span><?= e(billing_money_label($s['price'])) ?><?= e(billing_cycle_suffix($s['billing_cycle'] ?? '')) ?></span><?php endif; ?>
+                        <?php if ((float) $s['price'] > 0): ?><span>Bill <?= e(billing_money_label($s['price'])) ?><?= e(billing_cycle_suffix($s['billing_cycle'] ?? '')) ?>, VAT included</span><?php endif; ?>
                     </div>
                     <?php if ($status === 'booked'): ?>
                         <p class="text-blue-300 text-xs mt-3">Booked. The team builds or delivers this from the details above.</p>

@@ -2173,6 +2173,46 @@ a.contact-method:hover strong {
         letter-spacing: -0.04em;
     }
 
+    .slab-table thead {
+        display: none;
+    }
+
+    .slab-table,
+    .slab-table tbody,
+    .slab-table tr,
+    .slab-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .slab-table td,
+    .slab-table td:last-child {
+        text-align: left;
+        border-bottom: 0;
+        padding: 2px 0;
+    }
+
+    .slab-table td:first-child {
+        padding-top: 12px;
+        color: var(--site-muted);
+        font-size: var(--type-label);
+        font-weight: 700;
+    }
+
+    .slab-table td:last-child {
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--site-line);
+    }
+
+    .detail-plans .plan-buy {
+        align-items: stretch;
+    }
+
+    .detail-plans .button {
+        width: 100%;
+        justify-content: center;
+    }
+
     .form-grid {
         grid-template-columns: 1fr;
     }
