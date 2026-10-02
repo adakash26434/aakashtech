@@ -32,13 +32,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     } elseif ($email === '' || $password === '') {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, name, email, password, status FROM client_users WHERE email = ? LIMIT 1");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $client = $result->fetch_assoc();
-        $stmt->close();
-        if ($client && $client['status'] === 'active' && password_verify($password, $client['password'])) {
+        try {
+            $stmt = $conn->prepare("SELECT id, name, email, password, status FROM client_users WHERE email = ? LIMIT 1");
+            if (!$stmt) {
+                throw new RuntimeException('Client lookup failed.');
+            }
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $client = db_fetch_assoc($stmt);
+            $stmt->close();
+        } catch (Throwable $exception) {
+            error_log('Client sign-in could not read the account.');
+            $client = null;
+            $error = 'Sign-in could not be completed. Try again in a moment.';
+        }
+        if ($error === '' && $client && $client['status'] === 'active' && password_verify($password, (string) $client['password'])) {
             auth_clear_attempts($conn, 'client');
             $_SESSION['client_id'] = $client['id'];
             $_SESSION['client_name'] = $client['name'];
@@ -48,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             auth_fresh_session();
             header('Location: ' . $next);
             exit;
-        } else {
+        } elseif ($error === '') {
             auth_note_attempt($conn, 'client');
             $error = ($client && $client['status'] !== 'active')
                 ? 'Your account is suspended. Contact support.'

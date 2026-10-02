@@ -66,10 +66,18 @@ if (DB_DRIVER === 'sqlite') {
 require_once __DIR__ . '/includes/billing.php';
 try {
     billing_ensure($conn);
-    auth_ensure_attempts($conn);
-    cpanel_apply_admin($conn, cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''), isset($cpanel['admin_password']) ? (string) $cpanel['admin_password'] : (getenv('ADMIN_PASSWORD') !== false ? (string) getenv('ADMIN_PASSWORD') : ''));
 } catch (Throwable $exception) {
     error_log('Billing setup could not be completed.');
+}
+try {
+    auth_ensure_attempts($conn);
+} catch (Throwable $exception) {
+    error_log('Login attempt log could not be created.');
+}
+try {
+    cpanel_apply_admin($conn, cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''), isset($cpanel['admin_password']) ? (string) $cpanel['admin_password'] : (getenv('ADMIN_PASSWORD') !== false ? (string) getenv('ADMIN_PASSWORD') : ''));
+} catch (Throwable $exception) {
+    error_log('Admin account could not be updated from cpanel-config.php.');
 }
 
 // ====== SITE CONFIGURATION ======
@@ -230,40 +238,99 @@ function auth_ensure_attempts($conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
+function db_fetch_assoc($stmt) {
+    if (!is_object($stmt)) {
+        return null;
+    }
+    if (method_exists($stmt, 'get_result')) {
+        $result = $stmt->get_result();
+        if (!$result) {
+            return null;
+        }
+        $row = $result->fetch_assoc();
+        return $row ? $row : null;
+    }
+    $meta = $stmt->result_metadata();
+    if (!$meta) {
+        return null;
+    }
+    $fields = $meta->fetch_fields();
+    $meta->free();
+    $row = array();
+    $refs = array();
+    foreach ($fields as $index => $field) {
+        $row[$field->name] = null;
+        $refs[$index] = &$row[$field->name];
+    }
+    call_user_func_array(array($stmt, 'bind_result'), $refs);
+    if (!$stmt->fetch()) {
+        return null;
+    }
+    $copy = array();
+    foreach ($row as $key => $value) {
+        $copy[$key] = $value;
+    }
+    return $copy;
+}
+
 function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds) {
-    $scope = substr((string) $scope, 0, 20);
-    $ip = auth_client_ip();
-    $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
-    $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
-    $stmt->bind_param('sss', $scope, $ip, $since);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    return $row && (int) $row['c'] >= (int) $limit;
+    try {
+        $scope = substr((string) $scope, 0, 20);
+        $ip = auth_client_ip();
+        $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
+        $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('sss', $scope, $ip, $since);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        return $row && (int) $row['c'] >= (int) $limit;
+    } catch (Throwable $exception) {
+        return false;
+    }
 }
 
 function auth_note_attempt($conn, $scope) {
-    $scope = substr((string) $scope, 0, 20);
-    $ip = auth_client_ip();
-    $now = date('Y-m-d H:i:s');
-    $stmt = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('sss', $scope, $ip, $now);
-    $stmt->execute();
-    $stmt->close();
-    $cut = date('Y-m-d H:i:s', time() - 86400);
-    $stmt = $conn->prepare('DELETE FROM login_attempts WHERE attempted_at < ?');
-    $stmt->bind_param('s', $cut);
-    $stmt->execute();
-    $stmt->close();
+    try {
+        $scope = substr((string) $scope, 0, 20);
+        $ip = auth_client_ip();
+        $now = date('Y-m-d H:i:s');
+        $stmt = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param('sss', $scope, $ip, $now);
+        $stmt->execute();
+        $stmt->close();
+        $cut = date('Y-m-d H:i:s', time() - 86400);
+        $stmt = $conn->prepare('DELETE FROM login_attempts WHERE attempted_at < ?');
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param('s', $cut);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Throwable $exception) {
+        error_log('Sign-in attempt could not be recorded.');
+    }
 }
 
 function auth_clear_attempts($conn, $scope) {
-    $scope = substr((string) $scope, 0, 20);
-    $ip = auth_client_ip();
-    $stmt = $conn->prepare('DELETE FROM login_attempts WHERE scope = ? AND ip = ?');
-    $stmt->bind_param('ss', $scope, $ip);
-    $stmt->execute();
-    $stmt->close();
+    try {
+        $scope = substr((string) $scope, 0, 20);
+        $ip = auth_client_ip();
+        $stmt = $conn->prepare('DELETE FROM login_attempts WHERE scope = ? AND ip = ?');
+        if (!$stmt) {
+            return;
+        }
+        $stmt->bind_param('ss', $scope, $ip);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Throwable $exception) {
+        error_log('Sign-in attempts could not be cleared.');
+    }
 }
 
 function auth_account_is_active($role) {

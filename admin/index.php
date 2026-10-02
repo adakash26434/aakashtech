@@ -2,20 +2,30 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
-// Stats
-$total_inquiries = $conn->query("SELECT COUNT(*) as c FROM inquiries")->fetch_assoc()['c'];
-$new_inquiries = $conn->query("SELECT COUNT(*) as c FROM inquiries WHERE status='new'")->fetch_assoc()['c'];
-$total_clients = $conn->query("SELECT COUNT(*) as c FROM client_users")->fetch_assoc()['c'];
-$active_services = $conn->query("SELECT COUNT(*) as c FROM client_services WHERE status='active'")->fetch_assoc()['c'];
-$open_tickets = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE status='open'")->fetch_assoc()['c'];
-$total_campaigns = $conn->query("SELECT COUNT(*) as c FROM sms_campaigns")->fetch_assoc()['c'];
-$pending_topups = $conn->query("SELECT COUNT(*) as c FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'")->fetch_assoc()['c'];
-$booked_orders = $conn->query("SELECT COUNT(*) as c FROM client_services WHERE status = 'booked'")->fetch_assoc()['c'];
-
-// Recent inquiries
-$recent_inquiries = $conn->query("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 5");
-// Recent clients
-$recent_clients = $conn->query("SELECT id, name, email, company, status, created_at FROM client_users ORDER BY created_at DESC LIMIT 5");
+$total_inquiries = 0;
+$new_inquiries = 0;
+$total_clients = 0;
+$active_services = 0;
+$open_tickets = 0;
+$total_campaigns = 0;
+$pending_topups = 0;
+$booked_orders = 0;
+$recent_inquiries = false;
+$recent_clients = false;
+try {
+    $total_inquiries = (int) $conn->query("SELECT COUNT(*) as c FROM inquiries")->fetch_assoc()['c'];
+    $new_inquiries = (int) $conn->query("SELECT COUNT(*) as c FROM inquiries WHERE status='new'")->fetch_assoc()['c'];
+    $total_clients = (int) $conn->query("SELECT COUNT(*) as c FROM client_users")->fetch_assoc()['c'];
+    $active_services = (int) $conn->query("SELECT COUNT(*) as c FROM client_services WHERE status='active'")->fetch_assoc()['c'];
+    $open_tickets = (int) $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE status='open'")->fetch_assoc()['c'];
+    $total_campaigns = (int) $conn->query("SELECT COUNT(*) as c FROM sms_campaigns")->fetch_assoc()['c'];
+    $pending_topups = (int) $conn->query("SELECT COUNT(*) as c FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'")->fetch_assoc()['c'];
+    $booked_orders = (int) $conn->query("SELECT COUNT(*) as c FROM client_services WHERE status = 'booked'")->fetch_assoc()['c'];
+    $recent_inquiries = $conn->query("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 5");
+    $recent_clients = $conn->query("SELECT id, name, email, company, status, created_at FROM client_users ORDER BY created_at DESC LIMIT 5");
+} catch (Throwable $exception) {
+    error_log('Admin dashboard could not be loaded.');
+}
 ?>
 
 <!-- Page Content -->

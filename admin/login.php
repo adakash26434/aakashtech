@@ -19,29 +19,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($email === '' || $password === '') {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, name, email, password, role, is_active FROM admin_users WHERE email = ? LIMIT 1");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $admin = $result->fetch_assoc();
-        $stmt->close();
+        try {
+            $stmt = $conn->prepare("SELECT id, name, email, password, role, is_active FROM admin_users WHERE email = ? LIMIT 1");
+            if (!$stmt) {
+                throw new RuntimeException('Admin lookup failed.');
+            }
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $admin = db_fetch_assoc($stmt);
+            $stmt->close();
+        } catch (Throwable $exception) {
+            error_log('Admin sign-in could not read the account.');
+            $admin = null;
+            $error = 'Sign-in could not be completed. Try again in a moment.';
+        }
 
-        if ($admin && (int)$admin['is_active'] === 1 && password_verify($password, $admin['password'])) {
+        if ($error === '' && $admin && (int)$admin['is_active'] === 1 && password_verify($password, (string) $admin['password'])) {
             auth_clear_attempts($conn, 'admin');
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_name'] = $admin['name'];
             $_SESSION['admin_email'] = $admin['email'];
             $_SESSION['admin_role'] = $admin['role'];
             auth_fresh_session();
-            $adminId = (int) $admin['id'];
-            $stamp = date('Y-m-d H:i:s');
-            $touch = $conn->prepare('UPDATE admin_users SET last_login = ? WHERE id = ?');
-            $touch->bind_param('si', $stamp, $adminId);
-            $touch->execute();
-            $touch->close();
+            try {
+                $adminId = (int) $admin['id'];
+                $stamp = date('Y-m-d H:i:s');
+                $touch = $conn->prepare('UPDATE admin_users SET last_login = ? WHERE id = ?');
+                if ($touch) {
+                    $touch->bind_param('si', $stamp, $adminId);
+                    $touch->execute();
+                    $touch->close();
+                }
+            } catch (Throwable $exception) {
+                error_log('Admin last login could not be saved.');
+            }
             header('Location: index.php');
             exit;
-        } else {
+        } elseif ($error === '') {
             auth_note_attempt($conn, 'admin');
             $error = 'Invalid email or password.';
         }
