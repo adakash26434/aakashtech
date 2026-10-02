@@ -220,6 +220,20 @@ CREATE TABLE IF NOT EXISTS client_kyc (
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS domain_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    domain_name TEXT NOT NULL,
+    tld TEXT NOT NULL,
+    holder_kind TEXT DEFAULT 'individual',
+    holder_name TEXT DEFAULT '',
+    document_path TEXT DEFAULT '',
+    status TEXT DEFAULT 'requested',
+    admin_note TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    activated_at TEXT DEFAULT NULL
+);
+
 INSERT OR IGNORE INTO admin_users (name, email, password, role) VALUES
 ('Super Admin', 'admin@aakashtechnologies.com', 'RESET_ADMIN_PASSWORD_BEFORE_USE', 'super_admin');
 

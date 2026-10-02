@@ -32,7 +32,8 @@ if (
     preg_match('/\.sqlite(?:3)?$/i', $basename) ||
     strpos($requestPath, '/includes/') === 0 ||
     preg_match('#^/?uploads/.*\.(php|phtml|phar)$#i', $requestPath) ||
-    preg_match('#^/?uploads/kyc/#i', $requestPath)
+    preg_match('#^/?uploads/kyc/#i', $requestPath) ||
+    preg_match('#^/?uploads/domains/#i', $requestPath)
 ) {
     http_response_code(404);
     exit;

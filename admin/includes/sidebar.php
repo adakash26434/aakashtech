@@ -5,6 +5,7 @@ $navItems = [
     'inquiries.php'  => ['Inquiries', 'inbox'],
     'clients.php'    => ['Clients', 'users-round'],
     'kyc.php'        => ['Identity', 'badge-check'],
+    'domains.php'    => ['Domains', 'globe'],
     'services.php'   => ['Services', 'server'],
     'billing.php'    => ['Billing', 'wallet'],
     'campaigns.php'  => ['Messages', 'message-square-text'],

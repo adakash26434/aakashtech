@@ -205,7 +205,15 @@ $navBase = 'index.php';
                                         <?php $startSlab = $slabs ? billing_start_slab($slabs) : null; ?>
                                         <strong><?php if ($startSlab): ?>Starts from <?= billing_rate_markup($startSlab['unit_price'], isset($startSlab['offer_price']) ? $startSlab['offer_price'] : 0, true, ' each') ?><?php else: ?>Volume rate<?php endif; ?></strong>
                                     <?php endif; ?>
-                                    <a class="button button--small button--primary" href="<?= service_escape(billing_buy_href_plan($plan['code'])) ?>"><?= service_escape($service['action']) ?></a>
+                                    <?php
+                                    $planHref = billing_buy_href_plan($plan['code']);
+                                    $planAction = $service['action'];
+                                    if ($plan['code'] === 'domain-com' || $plan['code'] === 'domain-np') {
+                                        $planHref = 'domain.php?tld=' . ($plan['code'] === 'domain-np' ? 'com.np' : 'com');
+                                        $planAction = 'Check this name';
+                                    }
+                                    ?>
+                                    <a class="button button--small button--primary" href="<?= service_escape($planHref) ?>"><?= service_escape($planAction) ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

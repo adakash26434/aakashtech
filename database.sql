@@ -296,3 +296,20 @@ CREATE TABLE IF NOT EXISTS client_kyc (
     reviewed_at DATETIME DEFAULT NULL,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== Domain registration requests. The team registers the name, then marks it active. ======
+CREATE TABLE IF NOT EXISTS domain_requests (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    domain_name VARCHAR(190) NOT NULL,
+    tld         VARCHAR(20) NOT NULL,
+    holder_kind VARCHAR(20) DEFAULT 'individual',
+    holder_name VARCHAR(200) DEFAULT '',
+    document_path VARCHAR(255) DEFAULT '',
+    status      VARCHAR(20) DEFAULT 'requested',
+    admin_note  TEXT,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    activated_at DATETIME DEFAULT NULL,
+    INDEX idx_domain_client (client_id),
+    INDEX idx_domain_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

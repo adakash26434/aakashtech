@@ -163,13 +163,13 @@ function billing_page_copy()
             'kicker' => 'Domain registration in Nepal',
             'lead' => 'Reserve the web name your cooperative, company, or project will use. Choose .com or .com.np. The price is for one year and can renew from your wallet.',
             'points' => array(
-                '.com and .com.np are the two names sold here. The price beside each one is the yearly price.',
-                'Type the exact domain, such as yourcoop.com.np, and the organization or person it belongs to. That is the whole order.',
-                'This page does not ask a registrar whether the name is free. The team registers it after payment.',
-                'Hosting and email are separate. Buying the name does not put a website or mailboxes online.'
+                '.com and .com.np are the two names requested here. The price beside each one is the yearly list price.',
+                'Check the name on the Domain registration page first. .com.np is checked at register.com.np. .com is checked in the .com registry record.',
+                'If the name is free, send the request. A .com.np request includes the registry document. The team registers the name separately, then marks it active.',
+                'Hosting and email are separate. Requesting the name does not put a website or mailboxes online.'
             ),
             'after' => array(
-                'The team registers the name you typed. If that name is already taken, the team returns the price to your wallet once.',
+                'The request appears in the client portal while the team registers the name. It shows Active after that registration is done.',
                 'The year renews from the wallet on the due date. You can turn auto-renew off from the client panel.',
                 'You still buy hosting, email, or a website separately if you need them.'
             )
@@ -784,6 +784,7 @@ function billing_ensure($conn)
     billing_add_campaign_columns($conn);
     billing_add_portal_columns($conn);
     billing_ensure_kyc_table($conn);
+    billing_ensure_domain_requests($conn);
     billing_seed_plans($conn);
     billing_refresh_plans($conn);
     billing_seed_slabs($conn);
@@ -1206,6 +1207,41 @@ function billing_add_portal_columns($conn)
         }
         billing_exec($conn, 'ALTER TABLE client_users ADD COLUMN ' . $name . ' ' . $definition);
     }
+}
+
+function billing_ensure_domain_requests($conn)
+{
+    if (DB_DRIVER === 'sqlite') {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS domain_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            domain_name TEXT NOT NULL,
+            tld TEXT NOT NULL,
+            holder_kind TEXT DEFAULT 'individual',
+            holder_name TEXT DEFAULT '',
+            document_path TEXT DEFAULT '',
+            status TEXT DEFAULT 'requested',
+            admin_note TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            activated_at TEXT DEFAULT NULL
+        )");
+        return;
+    }
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS domain_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        domain_name VARCHAR(190) NOT NULL,
+        tld VARCHAR(20) NOT NULL,
+        holder_kind VARCHAR(20) DEFAULT 'individual',
+        holder_name VARCHAR(200) DEFAULT '',
+        document_path VARCHAR(255) DEFAULT '',
+        status VARCHAR(20) DEFAULT 'requested',
+        admin_note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        activated_at DATETIME DEFAULT NULL,
+        INDEX idx_domain_client (client_id),
+        INDEX idx_domain_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 function billing_ensure_kyc_table($conn)
@@ -2168,7 +2204,7 @@ function billing_buy_href_plan($code)
 function client_safe_next($value)
 {
     $value = (string) $value;
-    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|support|profile|kyc)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+)?$/', $value)) {
+    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+)?$/', $value)) {
         return 'index.php';
     }
     return $value;

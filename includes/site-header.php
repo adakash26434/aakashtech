@@ -25,6 +25,7 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
         </a>
 
         <nav class="desktop-nav" aria-label="Main navigation">
+            <a href="<?= $navBase === '' ? 'domain.php' : 'domain.php' ?>">Domain registration</a>
             <a href="<?= $navBase ?>#services">Services</a>
             <a href="<?= $navBase ?>#about">Why us</a>
             <a href="<?= $navBase ?>#process">How we work</a>
@@ -54,6 +55,7 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
          x-transition:enter-start="mobile-nav-enter-start"
          x-transition:enter-end="mobile-nav-enter-end"
          @click.outside="mobileOpen = false" aria-label="Mobile navigation">
+        <a href="domain.php" @click="mobileOpen = false">Domain registration</a>
         <a href="<?= $navBase ?>#services" @click="mobileOpen = false">Services</a>
         <a href="<?= $navBase ?>#about" @click="mobileOpen = false">Why us</a>
         <a href="<?= $navBase ?>#process" @click="mobileOpen = false">How we work</a>

@@ -143,6 +143,36 @@ body.portal-shell.bg-dark-950,
     color: #1d4ed8;
 }
 
+.domain-steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.domain-steps li {
+    position: relative;
+    margin: 0 0 10px;
+    padding-left: 22px;
+    color: var(--site-muted, #4a626a);
+    font-size: var(--type-body, 15px);
+}
+
+.domain-steps li::before {
+    position: absolute;
+    left: 0;
+    top: 0.45em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c5d5d0;
+    content: "";
+}
+
+.domain-steps li.is-done { color: #075e54; }
+.domain-steps li.is-done::before,
+.domain-steps li.is-current::before { background: #0b8b7a; }
+.domain-steps li.is-current { color: #16343a; font-weight: 600; }
+
 .portal-shell .form-input {
     min-height: 48px;
     color: #263e35;
