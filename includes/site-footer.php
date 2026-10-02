@@ -93,7 +93,6 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                     Tell us what you need
                     <i data-lucide="arrow-up-right" aria-hidden="true"></i>
                 </a>
-                <a href="admin/login.php" class="footer-admin">Admin sign in</a>
             </div>
         </div>
 
