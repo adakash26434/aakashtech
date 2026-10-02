@@ -193,10 +193,10 @@ function billing_page_copy()
             'kicker' => 'Domain email for organizations',
             'lead' => 'Mailboxes such as info@yourcoop.com.np, on Zoho, looked after by Aakash Technologies, a Zoho authorized partner in Nepal.',
             'points' => array(
-                'For a cooperative or any organization that should send mail from its own domain, not from a free personal address.',
+                'For a cooperative or any organization that should send mail from its own domain, such as info@yourcoop.com.np, not from a free Gmail or Yahoo address.',
                 'Choose 1, 5, or 10 mailboxes. Type exactly that many names, one per line, without @. info becomes info@yourdomain.',
-                'The domain must already be yours. If it is not, buy it on the domain page first.',
-                'The yearly price renews from the wallet.'
+                'The domain must already be yours. If it is not, buy it on the domain page first. The team creates the Zoho mailboxes and the domain records that let mail arrive there. If the domain is registered somewhere else, the team sends you those records to add.',
+                'The yearly price renews from the wallet. Mail already sitting in another inbox is not moved in this package.'
             ),
             'after' => array(
                 'The team creates the Zoho mailboxes from the names you typed and looks after them.',
@@ -208,9 +208,10 @@ function billing_page_copy()
             'kicker' => 'Websites built for a specific organization',
             'lead' => 'Pick the kind of site you need. The price is the full price for the pages named on that package. The booking form is the brief, so the work can start without a discovery call.',
             'points' => array(
-                'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal.',
-                'Each package names the pages included, such as home, about, services, and contact. A different set of pages is a different package.',
-                'You write what the site must do, the about text, the public phone and email, a preferred domain, a deadline, and the business address.',
+                'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal. The pages are laid out for a phone and a computer.',
+                'Each package names the pages included, such as home, about, services, and contact. A page that is not named is not included.',
+                'A member login, an eSewa or Khalti checkout, and a live booking calendar are not in these packages. The hotel package is a booking enquiry.',
+                'You write what the site must do, the about text, the public phone and email, a preferred domain, a deadline, and the business address. Photos and extra words go in that same brief.',
                 'Domain, hosting, and email are separate purchases. This price is the website itself, paid once.'
             ),
             'after' => array(

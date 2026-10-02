@@ -95,12 +95,12 @@ function site_seo_faqs($slug)
             array('Does hosting include a new website design?', 'No. Hosting keeps a site online. A custom website is a separate booking, and the domain is registered separately.')
         ),
         'professional-email' => array(
-            array('Can I get email on my own domain?', 'Yes. You choose 1, 5, or 10 names. The team creates those Zoho mailboxes, such as info@yourdomain. The domain must already be yours.'),
-            array('Who looks after the mailboxes?', 'Aakash Technologies, a Zoho authorized partner in Nepal. This website records the order. It does not open Zoho by itself.')
+            array('Can I get email on my own domain?', 'Yes. You choose 1, 5, or 10 names, such as info@yourdomain. The domain must already be yours. The team creates the Zoho mailboxes and the domain records that let mail arrive there.'),
+            array('Is old mail moved across?', 'No. This package creates the new mailboxes. Mail already sitting in Gmail, Yahoo, or another inbox stays where it is.')
         ),
         'custom-websites' => array(
-            array('What kinds of websites can I book?', 'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal. Each package names the pages included.'),
-            array('Is the website price yearly?', 'No. The website is paid once. Domain, hosting, and email are separate if you need them.')
+            array('What kinds of websites can I book?', 'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal. Each package names the pages included, and the layout works on a phone and a computer.'),
+            array('What is not included?', 'Domain, hosting, and email are separate. A member login, an eSewa or Khalti checkout, and a live booking calendar are not in these packages. The hotel package is a booking enquiry. The website is paid once.')
         ),
         'cyber-security' => array(
             array('Where does the cyber training happen?', 'At your address. The trainer comes for one visit. The date you pick is the date you are asking for.'),
