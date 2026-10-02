@@ -4,7 +4,10 @@
     --portal-line: #dfe9e4;
     --portal-ink: #183b31;
     --portal-text: #344b44;
-    --portal-muted: #6b8078;
+    --portal-muted: #4d675f;
+    --type-body: 15px;
+    --type-label: 13px;
+    --type-input: 16px;
     --portal-brand: #0b8b7a;
     --portal-brand-dark: #075e54;
 }
@@ -49,7 +52,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-shell .text-slate-400 {
-    color: #536b63;
+    color: #3f5c54;
 }
 
 .portal-shell .text-slate-500,
@@ -121,7 +124,7 @@ body.portal-shell.bg-dark-950,
     background-color: #ffffff;
     border-color: #cddbd4;
     box-shadow: 0 1px 2px rgba(24, 59, 49, 0.03);
-    font-size: 16px;
+    font-size: var(--type-input);
 }
 
 .portal-shell textarea.form-input {
@@ -172,7 +175,18 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell .dash-stat-label {
     color: var(--portal-muted);
-    font-size: 13px;
+    font-size: var(--type-label);
+}
+
+.portal-shell .text-xs,
+.portal-shell .text-\[10px\] {
+    font-size: var(--type-label);
+    line-height: 1.45;
+}
+
+.portal-shell .text-sm {
+    font-size: var(--type-body);
+    line-height: 1.5;
 }
 
 .portal-shell .dash-action-card {
@@ -254,7 +268,13 @@ body.portal-shell.bg-dark-950,
     outline-offset: 2px;
 }
 
-.portal-shell::-webkit-scrollbar-thumb {
+.portal-shell::-webkit-scrollbar-track,
+.portal-shell *::-webkit-scrollbar-track {
+    background: #e7f0ec;
+}
+
+.portal-shell::-webkit-scrollbar-thumb,
+.portal-shell *::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #43b39a, #087365);
 }
 
