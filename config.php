@@ -65,6 +65,11 @@ if (DB_DRIVER === 'sqlite') {
 
 require_once __DIR__ . '/includes/billing.php';
 try {
+    auth_ensure_client_table($conn);
+} catch (Throwable $exception) {
+    error_log('Client account table could not be created.');
+}
+try {
     billing_ensure($conn);
 } catch (Throwable $exception) {
     error_log('Billing setup could not be completed.');
@@ -261,6 +266,94 @@ function auth_ensure_admin_table($conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function auth_mobile_number($value)
+{
+    $digits = preg_replace('/\D+/', '', (string) $value);
+    if (!is_string($digits)) {
+        return '';
+    }
+    if (strlen($digits) === 13 && substr($digits, 0, 3) === '977') {
+        $digits = substr($digits, 3);
+    }
+    if (strlen($digits) === 11 && substr($digits, 0, 1) === '0') {
+        $digits = substr($digits, 1);
+    }
+    if (strlen($digits) !== 10) {
+        return '';
+    }
+    return $digits;
+}
+
+function auth_ensure_client_table($conn)
+{
+    if (DB_DRIVER === 'sqlite') {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            phone TEXT DEFAULT NULL,
+            company TEXT DEFAULT NULL,
+            address TEXT DEFAULT NULL,
+            status TEXT DEFAULT 'active',
+            avatar_color TEXT DEFAULT '#06b6d4',
+            sms_portal_username TEXT DEFAULT '',
+            sms_portal_password TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        $columns = array(
+            'phone' => 'TEXT DEFAULT NULL',
+            'company' => 'TEXT DEFAULT NULL',
+            'address' => 'TEXT DEFAULT NULL',
+            'status' => "TEXT DEFAULT 'active'",
+            'avatar_color' => "TEXT DEFAULT '#06b6d4'"
+        );
+    } else {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            phone VARCHAR(50) DEFAULT NULL,
+            company VARCHAR(255) DEFAULT NULL,
+            address TEXT DEFAULT NULL,
+            status VARCHAR(20) DEFAULT 'active',
+            avatar_color VARCHAR(20) DEFAULT '#06b6d4',
+            sms_portal_username VARCHAR(80) DEFAULT '',
+            sms_portal_password VARCHAR(80) DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_email (email),
+            INDEX idx_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $columns = array(
+            'phone' => 'VARCHAR(50) DEFAULT NULL',
+            'company' => 'VARCHAR(255) DEFAULT NULL',
+            'address' => 'TEXT DEFAULT NULL',
+            'status' => "VARCHAR(20) DEFAULT 'active'",
+            'avatar_color' => "VARCHAR(20) DEFAULT '#06b6d4'"
+        );
+    }
+
+    $present = array();
+    try {
+        $present = array_flip(billing_table_columns($conn, 'client_users'));
+    } catch (Throwable $exception) {
+        $present = array();
+    }
+    foreach ($columns as $name => $definition) {
+        if (isset($present[$name])) {
+            continue;
+        }
+        try {
+            billing_exec($conn, 'ALTER TABLE client_users ADD COLUMN ' . $name . ' ' . $definition);
+        } catch (Throwable $exception) {
+            error_log('Client account column could not be added.');
+        }
+    }
+}
+
 function auth_ensure_attempts($conn) {
     if (DB_DRIVER === 'sqlite') {
         billing_exec($conn, 'CREATE TABLE IF NOT EXISTS login_attempts (
@@ -278,6 +371,49 @@ function auth_ensure_attempts($conn) {
         attempted_at DATETIME NOT NULL,
         INDEX idx_attempt_lookup (scope, ip, attempted_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+function db_fetch_all($stmt)
+{
+    if (!is_object($stmt)) {
+        return array();
+    }
+    if (method_exists($stmt, 'get_result')) {
+        try {
+            $result = $stmt->get_result();
+            if ($result) {
+                $rows = array();
+                while ($row = $result->fetch_assoc()) {
+                    $rows[] = $row;
+                }
+                return $rows;
+            }
+        } catch (Throwable $exception) {
+            error_log('Falling back while reading database rows.');
+        }
+    }
+    $meta = $stmt->result_metadata();
+    if (!$meta) {
+        return array();
+    }
+    $fields = $meta->fetch_fields();
+    $meta->free();
+    $row = array();
+    $refs = array();
+    foreach ($fields as $index => $field) {
+        $row[$field->name] = null;
+        $refs[$index] = &$row[$field->name];
+    }
+    call_user_func_array(array($stmt, 'bind_result'), $refs);
+    $rows = array();
+    while ($stmt->fetch()) {
+        $copy = array();
+        foreach ($row as $key => $value) {
+            $copy[$key] = $value;
+        }
+        $rows[] = $copy;
+    }
+    return $rows;
 }
 
 function db_fetch_assoc($stmt) {

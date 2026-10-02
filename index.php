@@ -137,6 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         $error = 'One of your answers is too long. Please shorten it and try again.';
     } elseif (!filter_var($formValues['email'], FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
+    } elseif (auth_mobile_number($formValues['phone']) === '') {
+        $error = 'Enter a 10-digit mobile number.';
     } elseif ($formValues['service'] !== '' && !in_array($formValues['service'], $contactServices, true)) {
         $error = 'Please select one of the listed services.';
     } else {
@@ -145,11 +147,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             $stmt = $conn->prepare(
                 'INSERT INTO inquiries (name, email, phone, service, message, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
             );
+            $contactPhone = auth_mobile_number($formValues['phone']);
             $stmt->bind_param(
                 'sssss',
                 $formValues['name'],
                 $formValues['email'],
-                $formValues['phone'],
+                $contactPhone,
                 $formValues['service'],
                 $formValues['message']
             );
@@ -480,8 +483,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             </div>
                             <div class="form-field">
                                 <label for="phone">Phone *</label>
-                                <input id="phone" type="tel" name="phone" maxlength="40" required autocomplete="tel"
-                                       placeholder="+977 ..." value="<?= site_escape($formValues['phone']) ?>">
+                                <input id="phone" type="tel" name="phone" maxlength="16" required inputmode="tel" autocomplete="tel"
+                                       placeholder="98XXXXXXXX" value="<?= site_escape($formValues['phone']) ?>">
                             </div>
                             <div class="form-field form-field--full">
                                 <label for="email">Email *</label>

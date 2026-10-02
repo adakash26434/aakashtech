@@ -16,6 +16,12 @@ if (is_client_logged_in()) {
 
 $error = '';
 $showRegister = isset($_GET['action']) && $_GET['action'] === 'register';
+$registerValues = array(
+    'name' => '',
+    'email' => '',
+    'phone' => '',
+    'company' => ''
+);
 
 $flashError = flash('login_error');
 if ($error === '' && $flashError !== '') {
@@ -66,13 +72,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
-    $name = substr(trim($_POST['name'] ?? ''), 0, 80);
-    $email = substr(trim($_POST['email'] ?? ''), 0, 120);
-    $phone = substr(trim($_POST['phone'] ?? ''), 0, 40);
-    $company = substr(trim($_POST['company'] ?? ''), 0, 120);
-    $password = $_POST['password'] ?? '';
-    $confirm = $_POST['confirm_password'] ?? '';
-    $honeypot = trim($_POST['website'] ?? '');
+    $showRegister = true;
+    $name = substr(trim((string) ($_POST['name'] ?? '')), 0, 80);
+    $email = substr(trim((string) ($_POST['email'] ?? '')), 0, 120);
+    $phoneInput = trim((string) ($_POST['phone'] ?? ''));
+    $phone = auth_mobile_number($phoneInput);
+    $company = substr(trim((string) ($_POST['company'] ?? '')), 0, 120);
+    $password = (string) ($_POST['password'] ?? '');
+    $confirm = (string) ($_POST['confirm_password'] ?? '');
+    $honeypot = trim((string) ($_POST['website'] ?? ''));
+    $registerValues = array(
+        'name' => $name,
+        'email' => $email,
+        'phone' => substr($phoneInput, 0, 16),
+        'company' => $company
+    );
 
     if (!csrf_is_valid()) {
         $error = 'The form expired. Refresh the page and try again.';
@@ -85,25 +99,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Please fill in all required fields.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email.';
+    } elseif ($phone === '') {
+        $error = 'Enter a 10-digit mobile number.';
     } elseif (strlen($password) < 6) {
         $error = 'Password must be at least 6 characters.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
-        $check = $conn->prepare("SELECT id FROM client_users WHERE email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        $check->store_result();
-        if ($check->num_rows > 0) {
-            auth_note_attempt($conn, 'register');
-            $error = 'An account with this email already exists.';
-        } else {
-            $colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
-            $avatar_color = $colors[array_rand($colors)];
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssss", $name, $email, $hash, $phone, $company, $avatar_color);
-            if ($stmt->execute()) {
+        try {
+            $check = $conn->prepare("SELECT id FROM client_users WHERE email = ? LIMIT 1");
+            if (!$check) {
+                throw new RuntimeException('Client lookup failed.');
+            }
+            $check->bind_param("s", $email);
+            $check->execute();
+            $existing = db_fetch_assoc($check);
+            $check->close();
+            if ($existing) {
+                auth_note_attempt($conn, 'register');
+                $error = 'An account with this email already exists.';
+            } else {
+                $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+                $avatar_color = $colors[array_rand($colors)];
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)");
+                if (!$stmt) {
+                    throw new RuntimeException('Client insert failed.');
+                }
+                $stmt->bind_param("ssssss", $name, $email, $hash, $phone, $company, $avatar_color);
+                $stmt->execute();
+                $stmt->close();
                 auth_note_attempt($conn, 'register');
                 $_SESSION['client_id'] = $conn->insert_id;
                 $_SESSION['client_name'] = $name;
@@ -113,12 +138,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 auth_fresh_session();
                 header('Location: ' . $next);
                 exit;
-            } else {
-                $error = 'Registration failed. Please try again.';
             }
-            $stmt->close();
+        } catch (Throwable $exception) {
+            error_log('Client registration failed: ' . $exception->getMessage());
+            $message = $exception->getMessage();
+            if (stripos($message, 'Duplicate') !== false || stripos($message, 'UNIQUE') !== false) {
+                $error = 'An account with this email already exists.';
+            } else {
+                $error = 'The account could not be created. Refresh the page and try again.';
+            }
         }
-        $check->close();
     }
 }
 
@@ -208,20 +237,20 @@ try {
                 </div>
                 <div>
                     <label class="block text-slate-300 text-sm font-medium mb-2">Full Name *</label>
-                    <input type="text" name="name" required class="form-input" placeholder="John Doe">
+                    <input type="text" name="name" required class="form-input" placeholder="John Doe" value="<?= e($registerValues['name']) ?>">
                 </div>
                 <div>
                     <label class="block text-slate-300 text-sm font-medium mb-2">Email *</label>
-                    <input type="email" name="email" required autocomplete="email" class="form-input" placeholder="you@example.com">
+                    <input type="email" name="email" required autocomplete="email" class="form-input" placeholder="you@example.com" value="<?= e($registerValues['email']) ?>">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-slate-300 text-sm font-medium mb-2">Phone</label>
-                        <input type="tel" name="phone" class="form-input" placeholder="+977 98XXXX">
+                        <label class="block text-slate-300 text-sm font-medium mb-2">Mobile *</label>
+                        <input type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="98XXXXXXXX" value="<?= e($registerValues['phone']) ?>">
                     </div>
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Company</label>
-                        <input type="text" name="company" class="form-input" placeholder="Company Ltd">
+                        <input type="text" name="company" class="form-input" placeholder="Company Ltd" value="<?= e($registerValues['company']) ?>">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">

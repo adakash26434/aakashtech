@@ -510,8 +510,149 @@ function billing_add_missing_columns($conn)
     }
 }
 
+function billing_ensure_portal_tables($conn)
+{
+    if (DB_DRIVER === 'sqlite') {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            service_name TEXT NOT NULL,
+            description TEXT DEFAULT NULL,
+            status TEXT DEFAULT 'active',
+            start_date TEXT DEFAULT NULL,
+            end_date TEXT DEFAULT NULL,
+            price NUMERIC DEFAULT 0,
+            plan_code TEXT DEFAULT NULL,
+            billing_cycle TEXT DEFAULT 'one_time',
+            auto_renew INTEGER DEFAULT 0,
+            next_renewal TEXT DEFAULT NULL,
+            detail_label TEXT DEFAULT NULL,
+            order_brief TEXT DEFAULT NULL,
+            unit_kind TEXT DEFAULT '',
+            unit_quantity INTEGER DEFAULT 0,
+            grace_until TEXT DEFAULT NULL,
+            last_attempt_on TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS sms_campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            campaign_name TEXT NOT NULL,
+            sender_id TEXT DEFAULT NULL,
+            message_content TEXT NOT NULL,
+            recipients_count INTEGER DEFAULT 0,
+            channel TEXT DEFAULT 'sms',
+            audience TEXT DEFAULT '',
+            purpose TEXT DEFAULT '',
+            recipients_list TEXT DEFAULT '',
+            declaration_text TEXT DEFAULT '',
+            status TEXT DEFAULT 'draft',
+            scheduled_at TEXT DEFAULT NULL,
+            sent_at TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS support_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            subject TEXT NOT NULL,
+            description TEXT NOT NULL,
+            priority TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'open',
+            admin_reply TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS inquiries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            service TEXT DEFAULT NULL,
+            message TEXT NOT NULL,
+            status TEXT DEFAULT 'new',
+            admin_notes TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        return;
+    }
+
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_services (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        service_name VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        start_date DATE DEFAULT NULL,
+        end_date DATE DEFAULT NULL,
+        price DECIMAL(10,2) DEFAULT 0,
+        plan_code VARCHAR(80) DEFAULT NULL,
+        billing_cycle VARCHAR(20) DEFAULT 'one_time',
+        auto_renew TINYINT(1) DEFAULT 0,
+        next_renewal DATE DEFAULT NULL,
+        detail_label VARCHAR(255) DEFAULT NULL,
+        order_brief TEXT DEFAULT NULL,
+        unit_kind VARCHAR(40) DEFAULT '',
+        unit_quantity INT DEFAULT 0,
+        grace_until DATE DEFAULT NULL,
+        last_attempt_on DATE DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_client (client_id),
+        INDEX idx_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS sms_campaigns (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        campaign_name VARCHAR(255) NOT NULL,
+        sender_id VARCHAR(20) DEFAULT NULL,
+        message_content TEXT NOT NULL,
+        recipients_count INT DEFAULT 0,
+        channel VARCHAR(20) DEFAULT 'sms',
+        audience VARCHAR(40) DEFAULT '',
+        purpose VARCHAR(40) DEFAULT '',
+        recipients_list TEXT,
+        declaration_text TEXT,
+        status VARCHAR(20) DEFAULT 'draft',
+        scheduled_at DATETIME DEFAULT NULL,
+        sent_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_client (client_id),
+        INDEX idx_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS support_tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        priority VARCHAR(20) DEFAULT 'medium',
+        status VARCHAR(20) DEFAULT 'open',
+        admin_reply TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_client (client_id),
+        INDEX idx_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS inquiries (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        service VARCHAR(100) DEFAULT NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'new',
+        admin_notes TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_status (status),
+        INDEX idx_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
 function billing_ensure($conn)
 {
+    billing_ensure_portal_tables($conn);
     billing_create_tables($conn);
     billing_add_missing_columns($conn);
     $version = (int) billing_setting($conn, 'billing_schema_version');
@@ -903,7 +1044,7 @@ function billing_client_has_messaging($conn, $clientId)
     $stmt = $conn->prepare("SELECT id FROM client_services WHERE client_id = ? AND status = 'active' AND unit_kind IN ('sms', 'voice_calls', 'voice_minutes') LIMIT 1");
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     return (bool) $row;
 }
@@ -915,7 +1056,7 @@ function billing_portal_login($conn, $clientId)
     $stmt = $conn->prepare('SELECT sms_portal_username, sms_portal_password FROM client_users WHERE id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     if (!$row) {
         return $empty;
@@ -1361,7 +1502,7 @@ function billing_balance($conn, $clientId)
     $stmt = $conn->prepare('SELECT balance FROM client_wallets WHERE client_id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = db_fetch_assoc($stmt);
     $stmt->close();
     return $row ? (float) $row['balance'] : 0.0;
 }
@@ -1425,8 +1566,7 @@ function billing_unit_balances($conn, $clientId)
     $stmt = $conn->prepare('SELECT unit_kind, balance FROM client_units WHERE client_id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
+    foreach (db_fetch_all($stmt) as $row) {
         $balances[(string) $row['unit_kind']] = (int) $row['balance'];
     }
     $stmt->close();

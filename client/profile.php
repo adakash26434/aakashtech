@@ -5,27 +5,47 @@ $cid = get_client_id();
 $msg = '';
 $err = '';
 
-$client = $conn->query("SELECT * FROM client_users WHERE id = $cid")->fetch_assoc();
+$client = null;
+try {
+    $clientResult = $conn->query("SELECT * FROM client_users WHERE id = " . (int) $cid);
+    $client = $clientResult ? $clientResult->fetch_assoc() : null;
+} catch (Throwable $exception) {
+    error_log('Client profile could not be read.');
+}
+if (!$client) {
+    $client = array('name' => get_client_name(), 'email' => '', 'phone' => '', 'company' => '', 'address' => '', 'status' => 'active', 'avatar_color' => '#0b8b7a', 'password' => '');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     verify_csrf();
-    $name = substr(trim($_POST['name'] ?? ''), 0, 80);
-    $phone = substr(trim($_POST['phone'] ?? ''), 0, 40);
-    $company = substr(trim($_POST['company'] ?? ''), 0, 120);
-    $address = substr(trim($_POST['address'] ?? ''), 0, 300);
+    $name = substr(trim((string) ($_POST['name'] ?? '')), 0, 80);
+    $phoneInput = trim((string) ($_POST['phone'] ?? ''));
+    $phone = $phoneInput === '' ? '' : auth_mobile_number($phoneInput);
+    $company = substr(trim((string) ($_POST['company'] ?? '')), 0, 120);
+    $address = substr(trim((string) ($_POST['address'] ?? '')), 0, 300);
     if ($name === '') {
         $err = 'Name is required.';
+    } elseif ($phoneInput !== '' && $phone === '') {
+        $err = 'Enter a 10-digit mobile number.';
     } else {
-        $stmt = $conn->prepare("UPDATE client_users SET name = ?, phone = ?, company = ?, address = ? WHERE id = ?");
-        $stmt->bind_param("ssssi", $name, $phone, $company, $address, $cid);
-        if ($stmt->execute()) {
+        try {
+            $stmt = $conn->prepare("UPDATE client_users SET name = ?, phone = ?, company = ?, address = ? WHERE id = ?");
+            if (!$stmt) {
+                throw new RuntimeException('Profile update failed.');
+            }
+            $stmt->bind_param("ssssi", $name, $phone, $company, $address, $cid);
+            $stmt->execute();
+            $stmt->close();
             $_SESSION['client_name'] = $name;
             $msg = 'Profile updated successfully!';
-            $client = $conn->query("SELECT * FROM client_users WHERE id = $cid")->fetch_assoc();
-        } else {
+            $client['name'] = $name;
+            $client['phone'] = $phone;
+            $client['company'] = $company;
+            $client['address'] = $address;
+        } catch (Throwable $exception) {
+            error_log('Client profile could not be saved.');
             $err = 'Failed to update profile.';
         }
-        $stmt->close();
     }
 }
 
@@ -41,12 +61,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     } elseif ($new !== $confirm) {
         $err = 'Passwords do not match.';
     } else {
-        $hash = password_hash($new, PASSWORD_DEFAULT);
-        $stmt = $conn->prepare("UPDATE client_users SET password = ? WHERE id = ?");
-        $stmt->bind_param("si", $hash, $cid);
-        $stmt->execute();
-        $stmt->close();
-        $msg = 'Password changed successfully!';
+        try {
+            $hash = password_hash($new, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("UPDATE client_users SET password = ? WHERE id = ?");
+            if (!$stmt) {
+                throw new RuntimeException('Password update failed.');
+            }
+            $stmt->bind_param("si", $hash, $cid);
+            $stmt->execute();
+            $stmt->close();
+            $client['password'] = $hash;
+            $msg = 'Password changed successfully!';
+        } catch (Throwable $exception) {
+            error_log('Client password could not be saved.');
+            $err = 'Failed to update password.';
+        }
     }
 }
 ?>
@@ -86,8 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                 <input type="email" class="form-input opacity-50 cursor-not-allowed" value="<?= e($client['email']) ?>" disabled>
             </div>
             <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Phone</label>
-                <input type="tel" name="phone" class="form-input" value="<?= e($client['phone'] ?? '') ?>">
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">Mobile (10 digits)</label>
+                <input type="tel" name="phone" inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="98XXXXXXXX" value="<?= e($client['phone'] ?? '') ?>">
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Company</label>

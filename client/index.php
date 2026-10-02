@@ -3,19 +3,36 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 $cid = (int) get_client_id();
-$walletBalance = billing_balance($conn, $cid);
-$unitBalances = billing_unit_balances($conn, $cid);
-
-$my_services = $conn->query("SELECT * FROM client_services WHERE client_id = $cid ORDER BY created_at DESC");
-$my_campaigns = $conn->query("SELECT COUNT(*) as c FROM sms_campaigns WHERE client_id = $cid")->fetch_assoc()['c'];
-$my_tickets = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid")->fetch_assoc()['c'];
-$open_tickets = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid AND status='open'")->fetch_assoc()['c'];
-$active_services = $conn->query("SELECT COUNT(*) as c FROM client_services WHERE client_id = $cid AND status IN ('active','booked')")->fetch_assoc()['c'];
-
-$messagingActive = billing_client_has_messaging($conn, $cid);
-$portalLogin = billing_portal_login($conn, $cid);
-$recent_tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
-$recent_campaigns = $conn->query("SELECT * FROM sms_campaigns WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
+$walletBalance = 0;
+$unitBalances = array('sms' => 0, 'voice_minutes' => 0, 'voice_calls' => 0);
+$my_services = false;
+$my_campaigns = 0;
+$my_tickets = 0;
+$open_tickets = 0;
+$active_services = 0;
+$messagingActive = false;
+$portalLogin = array('username' => '', 'password' => '');
+$recent_tickets = false;
+$recent_campaigns = false;
+try {
+    $walletBalance = billing_balance($conn, $cid);
+    $unitBalances = billing_unit_balances($conn, $cid);
+    $my_services = $conn->query("SELECT * FROM client_services WHERE client_id = $cid ORDER BY created_at DESC");
+    $campaignCount = $conn->query("SELECT COUNT(*) as c FROM sms_campaigns WHERE client_id = $cid");
+    $ticketCount = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid");
+    $openCount = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid AND status='open'");
+    $serviceCount = $conn->query("SELECT COUNT(*) as c FROM client_services WHERE client_id = $cid AND status IN ('active','booked')");
+    $my_campaigns = ($campaignCount && ($row = $campaignCount->fetch_assoc())) ? (int) $row['c'] : 0;
+    $my_tickets = ($ticketCount && ($row = $ticketCount->fetch_assoc())) ? (int) $row['c'] : 0;
+    $open_tickets = ($openCount && ($row = $openCount->fetch_assoc())) ? (int) $row['c'] : 0;
+    $active_services = ($serviceCount && ($row = $serviceCount->fetch_assoc())) ? (int) $row['c'] : 0;
+    $messagingActive = billing_client_has_messaging($conn, $cid);
+    $portalLogin = billing_portal_login($conn, $cid);
+    $recent_tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
+    $recent_campaigns = $conn->query("SELECT * FROM sms_campaigns WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
+} catch (Throwable $exception) {
+    error_log('Client dashboard could not be loaded.');
+}
 ?>
 
 <div class="mb-8">
