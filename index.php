@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         <span class="eyebrow-dot" aria-hidden="true"></span>
                         For cooperatives, companies, parties, and personal work
                     </div>
-                    <h1 class="reveal font-heading">Send the notice. Stay online. Train the <span>people.</span></h1>
+                    <h1 class="reveal font-heading">Bulk SMS.<br>Voice calls.<br>Hosting and <span>servers.</span></h1>
                     <p class="hero-lede reveal">
                         Bulk SMS and auto voice calls for an AGM, program, event, election, or festival. Domain, hosting, and server care. Zoho email on your own domain. Websites for a cooperative, company, school, hotel, or newsroom. Cyber training at your address.
                     </p>
