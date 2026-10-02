@@ -67,7 +67,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['review_order']) || i
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 $balance = billing_balance($conn, (int) get_client_id());
-$due = $preview ? (float) $preview['price'] : billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0);
+$catalogNet = billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0);
+$catalogBill = billing_vat_bill($catalogNet);
+if ($preview && !empty($preview['ok'])) {
+    $billNet = (float) $preview['net'];
+    $billVat = (float) $preview['vat'];
+    $billTotal = (float) $preview['price'];
+    $due = $billTotal;
+} elseif ($needs === 'sms' || $needs === 'voice') {
+    $billNet = 0;
+    $billVat = 0;
+    $billTotal = 0;
+    $due = 0;
+} else {
+    $billNet = $catalogBill['net'];
+    $billVat = $catalogBill['vat'];
+    $billTotal = $catalogBill['total'];
+    $due = $billTotal;
+}
 $short = $due > 0 && ($balance + 0.001 < $due);
 $slabs = ($needs === 'sms' || $needs === 'voice') ? billing_slabs_for($conn, $plan['service_slug']) : array();
 
@@ -91,7 +108,10 @@ function checkout_value($values, $key)
             <?php endif; ?>
             <?php if ($preview && !empty($preview['ok'])): ?>
                 <div class="mb-4 p-4 bg-brand-500/10 border border-brand-500/30 rounded-xl text-sm">
-                    <p class="text-white font-medium mb-2">Amount due <?= e(billing_money_label($preview['price'])) ?></p>
+                    <p class="text-white font-medium mb-2">Bill</p>
+                    <p class="text-slate-300">List price <?= e(billing_money_label($preview['net'])) ?></p>
+                    <p class="text-slate-300">VAT 13% <?= e(billing_money_label($preview['vat'])) ?></p>
+                    <p class="text-white font-medium">Total <?= e(billing_money_label($preview['price'])) ?></p>
                     <?php foreach ($preview['brief'] as $label => $value): ?>
                         <p class="text-slate-300 max-h-24 overflow-auto whitespace-pre-wrap"><span class="text-slate-500"><?= e($label) ?>:</span> <?= e($value) ?></p>
                     <?php endforeach; ?>
@@ -292,10 +312,19 @@ function checkout_value($values, $key)
                     <div class="flex justify-between gap-3"><span class="text-slate-500"><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></span><strong class="text-white"><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true) ?></strong></div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">Price</span><strong class="text-white"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong></div>
+                <div class="flex justify-between gap-3"><span class="text-slate-500">List price</span><strong class="text-white"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong></div>
+            <?php endif; ?>
+            <?php if ($billTotal > 0 && $slabs): ?>
+                <div class="flex justify-between gap-3"><span class="text-slate-500">List price</span><strong class="text-white"><?= e(billing_money_label($billNet)) ?></strong></div>
+            <?php endif; ?>
+            <?php if ($billTotal > 0): ?>
+                <div class="flex justify-between gap-3"><span class="text-slate-500">VAT 13%</span><strong class="text-white"><?= e(billing_money_label($billVat)) ?></strong></div>
+                <div class="flex justify-between gap-3"><span class="text-slate-500">Bill total</span><strong class="text-white"><?= e(billing_money_label($billTotal)) ?></strong></div>
+            <?php else: ?>
+                <p class="text-slate-500">The bill is the list price for your quantity, plus 13% VAT.</p>
             <?php endif; ?>
             <div class="flex justify-between gap-3"><span class="text-slate-500">Wallet</span><strong class="text-white"><?= e(billing_money_label($balance)) ?></strong></div>
-            <p class="text-slate-500 text-xs leading-relaxed pt-2">Fill this form completely. The saved answers are what the team uses. Recurring domain, hosting, email, and server plans renew from the wallet.</p>
+            <p class="text-slate-500 text-xs leading-relaxed pt-2">Fill this form completely. The saved answers are what the team uses. Recurring plans renew the same bill, including VAT, from the wallet.</p>
         </div>
     </aside>
 </div>

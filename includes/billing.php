@@ -1311,8 +1311,8 @@ function billing_buy_steps()
 {
     return array(
         'Create a client account.',
-        'Add wallet funds by eSewa, Khalti, or bank transfer. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
-        'Fill the form for this service, review the price, and pay from the wallet. Domain, hosting, email, and managed server renew from that wallet on the due date.'
+        'Add wallet funds by the online or manual method saved in settings. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
+        'Fill the form for this service. The bill is that list price plus 13% VAT, paid from the wallet. Domain, hosting, email, and managed server renew that same bill on the due date.'
     );
 }
 
@@ -1786,7 +1786,18 @@ function client_safe_next($value)
     return $value;
 }
 
-function billing_payment_instructions($conn = null)
+function billing_vat_bill($amount)
+{
+    $net = round((float) $amount, 2);
+    $vat = round($net * 0.13, 2);
+    return array(
+        'net' => $net,
+        'vat' => $vat,
+        'total' => round($net + $vat, 2)
+    );
+}
+
+function billing_payment_methods($conn = null)
 {
     $esewa = (defined('ESEWA_ID') && ESEWA_ID !== '') ? ESEWA_ID : '';
     $khalti = (defined('KHALTI_ID') && KHALTI_ID !== '') ? KHALTI_ID : '';
@@ -1803,12 +1814,35 @@ function billing_payment_instructions($conn = null)
             $bank = trim((string) $settings['bank_details']);
         }
     }
-    $name = ($conn && isset($settings['site_name']) && trim((string) $settings['site_name']) !== '') ? trim((string) $settings['site_name']) : 'the company';
-    return array(
-        'esewa' => 'Pay with eSewa to ' . ($esewa !== '' ? $esewa : 'the eSewa ID in Settings') . ', then enter the transaction code.',
-        'khalti' => 'Pay with Khalti to ' . ($khalti !== '' ? $khalti : 'the Khalti ID in Settings') . ', then enter the transaction code.',
-        'bank' => $bank !== '' ? $bank : 'Transfer to the company bank account shared by ' . $name . ', then enter the voucher or reference number.'
-    );
+    $methods = array();
+    if ($esewa !== '') {
+        $methods[] = array(
+            'code' => 'esewa',
+            'group' => 'online',
+            'label' => 'eSewa',
+            'detail' => $esewa,
+            'instruction' => 'Pay with eSewa to ' . $esewa . ', then enter the transaction code.'
+        );
+    }
+    if ($khalti !== '') {
+        $methods[] = array(
+            'code' => 'khalti',
+            'group' => 'online',
+            'label' => 'Khalti',
+            'detail' => $khalti,
+            'instruction' => 'Pay with Khalti to ' . $khalti . ', then enter the transaction code.'
+        );
+    }
+    if ($bank !== '') {
+        $methods[] = array(
+            'code' => 'bank',
+            'group' => 'manual',
+            'label' => 'Bank transfer',
+            'detail' => $bank,
+            'instruction' => 'Transfer to this account, then enter the voucher or reference number. ' . $bank
+        );
+    }
+    return $methods;
 }
 
 function billing_ensure_wallet($conn, $clientId)
@@ -2368,12 +2402,18 @@ function billing_order_ready($detail, $brief, $price, $quantity, $unitKind, $sta
     if ($price <= 0) {
         return array('ok' => false, 'error' => 'This order does not have a price yet.');
     }
+    $bill = billing_vat_bill($price);
+    $brief['Service amount'] = billing_money_label($bill['net']);
+    $brief['VAT 13%'] = billing_money_label($bill['vat']);
+    $brief['Total'] = billing_money_label($bill['total']);
     return array(
         'ok' => true,
         'error' => '',
         'detail' => $detail,
         'brief' => $brief,
-        'price' => round((float) $price, 2),
+        'net' => $bill['net'],
+        'vat' => $bill['vat'],
+        'price' => $bill['total'],
         'quantity' => (int) $quantity,
         'unit_kind' => $unitKind,
         'status' => $status
@@ -2583,11 +2623,14 @@ function billing_refund_domain($conn, $serviceId)
 
 function billing_request_topup($conn, $clientId, $amount, $method, $reference)
 {
-    $allowed = array('esewa', 'khalti', 'bank');
+    $allowed = array();
+    foreach (billing_payment_methods($conn) as $methodRow) {
+        $allowed[] = $methodRow['code'];
+    }
     $amount = (int) $amount;
     $reference = trim((string) $reference);
     if (!in_array($method, $allowed, true)) {
-        return 'Choose a payment method.';
+        return 'Choose one of the payment methods saved for this site.';
     }
     if ($amount < 100 || $amount > 1000000) {
         return 'Enter an amount between NPR 100 and NPR 1,000,000.';

@@ -24,7 +24,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_topup'])) {
 
 $balance = billing_balance($conn, $cid);
 $units = billing_unit_balances($conn, $cid);
-$instructions = billing_payment_instructions($conn);
+$paymentMethods = billing_payment_methods($conn);
+$onlineMethods = array();
+$manualMethods = array();
+foreach ($paymentMethods as $paymentMethod) {
+    if ($paymentMethod['group'] === 'manual') {
+        $manualMethods[] = $paymentMethod;
+    } else {
+        $onlineMethods[] = $paymentMethod;
+    }
+}
+$methodCodes = array();
+foreach ($paymentMethods as $paymentMethod) {
+    $methodCodes[] = $paymentMethod['code'];
+}
+if (!in_array($methodValue, $methodCodes, true)) {
+    $methodValue = $methodCodes ? $methodCodes[0] : '';
+}
 $history = $conn->prepare('SELECT * FROM wallet_entries WHERE client_id = ? ORDER BY id DESC LIMIT 20');
 $history->bind_param('i', $cid);
 $history->execute();
@@ -61,6 +77,9 @@ $history->close();
 <div class="grid lg:grid-cols-2 gap-6 mb-8">
     <section class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add funds</h3></div>
+        <?php if (!$paymentMethods): ?>
+            <div class="p-5 text-sm text-slate-400">Payment details are not published yet. Online methods need an eSewa or Khalti ID, and manual payment needs the bank account, saved in Admin settings.</div>
+        <?php else: ?>
         <form method="POST" class="p-5 space-y-4">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <div>
@@ -70,9 +89,9 @@ $history->close();
             <div>
                 <label for="method" class="block text-slate-400 text-xs font-medium mb-1.5">Payment method</label>
                 <select id="method" name="method" class="form-input">
-                    <option value="esewa" <?= $methodValue === 'esewa' ? 'selected' : '' ?>>eSewa</option>
-                    <option value="khalti" <?= $methodValue === 'khalti' ? 'selected' : '' ?>>Khalti</option>
-                    <option value="bank" <?= $methodValue === 'bank' ? 'selected' : '' ?>>Bank transfer</option>
+                    <?php foreach ($paymentMethods as $paymentMethod): ?>
+                        <option value="<?= e($paymentMethod['code']) ?>" <?= $methodValue === $paymentMethod['code'] ? 'selected' : '' ?>><?= e($paymentMethod['label']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div>
@@ -81,14 +100,27 @@ $history->close();
             </div>
             <button type="submit" name="request_topup" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit top-up</button>
         </form>
+        <?php endif; ?>
     </section>
     <section class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Where to pay</h3></div>
         <div class="p-5 space-y-4 text-sm text-slate-400">
-            <p><strong class="text-white">eSewa.</strong> <?= e($instructions['esewa']) ?></p>
-            <p><strong class="text-white">Khalti.</strong> <?= e($instructions['khalti']) ?></p>
-            <p><strong class="text-white">Bank.</strong> <?= e($instructions['bank']) ?></p>
-            <p>After confirmation, domain, hosting, email, and monthly credit plans renew by themselves while the balance covers the price.</p>
+            <?php if ($onlineMethods): ?>
+                <p class="text-white font-medium">Online payment</p>
+                <?php foreach ($onlineMethods as $paymentMethod): ?>
+                    <p><strong class="text-white"><?= e($paymentMethod['label']) ?>.</strong> <?= e($paymentMethod['instruction']) ?></p>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            <?php if ($manualMethods): ?>
+                <p class="text-white font-medium">Manual payment</p>
+                <?php foreach ($manualMethods as $paymentMethod): ?>
+                    <p class="whitespace-pre-wrap"><strong class="text-white"><?= e($paymentMethod['label']) ?>.</strong> <?= e($paymentMethod['instruction']) ?></p>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            <?php if (!$paymentMethods): ?>
+                <p>No payment method is available until the details are saved.</p>
+            <?php endif; ?>
+            <p>The first top-up is confirmed once. After that, the wallet pays the service bill, which is the list price plus 13% VAT.</p>
         </div>
     </section>
 </div>

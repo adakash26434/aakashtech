@@ -216,13 +216,15 @@ $settings = site_public_settings($conn);
                 <p class="text-slate-500 text-xs mt-2">Only filled links appear as icons in the footer. WhatsApp uses the number above.</p>
             </div>
             <div class="pt-2 border-t border-slate-800">
-                <h4 class="font-heading font-semibold text-white text-sm mb-3">Wallet payment details</h4>
+                <h4 class="font-heading font-semibold text-white text-sm mb-3">Online payment</h4>
                 <div class="space-y-3">
-                    <input type="text" name="esewa_id" maxlength="40" class="form-input" placeholder="eSewa ID" value="<?= e($settings['esewa_id'] ?? '') ?>">
-                    <input type="text" name="khalti_id" maxlength="40" class="form-input" placeholder="Khalti ID" value="<?= e($settings['khalti_id'] ?? '') ?>">
-                    <textarea name="bank_details" maxlength="400" rows="3" class="form-input" placeholder="Bank name, account name, and account number"><?= e($settings['bank_details'] ?? '') ?></textarea>
+                    <input type="text" name="esewa_id" maxlength="40" class="form-input" placeholder="eSewa ID" value="<?= e($settings['esewa_id'] ?? '') ?>" aria-label="eSewa ID">
+                    <input type="text" name="khalti_id" maxlength="40" class="form-input" placeholder="Khalti ID" value="<?= e($settings['khalti_id'] ?? '') ?>" aria-label="Khalti ID">
                 </div>
-                <p class="text-slate-500 text-xs mt-2">Shown when a client adds wallet funds. A blank field keeps the value from cpanel-config.php.</p>
+                <p class="text-slate-500 text-xs mt-2">eSewa and Khalti appear for the client only after an ID is saved here. A blank field keeps the value from cpanel-config.php.</p>
+                <h4 class="font-heading font-semibold text-white text-sm mt-5 mb-3">Manual payment</h4>
+                <textarea name="bank_details" maxlength="400" rows="3" class="form-input" placeholder="Bank name, account name, and account number" aria-label="Bank details"><?= e($settings['bank_details'] ?? '') ?></textarea>
+                <p class="text-slate-500 text-xs mt-2">Bank transfer appears only after these details are saved. Leave it blank to hide manual payment.</p>
             </div>
             <button type="submit" name="update_settings" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save public details</button>
         </form>
