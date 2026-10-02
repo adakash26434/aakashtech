@@ -1689,17 +1689,20 @@ a.contact-method:hover strong {
 }
 
 .site-notice-card--image {
-    width: min(520px, 100%);
-    padding: 0 0 24px;
+    width: min(440px, 100%);
+    padding: 16px 16px 20px;
     overflow: hidden;
 }
 
 .site-notice-image {
     display: block;
     width: 100%;
-    max-height: 280px;
+    height: 210px;
+    margin: 0 0 16px;
     object-fit: cover;
+    object-position: center;
     background: var(--site-wash);
+    border-radius: 14px;
 }
 
 .site-notice-copy {
@@ -1707,7 +1710,7 @@ a.contact-method:hover strong {
 }
 
 .site-notice-card--image .site-notice-copy {
-    padding: 22px 26px 0;
+    padding: 0;
 }
 
 .site-notice-kicker {
