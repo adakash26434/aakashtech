@@ -1312,7 +1312,7 @@ function billing_buy_steps()
 {
     return array(
         'Create a client account.',
-        'Add wallet funds by the online or manual method saved in settings. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
+        'Add wallet funds using the payment details on the wallet page. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
         'Fill the form for this service. The bill is that list price plus 13% VAT, paid from the wallet. Domain, hosting, email, and managed server renew that same bill on the due date.'
     );
 }

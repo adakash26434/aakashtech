@@ -268,11 +268,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     </div>
                     <h1 class="reveal font-heading">Bulk SMS.<br>Voice calls.<br>Hosting and <span>servers.</span></h1>
                     <p class="hero-lede reveal">
-                        Bulk SMS and auto voice calls for an AGM, program, event, election, or festival. Domain, hosting, and server care. Zoho email on your own domain. Websites for a cooperative, company, school, hotel, or newsroom. Cyber training at your address.
+                        Send the AGM, election, school, or festival notice, then keep the domain, the mail, and the website with the same company. The rate is on the page. The bill adds 13% VAT before you pay.
                     </p>
                     <div class="hero-actions reveal">
                         <a class="button button--primary" href="#services">
-                            See who it is for
+                            See the rates
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </a>
                         <a class="button button--outline" href="client/shop.php">
@@ -302,32 +302,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     <h2 class="window-heading font-heading">Everything is on the page</h2>
                         <p class="window-subtitle">Read the rate, then buy or book. No extra call to explain the service.</p>
                         <div class="solution-list">
-                            <div class="solution-row">
+                            <a class="solution-row" href="service.php?slug=bulk-sms">
                                 <span class="solution-icon"><i data-lucide="message-square-text" aria-hidden="true"></i></span>
-                                <span class="solution-row-copy"><strong>Bulk SMS</strong><span>Cheaper as the list gets longer</span></span>
+                                <span class="solution-row-copy"><strong>Bulk SMS</strong><span>Type a quantity and see the bill</span></span>
                                 <i class="solution-row-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
-                            </div>
-                            <div class="solution-row">
+                            </a>
+                            <a class="solution-row" href="service.php?slug=bulk-voice">
                                 <span class="solution-icon"><i data-lucide="phone-call" aria-hidden="true"></i></span>
-                                <span class="solution-row-copy"><strong>Auto voice calls</strong><span>AGM, election, festival, program</span></span>
+                                <span class="solution-row-copy"><strong>Auto voice calls</strong><span>Nepali or English, same volume rate</span></span>
                                 <i class="solution-row-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
-                            </div>
-                            <div class="solution-row">
+                            </a>
+                            <a class="solution-row" href="#services">
                                 <span class="solution-icon"><i data-lucide="server" aria-hidden="true"></i></span>
-                                <span class="solution-row-copy"><strong>Sites, hosting, Zoho email</strong><span>Domain mail managed in Nepal</span></span>
+                                <span class="solution-row-copy"><strong>Sites, hosting, Zoho email</strong><span>Domain, site, and mail in one account</span></span>
                                 <i class="solution-row-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
-                            </div>
-                            <div class="solution-row">
+                            </a>
+                            <a class="solution-row" href="service.php?slug=cyber-security">
                                 <span class="solution-icon"><i data-lucide="shield-check" aria-hidden="true"></i></span>
-                                <span class="solution-row-copy"><strong>Field cyber training</strong><span>Directors, staff, and members</span></span>
+                                <span class="solution-row-copy"><strong>Field cyber training</strong><span>The trainer comes to your address</span></span>
                                 <i class="solution-row-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
-                            </div>
+                            </a>
                         </div>
                     </div>
 
                     <div class="art-note">
                         <i data-lucide="circle-check" aria-hidden="true"></i>
-                        Plan clearly. Build thoughtfully.
+                        The bill shows 13% VAT.
                     </div>
                 </div>
             </div>
@@ -351,6 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             <strong>Cooperatives</strong>
             <strong>Companies</strong>
             <strong>Parties</strong>
+            <strong>Schools</strong>
             <strong>Personal use</strong>
         </div>
 
@@ -359,7 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="section-heading section-heading--center reveal">
                     <span class="section-kicker">What we do</span>
                     <h2 class="font-heading">Read the rate. Buy it, or book it.</h2>
-                    <p><?= site_escape($siteName) ?> is a bulk SMS provider and hosting provider in Nepal, with bulk voice calls, domains, Zoho email, websites, and on-site cyber training. Each page shows who it is for, what you enter, and the rate.</p>
+                    <p>Open a service and see the rate before you create an account. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers the domain, hosting, Zoho email, the website, and field training.</p>
                 </div>
 
                 <div class="service-grid">
@@ -398,12 +399,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="about-copy">
                     <span class="section-kicker reveal">Why <?= site_escape($siteName) ?></span>
                     <h2 class="reveal font-heading">The rate is on the page. The order is the brief.</h2>
-                    <p class="reveal">Each service page lists who it is for, what you type before paying, and the price. Cooperatives, companies, parties, and personal use follow the same path.</p>
+                    <p class="reveal">A cooperative can send the notice, register the name, host the site, open domain email, and train the people from one account. Companies, parties, schools, and personal use follow the same path.</p>
 
                     <ul class="value-list">
                         <li class="reveal">
                             <span class="value-list-icon"><i data-lucide="message-circle-check" aria-hidden="true"></i></span>
-                            <div><strong>No discovery call</strong><p>The checkout form is the brief for SMS, voice, domains, email, websites, and field training.</p></div>
+                            <div><strong>Price before you ask</strong><p>The rate and the 13% VAT bill are on the service page. The checkout form is the brief.</p></div>
                         </li>
                         <li class="reveal">
                             <span class="value-list-icon"><i data-lucide="blocks" aria-hidden="true"></i></span>
@@ -423,7 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="process-heading reveal">
                     <span class="section-kicker">How we work</span>
                     <h2 class="font-heading">Buy it, then let it renew.</h2>
-                    <p>Create a client account, add wallet funds once, and choose a plan. Recurring services continue without a renewal ticket.</p>
+                    <p>Create a client account, add wallet funds, and choose a plan. The first top-up is confirmed once. After that, checkout and renewals use the wallet.</p>
                 </div>
 
                 <div class="process-steps">
@@ -433,7 +434,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         <p>Open a service, read the rate, and enter the details that page asks for. Websites and training are booked the same way.</p>
                     </article>
                     <article class="process-step reveal">
-                        <span class="step-number">02 / Pay once</span>
+                        <span class="step-number">02 / Wallet</span>
                         <h3>Add wallet funds</h3>
                         <p><?= site_escape($paySentence) ?></p>
                     </article>
