@@ -9,6 +9,15 @@ foreach ($segments as $segment) {
     }
 }
 
+if ($requestPath === '/sitemap.xml') {
+    require __DIR__ . '/sitemap.php';
+    return true;
+}
+if ($requestPath === '/robots.txt') {
+    require __DIR__ . '/robots.php';
+    return true;
+}
+
 $basename = basename($requestPath);
 $blockedFiles = array(
     'config.php',

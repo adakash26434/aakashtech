@@ -1003,6 +1003,21 @@ body.site-public textarea {
     line-height: 1.7;
 }
 
+.detail-faq {
+    margin: 8px 0 0;
+}
+.detail-faq dt {
+    margin-top: 16px;
+    color: var(--site-ink);
+    font-size: var(--type-body);
+    font-weight: 700;
+}
+.detail-faq dd {
+    margin: 4px 0 0;
+    color: var(--site-muted);
+    font-size: var(--type-body);
+    line-height: 1.7;
+}
 .detail-subhead {
     margin: 32px 0 0;
     color: var(--site-ink);

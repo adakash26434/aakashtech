@@ -189,11 +189,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fbfdfc">
-    <title><?= site_escape($siteName) ?> | SMS, Voice, Websites, Email &amp; Training in Nepal</title>
-    <meta name="description" content="Bulk SMS and auto voice calls for cooperatives, companies, and parties in Nepal, plus domains, hosting, Zoho email, custom websites, and on-site cyber training.">
-    <meta property="og:title" content="<?= site_escape($siteName) ?> | SMS, Voice, Websites, Email &amp; Training in Nepal">
-    <meta property="og:description" content="See the rate, then buy or book online. Volume SMS and voice, websites, Zoho email, and field cyber training.">
-    <meta property="og:type" content="website">
+    <?php
+    require_once __DIR__ . '/includes/seo.php';
+    $homeSameAs = array();
+    foreach ($siteSocials as $social) {
+        $homeSameAs[] = $social['href'];
+    }
+    site_seo_print(
+        'Bulk SMS Provider & Hosting in Nepal | ' . $siteName,
+        'Bulk SMS provider, bulk voice calls, and hosting provider in Nepal. Domains, Zoho email, websites, and cyber training, with the rate on the page.',
+        '/',
+        site_seo_home_graph($publicSite, $homeSameAs),
+        $siteLogo
+    );
+    ?>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -334,7 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="section-heading section-heading--center reveal">
                     <span class="section-kicker">What we do</span>
                     <h2 class="font-heading">Read the rate. Buy it, or book it.</h2>
-                    <p>Each service page says who it is for, what is included, and the price. Checkout asks for the details we need, so the order does not depend on a follow-up call.</p>
+                    <p><?= site_escape($siteName) ?> is a bulk SMS provider and hosting provider in Nepal, with bulk voice calls, domains, Zoho email, websites, and on-site cyber training. Each page shows who it is for, what you enter, and the rate.</p>
                 </div>
 
                 <div class="service-grid">

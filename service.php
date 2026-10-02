@@ -52,8 +52,39 @@ $navBase = 'index.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= service_escape($service['title']) ?> | <?= service_escape($siteName) ?></title>
-    <meta name="description" content="<?= service_escape($page['lead']) ?>">
+    <?php
+    require_once __DIR__ . '/includes/seo.php';
+    $seoPhrases = site_seo_phrases();
+    $seoPhrase = isset($seoPhrases[$slug]) ? $seoPhrases[$slug] : array('title' => $service['title'], 'description' => $page['lead']);
+    $seoSameAs = array();
+    foreach ($siteSocials as $social) {
+        $seoSameAs[] = $social['href'];
+    }
+    $seoPrice = null;
+    $seoUnit = '';
+    if ($slabs) {
+        $seoStart = billing_start_slab($slabs);
+        $seoPrice = billing_selling_price($seoStart['unit_price'], isset($seoStart['offer_price']) ? $seoStart['offer_price'] : 0);
+        $seoUnit = $slug === 'bulk-voice' ? 'call' : 'SMS';
+    } else {
+        foreach ($plans as $seoPlan) {
+            if ((float) $seoPlan['price'] <= 0) {
+                continue;
+            }
+            $seoSell = billing_selling_price($seoPlan['price'], isset($seoPlan['offer_price']) ? $seoPlan['offer_price'] : 0);
+            if ($seoPrice === null || $seoSell < $seoPrice) {
+                $seoPrice = $seoSell;
+            }
+        }
+    }
+    site_seo_print(
+        $seoPhrase['title'] . ' | ' . $siteName,
+        $seoPhrase['description'],
+        'service.php?slug=' . rawurlencode($slug),
+        site_seo_service_graph($publicSite, $seoSameAs, $slug, $seoPhrase['description'], $seoPrice, $seoUnit),
+        $servicePoster !== '' ? $servicePoster : $siteLogo
+    );
+    ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -107,6 +138,16 @@ $navBase = 'index.php';
                                 <li><?= service_escape($after) ?></li>
                             <?php endforeach; ?>
                         </ul>
+                    <?php endif; ?>
+                    <?php $faqs = site_seo_faqs($slug); ?>
+                    <?php if ($faqs): ?>
+                        <h2 class="detail-subhead font-heading">Common questions</h2>
+                        <dl class="detail-faq">
+                            <?php foreach ($faqs as $faq): ?>
+                                <dt><?= service_escape($faq[0]) ?></dt>
+                                <dd><?= service_escape($faq[1]) ?></dd>
+                            <?php endforeach; ?>
+                        </dl>
                     <?php endif; ?>
                 </div>
                 <aside class="detail-panel">

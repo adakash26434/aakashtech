@@ -128,7 +128,7 @@ function billing_page_copy()
 {
     return array(
         'bulk-sms' => array(
-            'kicker' => 'Bulk SMS in Nepal',
+            'kicker' => 'Bulk SMS provider in Nepal',
             'lead' => 'Send an informational text to members, customers, voters, or your own list. The table on this page is the price. A smaller quantity costs more per SMS. A larger quantity costs less.',
             'points' => array(
                 'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
@@ -144,7 +144,7 @@ function billing_page_copy()
             )
         ),
         'bulk-voice' => array(
-            'kicker' => 'Bulk auto voice calls in Nepal',
+            'kicker' => 'Bulk voice calls in Nepal',
             'lead' => 'A recorded call carries the same kind of notice as an SMS when people are more likely to listen than to read. You type the exact words and choose Nepali or English.',
             'points' => array(
                 'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
@@ -175,7 +175,7 @@ function billing_page_copy()
             )
         ),
         'hosting-server' => array(
-            'kicker' => 'Hosting and server management',
+            'kicker' => 'Hosting provider in Nepal',
             'lead' => 'Keep one website online, with SSL and someone responsible for the server. This is hosting or server care. It is not the design of a new website.',
             'points' => array(
                 'Website hosting is one site, SSL, and routine care for a year.',
