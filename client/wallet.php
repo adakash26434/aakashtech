@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_topup'])) {
 
 $balance = billing_balance($conn, $cid);
 $units = billing_unit_balances($conn, $cid);
-$instructions = billing_payment_instructions();
+$instructions = billing_payment_instructions($conn);
 $history = $conn->prepare('SELECT * FROM wallet_entries WHERE client_id = ? ORDER BY id DESC LIMIT 20');
 $history->bind_param('i', $cid);
 $history->execute();

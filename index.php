@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     <meta name="theme-color" content="#fbfdfc">
     <title><?= site_escape($siteName) ?> | SMS, Voice, Websites, Email &amp; Training in Nepal</title>
     <meta name="description" content="Bulk SMS and auto voice calls for cooperatives, companies, and parties in Nepal, plus domains, hosting, Zoho email, custom websites, and on-site cyber training.">
-    <meta property="og:title" content="Aakash Technologies | SMS, Voice, Websites, Email &amp; Training in Nepal">
+    <meta property="og:title" content="<?= site_escape($siteName) ?> | SMS, Voice, Websites, Email &amp; Training in Nepal">
     <meta property="og:description" content="See the rate, then buy or book online. Volume SMS and voice, websites, Zoho email, and field cyber training.">
     <meta property="og:type" content="website">
 
@@ -252,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     </div>
                 </div>
 
-                <div class="hero-art reveal" aria-label="Aakash Technologies services">
+                <div class="hero-art reveal" aria-label="<?= site_escape($siteName) ?> services">
                     <div class="art-orbit" aria-hidden="true"></div>
                     <span class="art-spark art-spark--one" aria-hidden="true"></span>
                     <span class="art-spark art-spark--two" aria-hidden="true"></span>
@@ -261,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         <div class="window-top">
                             <div class="window-brand">
                                 <span class="window-brand-mark"><i data-lucide="sparkles" aria-hidden="true"></i></span>
-                                Aakash Technologies
+                                <?= site_escape($siteName) ?>
                             </div>
                             <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
                         </div>
@@ -299,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             </div>
         </section>
 
-        <div class="service-ribbon" aria-label="Aakash Technologies service categories">
+        <div class="service-ribbon" aria-label="<?= site_escape($siteName) ?> service categories">
             <div class="wrap service-ribbon-inner">
                 <div class="ribbon-lead">Buy what you need. Recurring plans renew themselves.</div>
                 <div class="ribbon-item"><i data-lucide="message-square-text" aria-hidden="true"></i> Bulk SMS</div>
@@ -362,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 </div>
 
                 <div class="about-copy">
-                    <span class="section-kicker reveal">Why Aakash Technologies</span>
+                    <span class="section-kicker reveal">Why <?= site_escape($siteName) ?></span>
                     <h2 class="reveal font-heading">The rate is on the page. The order is the brief.</h2>
                     <p class="reveal">Each service page lists who it is for, what you type before paying, and the price. Cooperatives, companies, parties, and personal use follow the same path.</p>
 

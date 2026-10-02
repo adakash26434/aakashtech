@@ -26,7 +26,7 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
 
         <nav class="desktop-nav" aria-label="Main navigation">
             <a href="<?= $navBase ?>#services">Services</a>
-            <a href="<?= $navBase ?>#about">Why Aakash</a>
+            <a href="<?= $navBase ?>#about">Why us</a>
             <a href="<?= $navBase ?>#process">How we work</a>
             <a href="<?= $navBase ?>#contact">Contact</a>
         </nav>
@@ -55,7 +55,7 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
          x-transition:enter-end="mobile-nav-enter-end"
          @click.outside="mobileOpen = false" aria-label="Mobile navigation">
         <a href="<?= $navBase ?>#services" @click="mobileOpen = false">Services</a>
-        <a href="<?= $navBase ?>#about" @click="mobileOpen = false">Why Aakash</a>
+        <a href="<?= $navBase ?>#about" @click="mobileOpen = false">Why us</a>
         <a href="<?= $navBase ?>#process" @click="mobileOpen = false">How we work</a>
         <a href="<?= $navBase ?>#contact" @click="mobileOpen = false">Contact</a>
         <a href="client/login.php">

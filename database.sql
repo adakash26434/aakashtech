@@ -180,7 +180,10 @@ INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('site_location', 'Kathmandu, Nepal'),
 ('footer_text', 'Designed and built in Nepal.'),
 ('footer_tagline', 'Practical technology for businesses ready to grow.'),
-('logo_path', '');
+('logo_path', ''),
+('esewa_id', ''),
+('khalti_id', ''),
+('bank_details', '');
 
 INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('service_pricing_bulk-sms', '{"label":"Indicative rate","amount":"NPR 0.65–0.95 per SMS","details":"Lower per-message rates at higher volume."}'),

@@ -23,7 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         'instagram_url' => 200,
         'youtube_url' => 200,
         'tiktok_url' => 200,
-        'linkedin_url' => 200
+        'linkedin_url' => 200,
+        'esewa_id' => 40,
+        'khalti_id' => 40,
+        'bank_details' => 400
     );
     $values = array();
     foreach ($fields as $key => $limit) {
@@ -211,6 +214,15 @@ $settings = site_public_settings($conn);
                     <input type="url" name="linkedin_url" maxlength="200" class="form-input" placeholder="LinkedIn https:// link" value="<?= e($settings['linkedin_url'] ?? '') ?>">
                 </div>
                 <p class="text-slate-500 text-xs mt-2">Only filled links appear as icons in the footer. WhatsApp uses the number above.</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800">
+                <h4 class="font-heading font-semibold text-white text-sm mb-3">Wallet payment details</h4>
+                <div class="space-y-3">
+                    <input type="text" name="esewa_id" maxlength="40" class="form-input" placeholder="eSewa ID" value="<?= e($settings['esewa_id'] ?? '') ?>">
+                    <input type="text" name="khalti_id" maxlength="40" class="form-input" placeholder="Khalti ID" value="<?= e($settings['khalti_id'] ?? '') ?>">
+                    <textarea name="bank_details" maxlength="400" rows="3" class="form-input" placeholder="Bank name, account name, and account number"><?= e($settings['bank_details'] ?? '') ?></textarea>
+                </div>
+                <p class="text-slate-500 text-xs mt-2">Shown when a client adds wallet funds. A blank field keeps the value from cpanel-config.php.</p>
             </div>
             <button type="submit" name="update_settings" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save public details</button>
         </form>

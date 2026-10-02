@@ -53,7 +53,7 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
             <div class="footer-column">
                 <h2>Explore</h2>
                 <a href="<?= $navBase ?>#services">Services</a>
-                <a href="<?= $navBase ?>#about">Why Aakash</a>
+                <a href="<?= $navBase ?>#about">Why us</a>
                 <a href="<?= $navBase ?>#process">How we work</a>
                 <a href="<?= $navBase ?>#contact">Contact</a>
             </div>

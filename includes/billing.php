@@ -772,7 +772,10 @@ function site_public_defaults()
         'linkedin_url' => '',
         'footer_tagline' => 'Practical technology for businesses ready to grow.',
         'footer_text' => 'Designed and built in Nepal.',
-        'logo_path' => ''
+        'logo_path' => '',
+        'esewa_id' => defined('ESEWA_ID') ? ESEWA_ID : '',
+        'khalti_id' => defined('KHALTI_ID') ? KHALTI_ID : '',
+        'bank_details' => defined('BANK_DETAILS') ? BANK_DETAILS : ''
     );
 }
 
@@ -1420,7 +1423,6 @@ function billing_seed_slabs($conn)
 function billing_sync_catalog($conn)
 {
     billing_exec($conn, "UPDATE services SET is_active = 0 WHERE slug IN ('website-design', 'domain-hosting')");
-    $update = $conn->prepare('UPDATE services SET title = ?, description = ?, icon = ?, features = ?, sort_order = ?, is_active = 1 WHERE slug = ?');
     $insert = $conn->prepare('INSERT INTO services (title, description, icon, features, sort_order, slug, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)');
     foreach (billing_catalog_rows() as $row) {
         $title = $row[0];
@@ -1429,15 +1431,10 @@ function billing_sync_catalog($conn)
         $icon = $row[3];
         $features = $row[4];
         $sort = (int) $row[5];
-        $update->bind_param('ssssis', $title, $description, $icon, $features, $sort, $slug);
-        $update->execute();
-        if (billing_affected($conn) > 0) {
-            continue;
-        }
         $check = $conn->prepare('SELECT id FROM services WHERE slug = ?');
         $check->bind_param('s', $slug);
         $check->execute();
-        $found = $check->get_result()->fetch_assoc();
+        $found = db_fetch_assoc($check);
         $check->close();
         if ($found) {
             continue;
@@ -1445,8 +1442,111 @@ function billing_sync_catalog($conn)
         $insert->bind_param('ssssis', $title, $description, $icon, $features, $sort, $slug);
         $insert->execute();
     }
-    $update->close();
     $insert->close();
+}
+
+function billing_catalog_overrides($conn)
+{
+    $map = array();
+    if (!$conn) {
+        return $map;
+    }
+    try {
+        $result = $conn->query('SELECT slug, title, description, features, is_active FROM services');
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $map[(string) $row['slug']] = $row;
+            }
+        }
+    } catch (Throwable $exception) {
+        return array();
+    }
+    return $map;
+}
+
+function billing_service_view($slug, $override)
+{
+    $definitions = billing_service_definitions();
+    if (!isset($definitions[$slug])) {
+        return null;
+    }
+    $service = $definitions[$slug];
+    if (!is_array($override)) {
+        return $service;
+    }
+    $title = trim((string) (isset($override['title']) ? $override['title'] : ''));
+    $description = trim((string) (isset($override['description']) ? $override['description'] : ''));
+    $features = trim((string) (isset($override['features']) ? $override['features'] : ''));
+    if ($title !== '') {
+        $service['title'] = $title;
+    }
+    if ($description !== '') {
+        $service['summary'] = $description;
+    }
+    if ($features !== '') {
+        $tags = array();
+        foreach (explode(',', $features) as $tag) {
+            $tag = trim($tag);
+            if ($tag !== '') {
+                $tags[] = $tag;
+            }
+        }
+        if ($tags) {
+            $service['tags'] = $tags;
+        }
+    }
+    return $service;
+}
+
+function billing_save_public_service($conn, $slug, $title, $description, $features)
+{
+    $known = billing_service_definitions();
+    if (!isset($known[$slug])) {
+        return 'That service is not on the public site.';
+    }
+    $title = substr(trim((string) $title), 0, 120);
+    $description = substr(trim((string) $description), 0, 500);
+    $features = substr(trim((string) $features), 0, 300);
+    if ($title === '') {
+        return 'The public title is required.';
+    }
+    $check = $conn->prepare('SELECT id FROM services WHERE slug = ?');
+    $check->bind_param('s', $slug);
+    $check->execute();
+    $found = db_fetch_assoc($check);
+    $check->close();
+    if ($found) {
+        $stmt = $conn->prepare('UPDATE services SET title = ?, description = ?, features = ?, is_active = 1 WHERE slug = ?');
+        $stmt->bind_param('ssss', $title, $description, $features, $slug);
+        $stmt->execute();
+        $stmt->close();
+        billing_set_setting($conn, 'service_text_' . $slug, '1');
+        return '';
+    }
+    $icon = 'code';
+    $sort = 0;
+    foreach (billing_catalog_rows() as $row) {
+        if ($row[1] === $slug) {
+            $icon = $row[3];
+            $sort = (int) $row[5];
+            break;
+        }
+    }
+    $stmt = $conn->prepare('INSERT INTO services (title, description, icon, features, sort_order, slug, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)');
+    $stmt->bind_param('ssssis', $title, $description, $icon, $features, $sort, $slug);
+    $stmt->execute();
+    $stmt->close();
+    billing_set_setting($conn, 'service_text_' . $slug, '1');
+    return '';
+}
+
+function billing_saved_service_view($conn, $slug, $overrides)
+{
+    $override = null;
+    if ($conn && billing_setting($conn, 'service_text_' . $slug) === '1' && isset($overrides[$slug])) {
+        $override = $overrides[$slug];
+    }
+    return billing_service_view($slug, $override);
 }
 
 function billing_normalize_plan($row)
@@ -1530,11 +1630,13 @@ function billing_public_cards($conn)
         $grouped[$plan['service_slug']][] = $plan;
     }
 
+    $overrides = billing_catalog_overrides($conn);
     $cards = array();
     foreach (billing_service_definitions() as $slug => $service) {
         if (empty($grouped[$slug])) {
             continue;
         }
+        $service = billing_saved_service_view($conn, $slug, $overrides);
         $servicePlans = $grouped[$slug];
         $slabs = ($slug === 'bulk-sms' || $slug === 'bulk-voice') ? billing_slabs_for($conn, $slug) : array();
         $lines = array();
@@ -1606,12 +1708,28 @@ function client_safe_next($value)
     return $value;
 }
 
-function billing_payment_instructions()
+function billing_payment_instructions($conn = null)
 {
+    $esewa = (defined('ESEWA_ID') && ESEWA_ID !== '') ? ESEWA_ID : '';
+    $khalti = (defined('KHALTI_ID') && KHALTI_ID !== '') ? KHALTI_ID : '';
+    $bank = (defined('BANK_DETAILS') && BANK_DETAILS !== '') ? BANK_DETAILS : '';
+    if ($conn) {
+        $settings = site_public_settings($conn);
+        if (isset($settings['esewa_id']) && trim((string) $settings['esewa_id']) !== '') {
+            $esewa = trim((string) $settings['esewa_id']);
+        }
+        if (isset($settings['khalti_id']) && trim((string) $settings['khalti_id']) !== '') {
+            $khalti = trim((string) $settings['khalti_id']);
+        }
+        if (isset($settings['bank_details']) && trim((string) $settings['bank_details']) !== '') {
+            $bank = trim((string) $settings['bank_details']);
+        }
+    }
+    $name = ($conn && isset($settings['site_name']) && trim((string) $settings['site_name']) !== '') ? trim((string) $settings['site_name']) : 'the company';
     return array(
-        'esewa' => 'Pay with eSewa to ' . ((defined('ESEWA_ID') && ESEWA_ID !== '') ? ESEWA_ID : '98XXXXXXXX') . ', then enter the transaction code.',
-        'khalti' => 'Pay with Khalti to ' . ((defined('KHALTI_ID') && KHALTI_ID !== '') ? KHALTI_ID : '98XXXXXXXX') . ', then enter the transaction code.',
-        'bank' => (defined('BANK_DETAILS') && BANK_DETAILS !== '') ? BANK_DETAILS : 'Transfer to the company bank account shared by Aakash Technologies, then enter the voucher or reference number.'
+        'esewa' => 'Pay with eSewa to ' . ($esewa !== '' ? $esewa : 'the eSewa ID in Settings') . ', then enter the transaction code.',
+        'khalti' => 'Pay with Khalti to ' . ($khalti !== '' ? $khalti : 'the Khalti ID in Settings') . ', then enter the transaction code.',
+        'bank' => $bank !== '' ? $bank : 'Transfer to the company bank account shared by ' . $name . ', then enter the voucher or reference number.'
     );
 }
 

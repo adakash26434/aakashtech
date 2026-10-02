@@ -16,7 +16,6 @@ if (!isset($definitions[$slug]) || !isset($pages[$slug])) {
     exit;
 }
 
-$service = $definitions[$slug];
 $page = $pages[$slug];
 $publicSite = site_public_defaults();
 $conn = null;
@@ -35,6 +34,8 @@ $siteLocation = $publicSite['site_location'];
 $siteTagline = $publicSite['footer_tagline'];
 $siteFooter = $publicSite['footer_text'];
 $siteLogo = $publicSite['logo_path'];
+$overrides = $conn ? billing_catalog_overrides($conn) : array();
+$service = billing_saved_service_view($conn, $slug, $overrides);
 $servicePoster = $conn ? site_service_poster($conn, $slug) : '';
 
 $plans = array();
@@ -51,7 +52,7 @@ $navBase = 'index.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= service_escape($service['title']) ?> | Aakash Technologies</title>
+    <title><?= service_escape($service['title']) ?> | <?= service_escape($siteName) ?></title>
     <meta name="description" content="<?= service_escape($page['lead']) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
