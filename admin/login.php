@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $exception) {
             error_log('Admin sign-in could not read the account.');
             $admin = null;
-            $error = 'Sign-in could not be completed. Try again in a moment.';
+            $error = 'The admin account could not be read. In cpanel-config.php set admin_email and a password of at least 6 characters, then open this page again.';
         }
 
         if ($error === '' && $admin && (int)$admin['is_active'] === 1 && password_verify($password, (string) $admin['password'])) {

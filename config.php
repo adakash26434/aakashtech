@@ -75,6 +75,11 @@ try {
     error_log('Login attempt log could not be created.');
 }
 try {
+    auth_ensure_admin_table($conn);
+} catch (Throwable $exception) {
+    error_log('Admin account table could not be created.');
+}
+try {
     cpanel_apply_admin($conn, cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''), isset($cpanel['admin_password']) ? (string) $cpanel['admin_password'] : (getenv('ADMIN_PASSWORD') !== false ? (string) getenv('ADMIN_PASSWORD') : ''));
 } catch (Throwable $exception) {
     error_log('Admin account could not be updated from cpanel-config.php.');
@@ -105,7 +110,12 @@ function cpanel_apply_admin($conn, $email, $password)
         return;
     }
     $stamp = hash('sha256', $email . "\0" . $password);
-    $saved = (string) billing_setting($conn, 'cpanel_admin_stamp');
+    $saved = '';
+    try {
+        $saved = (string) billing_setting($conn, 'cpanel_admin_stamp');
+    } catch (Throwable $exception) {
+        $saved = '';
+    }
     if ($saved !== '' && hash_equals($saved, $stamp)) {
         return;
     }
@@ -113,9 +123,12 @@ function cpanel_apply_admin($conn, $email, $password)
     $name = 'Admin';
     $role = 'super_admin';
     $stmt = $conn->prepare('SELECT id FROM admin_users WHERE email = ? LIMIT 1');
+    if (!$stmt) {
+        throw new RuntimeException('Admin account could not be read.');
+    }
     $stmt->bind_param('s', $email);
     $stmt->execute();
-    $existing = $stmt->get_result()->fetch_assoc();
+    $existing = db_fetch_assoc($stmt);
     $stmt->close();
     if ($existing) {
         $id = (int) $existing['id'];
@@ -219,6 +232,35 @@ function auth_client_ip() {
     return substr($ip, 0, 45);
 }
 
+function auth_ensure_admin_table($conn) {
+    if (DB_DRIVER === 'sqlite') {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS admin_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'admin',
+            is_active INTEGER DEFAULT 1,
+            last_login TEXT DEFAULT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
+        return;
+    }
+    billing_exec($conn, 'CREATE TABLE IF NOT EXISTS admin_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT "admin",
+        is_active TINYINT(1) DEFAULT 1,
+        last_login DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
 function auth_ensure_attempts($conn) {
     if (DB_DRIVER === 'sqlite') {
         billing_exec($conn, 'CREATE TABLE IF NOT EXISTS login_attempts (
@@ -243,12 +285,15 @@ function db_fetch_assoc($stmt) {
         return null;
     }
     if (method_exists($stmt, 'get_result')) {
-        $result = $stmt->get_result();
-        if (!$result) {
-            return null;
+        try {
+            $result = $stmt->get_result();
+            if ($result) {
+                $row = $result->fetch_assoc();
+                return $row ? $row : null;
+            }
+        } catch (Throwable $exception) {
+            error_log('Falling back while reading a database row.');
         }
-        $row = $result->fetch_assoc();
-        return $row ? $row : null;
     }
     $meta = $stmt->result_metadata();
     if (!$meta) {
