@@ -1711,6 +1711,11 @@ a.contact-method:hover strong {
 
 .site-notice-card--image .site-notice-copy {
     padding: 0;
+    text-align: center;
+}
+
+.site-notice-card--image .site-notice-actions {
+    justify-content: center;
 }
 
 .site-notice-kicker {
