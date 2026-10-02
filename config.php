@@ -172,6 +172,9 @@ function require_client() {
     $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
     $prefix = strpos($script, '/client/') !== false ? '' : 'client/';
     if (!is_client_logged_in()) {
+        $page = basename($script);
+        $query = isset($_SERVER['QUERY_STRING']) ? (string) $_SERVER['QUERY_STRING'] : '';
+        $_SESSION['client_next'] = client_safe_next($query === '' ? $page : $page . '?' . $query);
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
@@ -519,22 +522,33 @@ function auth_account_is_active($role) {
     if (!$conn) {
         return false;
     }
-    if ($role === 'admin') {
-        $id = (int) ($_SESSION['admin_id'] ?? 0);
-        $stmt = $conn->prepare('SELECT is_active FROM admin_users WHERE id = ?');
+    try {
+        if ($role === 'admin') {
+            $id = (int) ($_SESSION['admin_id'] ?? 0);
+            $stmt = $conn->prepare('SELECT is_active FROM admin_users WHERE id = ?');
+            if (!$stmt) {
+                return false;
+            }
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            return $row && (int) $row['is_active'] === 1;
+        }
+        $id = (int) ($_SESSION['client_id'] ?? 0);
+        $stmt = $conn->prepare('SELECT status FROM client_users WHERE id = ?');
+        if (!$stmt) {
+            return false;
+        }
         $stmt->bind_param('i', $id);
         $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
+        $row = db_fetch_assoc($stmt);
         $stmt->close();
-        return $row && (int) $row['is_active'] === 1;
+        return $row && $row['status'] === 'active';
+    } catch (Throwable $exception) {
+        error_log('Account status could not be read.');
+        return false;
     }
-    $id = (int) ($_SESSION['client_id'] ?? 0);
-    $stmt = $conn->prepare('SELECT status FROM client_users WHERE id = ?');
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    return $row && $row['status'] === 'active';
 }
 
 function auth_drop_role($role) {

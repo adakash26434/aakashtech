@@ -16,13 +16,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_read'])) {
     }
 }
 
-if ($filter === 'all') {
-    $inquiries = $conn->query('SELECT * FROM inquiries ORDER BY created_at DESC');
-} else {
-    $stmt = $conn->prepare('SELECT * FROM inquiries WHERE status = ? ORDER BY created_at DESC');
-    $stmt->bind_param('s', $filter);
-    $stmt->execute();
-    $inquiries = $stmt->get_result();
+$inquiries = array();
+try {
+    if ($filter === 'all') {
+        $result = $conn->query('SELECT * FROM inquiries ORDER BY created_at DESC');
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $inquiries[] = $row;
+            }
+        }
+    } else {
+        $stmt = $conn->prepare('SELECT * FROM inquiries WHERE status = ? ORDER BY created_at DESC');
+        if ($stmt) {
+            $stmt->bind_param('s', $filter);
+            $stmt->execute();
+            $inquiries = db_fetch_all($stmt);
+            $stmt->close();
+        }
+    }
+} catch (Throwable $exception) {
+    error_log('Inquiries could not be listed.');
+    $inquiries = array();
 }
 ?>
 <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
@@ -40,7 +54,7 @@ if ($filter === 'all') {
 </div>
 
 <div class="dash-panel overflow-hidden">
-    <?php if ($inquiries && $inquiries->num_rows > 0): ?>
+    <?php if ($inquiries): ?>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -54,7 +68,7 @@ if ($filter === 'all') {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800">
-                    <?php while ($row = $inquiries->fetch_assoc()): ?>
+                    <?php foreach ($inquiries as $row): ?>
                         <tr class="hover:bg-slate-800/50 transition">
                             <td class="px-4 py-3">
                                 <p class="text-white text-sm font-medium"><?= e($row['name']) ?></p>
@@ -85,7 +99,7 @@ if ($filter === 'all') {
                                 <?php endif; ?>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>

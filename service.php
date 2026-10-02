@@ -102,9 +102,9 @@ $navBase = 'index.php';
                             <thead><tr><th>Quantity</th><th>Each</th></tr></thead>
                             <tbody>
                                 <?php foreach ($slabs as $slab): ?>
-                                    <tr>
+                                    <tr<?= !empty($slab['is_start']) ? ' class="slab-row--start"' : '' ?>>
                                         <td><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></td>
-                                        <td><?= service_escape(billing_unit_label($slab['unit_price'])) ?></td>
+                                        <td><?= service_escape(billing_unit_label($slab['unit_price'])) ?><?php if (!empty($slab['is_start'])): ?> <span class="slab-start">Starts from</span><?php endif; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -122,7 +122,7 @@ $navBase = 'index.php';
                                     <?php if ((float) $plan['price'] > 0): ?>
                                         <strong><?= service_escape(billing_money_label($plan['price'])) ?><?= service_escape(billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
                                     <?php else: ?>
-                                        <strong>Calculated from the slab</strong>
+                                        <strong>Starts from <?= service_escape(billing_unit_label(billing_start_slab($slabs)['unit_price'])) ?> each</strong>
                                     <?php endif; ?>
                                     <a class="button button--small button--primary" href="<?= service_escape(billing_buy_href_plan($plan['code'])) ?>"><?= service_escape($service['action']) ?></a>
                                 </div>

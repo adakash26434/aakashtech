@@ -17,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_auto_renew'])) {
 $services = $conn->prepare('SELECT * FROM client_services WHERE client_id = ? ORDER BY id DESC');
 $services->bind_param('i', $cid);
 $services->execute();
-$serviceRows = $services->get_result();
+$serviceRows = db_fetch_all($services);
+$services->close();
 $units = billing_unit_balances($conn, $cid);
 $balance = billing_balance($conn, $cid);
 ?>
@@ -36,9 +37,9 @@ $balance = billing_balance($conn, $cid);
     <div class="mb-4 p-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-brand-400 text-sm"><?= e($toggleMessage) ?></div>
 <?php endif; ?>
 
-<?php if ($serviceRows && $serviceRows->num_rows > 0): ?>
+<?php if ($serviceRows): ?>
     <div class="grid sm:grid-cols-2 gap-4">
-        <?php while ($s = $serviceRows->fetch_assoc()): ?>
+        <?php foreach ($serviceRows as $s): ?>
             <?php
             $renewable = isset($s['billing_cycle']) && ($s['billing_cycle'] === 'monthly' || $s['billing_cycle'] === 'yearly');
             $status = (string) $s['status'];
@@ -96,7 +97,7 @@ $balance = billing_balance($conn, $cid);
                     <?php endif; ?>
                 </div>
             </article>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </div>
 <?php else: ?>
     <div class="dash-panel">
@@ -106,7 +107,4 @@ $balance = billing_balance($conn, $cid);
         </div>
     </div>
 <?php endif; ?>
-<?php
-$services->close();
-require_once __DIR__ . '/includes/footer.php';
-?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

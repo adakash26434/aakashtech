@@ -44,6 +44,10 @@ foreach (billing_load_plans($conn) as $plan) {
                 </div>
                 <a href="../service.php?slug=<?= e(rawurlencode($slug)) ?>" class="text-brand-400 text-sm">Full explanation</a>
             </div>
+            <?php
+            $bands = ($slug === 'bulk-sms' || $slug === 'bulk-voice') ? billing_slabs_for($conn, $slug) : array();
+            $startBand = $bands ? billing_start_slab($bands) : null;
+            ?>
             <div class="grid md:grid-cols-2 gap-4">
                 <?php foreach ($grouped[$slug] as $plan): ?>
                     <article class="dash-panel">
@@ -59,6 +63,13 @@ foreach (billing_load_plans($conn) as $plan) {
                             <p class="text-slate-500 text-sm mb-4"><?= e($plan['summary']) ?></p>
                             <?php if ((float) $plan['price'] > 0): ?>
                                 <p class="font-heading font-bold text-white text-xl mb-4"><?= e(billing_money_label($plan['price'])) ?><span class="text-slate-500 text-sm font-medium"><?= e(billing_cycle_suffix($plan['billing_cycle'])) ?></span></p>
+                            <?php elseif ($startBand): ?>
+                                <p class="font-heading font-bold text-white text-xl mb-2">Starts from <?= e(billing_unit_label($startBand['unit_price'])) ?> each</p>
+                                <ul class="text-slate-500 text-xs space-y-1 mb-4">
+                                    <?php foreach ($bands as $band): ?>
+                                        <li><?= number_format($band['min_qty']) ?>–<?= number_format($band['max_qty']) ?> · <?= e(billing_unit_label($band['unit_price'])) ?><?= !empty($band['is_start']) ? ' · starts from' : '' ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
                             <?php else: ?>
                                 <p class="font-heading font-bold text-white text-xl mb-4">Volume rate</p>
                             <?php endif; ?>

@@ -28,7 +28,8 @@ $instructions = billing_payment_instructions();
 $history = $conn->prepare('SELECT * FROM wallet_entries WHERE client_id = ? ORDER BY id DESC LIMIT 20');
 $history->bind_param('i', $cid);
 $history->execute();
-$entries = $history->get_result();
+$entries = db_fetch_all($history);
+$history->close();
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Wallet</h1>
@@ -105,15 +106,15 @@ $entries = $history->get_result();
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
-                <?php if ($entries && $entries->num_rows > 0): ?>
-                    <?php while ($entry = $entries->fetch_assoc()): ?>
+                <?php if ($entries): ?>
+                    <?php foreach ($entries as $entry): ?>
                         <tr>
                             <td class="px-4 py-3 text-slate-400 text-sm"><?= e(date('M d, Y', strtotime($entry['created_at']))) ?></td>
                             <td class="px-4 py-3 text-white text-sm"><?= e(ucfirst($entry['kind'])) ?><?= $entry['reference_note'] !== '' ? ' · ' . e($entry['reference_note']) : '' ?></td>
                             <td class="px-4 py-3 text-sm <?= $entry['direction'] === 'credit' ? 'text-green-400' : 'text-white' ?>"><?= $entry['direction'] === 'credit' ? '+' : '−' ?><?= e(billing_money_label($entry['amount'])) ?></td>
                             <td class="px-4 py-3 text-slate-400 text-sm"><?= e(ucfirst($entry['status'])) ?></td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 <?php else: ?>
                     <tr><td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm">No wallet activity yet.</td></tr>
                 <?php endif; ?>
@@ -121,7 +122,4 @@ $entries = $history->get_result();
         </table>
     </div>
 </section>
-<?php
-$history->close();
-require_once __DIR__ . '/includes/footer.php';
-?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
