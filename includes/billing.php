@@ -396,6 +396,12 @@ function billing_create_tables($conn)
             unit_price NUMERIC NOT NULL,
             sort_order INTEGER DEFAULT 0
         )');
+        billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT NOT NULL UNIQUE,
+            setting_value TEXT DEFAULT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )');
         return;
     }
 
@@ -456,6 +462,12 @@ function billing_create_tables($conn)
         unit_price DECIMAL(12,2) NOT NULL,
         sort_order INT DEFAULT 0,
         INDEX idx_slab_service (service_slug)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(100) NOT NULL UNIQUE,
+        setting_value TEXT DEFAULT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -572,12 +584,16 @@ function site_public_settings($conn)
     if (!$conn) {
         return $settings;
     }
-    $stored = array();
-    $result = $conn->query('SELECT setting_key, setting_value FROM site_settings');
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $stored[(string) $row['setting_key']] = (string) $row['setting_value'];
+    try {
+        $stored = array();
+        $result = $conn->query('SELECT setting_key, setting_value FROM site_settings');
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $stored[(string) $row['setting_key']] = (string) $row['setting_value'];
+            }
         }
+    } catch (Throwable $exception) {
+        return $settings;
     }
     $managed = isset($stored['public_details_managed']) && $stored['public_details_managed'] === '1';
     if (!$managed) {
@@ -676,10 +692,18 @@ function site_logo_web_path($path)
 function site_portal_identity($conn)
 {
     $brand = site_public_settings($conn);
-    $letter = strtoupper(substr($brand['site_name'], 0, 1));
+    $name = isset($brand['site_name']) ? trim((string) $brand['site_name']) : '';
+    if ($name === '') {
+        $name = 'Aakash Technologies';
+    }
+    $letter = strtoupper(substr($name, 0, 1));
+    $logo = '';
+    if (isset($brand['logo_path'])) {
+        $logo = site_logo_web_path($brand['logo_path']);
+    }
     return array(
-        'name' => $brand['site_name'] !== '' ? $brand['site_name'] : 'Aakash Technologies',
-        'logo' => site_logo_web_path($brand['logo_path']),
+        'name' => $name,
+        'logo' => $logo,
         'letter' => $letter !== '' ? $letter : 'A'
     );
 }

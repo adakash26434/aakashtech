@@ -113,6 +113,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $check->close();
     }
 }
+
+$identity = array('name' => 'Aakash Technologies', 'logo' => '', 'letter' => 'A');
+try {
+    $identity = site_portal_identity($conn);
+} catch (Throwable $exception) {
+    error_log('Client login could not load the site name.');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -144,7 +151,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 
     <div class="relative z-10 w-full max-w-md mx-4">
         <div class="text-center mb-8">
-            <?php $identity = site_portal_identity($conn); ?>
             <a href="../index.php" class="inline-flex items-center justify-center gap-3 mb-6">
                 <?php if ($identity['logo'] !== ''): ?>
                     <img src="<?= e($identity['logo']) ?>" alt="" class="w-12 h-12 rounded-xl object-contain bg-white p-1">
