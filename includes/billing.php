@@ -708,6 +708,90 @@ function site_portal_identity($conn)
     );
 }
 
+function site_poster_file($path)
+{
+    $path = str_replace('\\', '/', (string) $path);
+    if (!preg_match('/^uploads\/service-poster-[a-z0-9-]+\.(png|jpe?g|webp|gif)$/', $path)) {
+        return '';
+    }
+    $full = dirname(__DIR__) . '/' . $path;
+    return is_file($full) ? $path : '';
+}
+
+function site_poster_web_path($path)
+{
+    $path = site_poster_file($path);
+    if ($path === '') {
+        return '';
+    }
+    $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+    $prefix = (strpos($script, '/admin/') !== false || strpos($script, '/client/') !== false) ? '../' : '';
+    return $prefix . $path;
+}
+
+function site_service_poster($conn, $slug)
+{
+    $definitions = billing_service_definitions();
+    if (!isset($definitions[$slug]) || !$conn) {
+        return '';
+    }
+    try {
+        $stored = billing_setting($conn, 'service_poster_' . $slug);
+    } catch (Throwable $exception) {
+        return '';
+    }
+    return site_poster_web_path($stored);
+}
+
+function site_store_poster($file, $slug)
+{
+    $definitions = billing_service_definitions();
+    if (!isset($definitions[$slug])) {
+        return array('ok' => false, 'error' => 'That service is not on the public site.');
+    }
+    if (!is_array($file) || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return array('ok' => true, 'path' => null);
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        return array('ok' => false, 'error' => 'The photo could not be uploaded.');
+    }
+    if ((int) $file['size'] > 4194304) {
+        return array('ok' => false, 'error' => 'Use a photo smaller than 4 MB.');
+    }
+    $mime = '';
+    if (class_exists('finfo')) {
+        $info = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $info->file($file['tmp_name']);
+    }
+    $types = array('image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/gif' => 'gif');
+    $image = @getimagesize($file['tmp_name']);
+    $imageTypes = array(IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg', IMAGETYPE_GIF => 'gif');
+    if (defined('IMAGETYPE_WEBP')) {
+        $imageTypes[IMAGETYPE_WEBP] = 'webp';
+    }
+    if (!isset($types[$mime]) || !$image || !isset($imageTypes[$image[2]]) || $types[$mime] !== $imageTypes[$image[2]]) {
+        return array('ok' => false, 'error' => 'The photo must be a PNG, JPG, WEBP, or GIF image.');
+    }
+    if ((int) $image[0] < 1 || (int) $image[1] < 1 || (int) $image[0] > 4000 || (int) $image[1] > 4000) {
+        return array('ok' => false, 'error' => 'Use a photo no larger than 4000 pixels on a side.');
+    }
+    $dir = dirname(__DIR__) . '/uploads';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return array('ok' => false, 'error' => 'The uploads folder could not be created.');
+    }
+    $relative = 'uploads/service-poster-' . $slug . '.' . $imageTypes[$image[2]];
+    $target = dirname(__DIR__) . '/' . $relative;
+    foreach (glob($dir . '/service-poster-' . $slug . '.*') as $old) {
+        if (is_file($old)) {
+            unlink($old);
+        }
+    }
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        return array('ok' => false, 'error' => 'The photo could not be saved.');
+    }
+    return array('ok' => true, 'path' => $relative);
+}
+
 function site_store_logo($file)
 {
     if (!is_array($file) || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {

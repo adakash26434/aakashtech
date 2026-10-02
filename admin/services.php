@@ -50,7 +50,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_service'])) {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_poster'])) {
+    verify_csrf();
+    $slug = isset($_POST['poster_slug']) ? (string) $_POST['poster_slug'] : '';
+    $known = billing_service_definitions();
+    if (!isset($known[$slug])) {
+        $err = 'That service is not on the public site.';
+    } else {
+        $poster = site_store_poster(isset($_FILES['poster']) ? $_FILES['poster'] : array(), $slug);
+        if (!$poster['ok']) {
+            $err = $poster['error'];
+        } else {
+            if (!empty($_POST['remove_poster'])) {
+                $dir = dirname(__DIR__) . '/uploads';
+                foreach (glob($dir . '/service-poster-' . $slug . '.*') as $old) {
+                    if (is_file($old)) {
+                        unlink($old);
+                    }
+                }
+                billing_set_setting($conn, 'service_poster_' . $slug, '');
+            } elseif ($poster['path'] !== null) {
+                billing_set_setting($conn, 'service_poster_' . $slug, $poster['path']);
+            }
+            $msg = 'Service photo saved.';
+        }
+    }
+}
+
 $services = $conn->query("SELECT * FROM services ORDER BY sort_order, id");
+$posterServices = billing_service_definitions();
 ?>
 <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
     <div>
@@ -73,6 +101,37 @@ $services = $conn->query("SELECT * FROM services ORDER BY sort_order, id");
             <p class="text-slate-500 text-xs mt-1">The public cards and client shop use the prices saved in Billing.</p>
         </div>
         <a href="billing.php" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Open billing</a>
+    </div>
+</div>
+
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">See rates photos</h3></div>
+    <div class="p-5 space-y-5">
+        <p class="text-slate-500 text-sm">Upload a photo or poster for a service. It appears on that service’s See rates page. Leave it empty and nothing is shown.</p>
+        <?php foreach ($posterServices as $slug => $service): ?>
+            <?php $posterPreview = site_service_poster($conn, $slug); ?>
+            <form method="POST" action="" enctype="multipart/form-data" class="grid sm:grid-cols-[140px_1fr] gap-4 items-center border-t border-slate-800 pt-5 first:border-0 first:pt-0">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="poster_slug" value="<?= e($slug) ?>">
+                <div>
+                    <?php if ($posterPreview !== ''): ?>
+                        <img src="<?= e($posterPreview) ?>" alt="" class="w-full max-h-24 object-contain bg-white rounded-xl p-1">
+                    <?php else: ?>
+                        <div class="h-20 rounded-xl border border-dashed border-slate-700 text-slate-500 text-xs flex items-center justify-center">No photo</div>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <p class="text-white text-sm font-medium mb-2"><?= e($service['title']) ?></p>
+                    <input type="file" name="poster" accept="image/png,image/jpeg,image/webp,image/gif" class="form-input">
+                    <?php if ($posterPreview !== ''): ?>
+                        <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" name="remove_poster" value="1"> Remove the current photo
+                        </label>
+                    <?php endif; ?>
+                    <button type="submit" name="save_poster" class="mt-3 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save photo</button>
+                </div>
+            </form>
+        <?php endforeach; ?>
     </div>
 </div>
 

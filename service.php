@@ -35,6 +35,7 @@ $siteLocation = $publicSite['site_location'];
 $siteTagline = $publicSite['footer_tagline'];
 $siteFooter = $publicSite['footer_text'];
 $siteLogo = $publicSite['logo_path'];
+$servicePoster = $conn ? site_service_poster($conn, $slug) : '';
 
 $plans = array();
 foreach (($conn ? billing_load_plans($conn) : billing_default_plans()) as $plan) {
@@ -66,7 +67,13 @@ $navBase = 'index.php';
     <?php include __DIR__ . '/includes/site-header.php'; ?>
     <main id="main-content">
         <section class="section detail-section">
-            <div class="wrap detail-layout">
+            <div class="wrap">
+            <?php if ($servicePoster !== ''): ?>
+                <figure class="detail-poster">
+                    <img src="<?= service_escape($servicePoster) ?>" alt="<?= service_escape($service['title']) ?>">
+                </figure>
+            <?php endif; ?>
+            <div class="detail-layout">
                 <div>
                     <a class="detail-back" href="index.php#services">All services</a>
                     <span class="section-kicker"><?= service_escape($page['kicker']) ?></span>
@@ -123,6 +130,7 @@ $navBase = 'index.php';
                         <?php endforeach; ?>
                     </div>
                 </aside>
+            </div>
             </div>
         </section>
     </main>
