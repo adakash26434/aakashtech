@@ -93,11 +93,25 @@ $navBase = 'index.php';
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
+                    <h2 class="detail-subhead font-heading">How you buy it</h2>
+                    <ul class="detail-points">
+                        <?php foreach (billing_buy_steps() as $step): ?>
+                            <li><?= service_escape($step) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php if (!empty($page['after'])): ?>
+                        <h2 class="detail-subhead font-heading">After you pay</h2>
+                        <ul class="detail-points">
+                            <?php foreach ($page['after'] as $after): ?>
+                                <li><?= service_escape($after) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                 </div>
                 <aside class="detail-panel">
                     <?php if ($slabs): ?>
                         <h2 class="font-heading">Rate by volume</h2>
-                        <p>A smaller quantity uses the higher rate. A larger quantity uses the lower rate.</p>
+                        <p>Use the row that contains your quantity. That row is the price for each one. A quantity outside the table cannot be ordered.</p>
                         <table class="slab-table">
                             <thead><tr><th>Quantity</th><th>Each</th></tr></thead>
                             <tbody>
@@ -111,7 +125,7 @@ $navBase = 'index.php';
                         </table>
                     <?php else: ?>
                         <h2 class="font-heading">Choose a package</h2>
-                        <p>The price shown is the price charged from your wallet.</p>
+                        <p>The amount below is taken from your wallet. Yearly and monthly plans renew on the due date. A one-time booking is paid once.</p>
                     <?php endif; ?>
                     <div class="detail-plans">
                         <?php foreach ($plans as $plan): ?>

@@ -129,72 +129,109 @@ function billing_page_copy()
     return array(
         'bulk-sms' => array(
             'kicker' => 'Bulk SMS in Nepal',
-            'lead' => 'Send an informational text to members, customers, voters, or your own list. The rate on this page is the rate you pay. A short list costs more per SMS. A long list costs less.',
+            'lead' => 'Send an informational text to members, customers, voters, or your own list. The table on this page is the price. A smaller quantity costs more per SMS. A larger quantity costs less.',
             'points' => array(
-                'For cooperatives, companies, parties, and personal messages.',
-                'Typical uses: AGM, program, event, election, festival, and general notices.',
-                'You choose the sender name, write the message, and set how many SMS you need before you pay.',
-                'Credits are added as soon as the wallet payment succeeds. The client panel then shows the SMS portal login. Sending is done at sms.aakashtechnologies.com.np with that username and password.',
+                'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
+                'Type a quantity that sits inside one row of the rate table. That row is the price per SMS. The homepage Starts from label is only the row chosen for the front page.',
+                'The sender name is 3 to 11 letters or numbers, such as Sahakari. Write the exact message people should receive.',
+                'A number list is optional. If you paste one, each line must be one 10-digit mobile and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
                 'Before payment you accept a declaration: the message will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
+            ),
+            'after' => array(
+                'The SMS count is added to your client account as soon as the wallet payment succeeds.',
+                'This website keeps the order and the credits. Sending is done at sms.aakashtechnologies.com.np. The client panel shows the username and password for that portal after the purchase.',
+                'A copy saved under Messages does not reduce those credits. The credits stay until they are used in the SMS portal.'
             )
         ),
         'bulk-voice' => array(
             'kicker' => 'Bulk auto voice calls in Nepal',
-            'lead' => 'A recorded voice call carries the same kind of notice as an SMS when people are more likely to listen than to read. You write the script on this form.',
+            'lead' => 'A recorded call carries the same kind of notice as an SMS when people are more likely to listen than to read. You type the exact words and choose Nepali or English.',
             'points' => array(
-                'Same audiences: cooperative, company, party, or personal.',
-                'Same occasions: AGM, program, event, election, festival, or a general notice.',
-                'Choose Nepali or English and the date the calls should go out.',
-                'The price is per call and drops as the volume rises. There is no separate quote call. An active voice or SMS purchase also opens the SMS portal login in the client panel.',
+                'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
+                'Type a quantity that sits inside one row of the rate table. That row is the price per call. The homepage Starts from label is only the row chosen for the front page.',
+                'Write the exact script people should hear, and choose Nepali or English. Add a send date if you already know it.',
+                'A number list is optional. If you paste one, each line must be one 10-digit mobile and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
                 'Before payment you accept a declaration: the call will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
+            ),
+            'after' => array(
+                'The call count is added to your client account as soon as the wallet payment succeeds.',
+                'This website keeps the order, the script, and the credits. The calls are sent from the portal at sms.aakashtechnologies.com.np. An active SMS or voice purchase shows that login in the client panel.',
+                'A copy saved under Messages does not reduce those credits.'
             )
         ),
         'domain-registration' => array(
             'kicker' => 'Domain registration in Nepal',
-            'lead' => 'Reserve the name your cooperative, company, or project will use online. The yearly price renews from your wallet unless you turn auto-renew off.',
+            'lead' => 'Reserve the web name your cooperative, company, or project will use. Choose .com or .com.np. The price is for one year and can renew from your wallet.',
             'points' => array(
-                '.com and .com.np are listed with the price.',
-                'Enter the exact domain and the organization name. That is the whole order.',
-                'Registration is requested after payment. This site does not check the registrar live. If the name is already taken, the team returns the amount to your wallet.'
+                '.com and .com.np are the two names sold here. The price beside each one is the yearly price.',
+                'Type the exact domain, such as yourcoop.com.np, and the organization or person it belongs to. That is the whole order.',
+                'This page does not ask a registrar whether the name is free. The team registers it after payment.',
+                'Hosting and email are separate. Buying the name does not put a website or mailboxes online.'
+            ),
+            'after' => array(
+                'The team registers the name you typed. If that name is already taken, the team returns the price to your wallet once.',
+                'The year renews from the wallet on the due date. You can turn auto-renew off from the client panel.',
+                'You still buy hosting, email, or a website separately if you need them.'
             )
         ),
         'hosting-server' => array(
             'kicker' => 'Hosting and server management',
-            'lead' => 'Keep a website online, with SSL and someone responsible for the server. This is yearly hosting or monthly server management, not a custom design project.',
+            'lead' => 'Keep one website online, with SSL and someone responsible for the server. This is hosting or server care. It is not the design of a new website.',
             'points' => array(
-                'Website hosting covers one site, SSL, and routine care for a year.',
-                'Managed server is monthly care when the server itself needs watching.',
-                'Tell us the domain and what the server is for. Renewal continues from the wallet.'
+                'Website hosting is one site, SSL, and routine care for a year.',
+                'Managed server is monthly care when a person needs to watch the server, for a website or for website plus email.',
+                'Type the domain, the organization, and whether this is a new website, an existing website, or a website plus email.',
+                'The domain name is separate. Register it on the domain page if you do not already have it. A custom design is the website service.'
+            ),
+            'after' => array(
+                'The team sets up the hosting or server care from the domain and the use you selected.',
+                'A yearly hosting plan and a monthly managed-server plan renew from the wallet on the due date.',
+                'Turning auto-renew off stops the next charge. It does not refund the period already paid.'
             )
         ),
         'professional-email' => array(
             'kicker' => 'Domain email for organizations',
-            'lead' => 'Mailboxes such as info@yourcoop.com.np, run on Zoho and looked after by Aakash Technologies, a Zoho authorized partner in Nepal.',
+            'lead' => 'Mailboxes such as info@yourcoop.com.np, on Zoho, looked after by Aakash Technologies, a Zoho authorized partner in Nepal.',
             'points' => array(
-                'For cooperatives and any organization that should not use a free personal address.',
-                'Choose 1, 5, or 10 mailboxes and type the names you want, such as info or chairperson.',
-                'The domain must be yours, or buy the domain on this site first.',
-                'The yearly fee renews from your wallet.'
+                'For a cooperative or any organization that should send mail from its own domain, not from a free personal address.',
+                'Choose 1, 5, or 10 mailboxes. Type exactly that many names, one per line, without @. info becomes info@yourdomain.',
+                'The domain must already be yours. If it is not, buy it on the domain page first.',
+                'The yearly price renews from the wallet.'
+            ),
+            'after' => array(
+                'The team creates the Zoho mailboxes from the names you typed and looks after them.',
+                'This website records the order. It does not open the Zoho account by itself.',
+                'The year renews from the wallet. Turn auto-renew off in the client panel if the mailboxes should stop at the end of the year.'
             )
         ),
         'custom-websites' => array(
             'kicker' => 'Websites built for a specific organization',
-            'lead' => 'Pick the kind of site you need. The price is the full booking price for the pages named on that package. The form collects the brief, so the project can start without a discovery call.',
+            'lead' => 'Pick the kind of site you need. The price is the full price for the pages named on that package. The booking form is the brief, so the work can start without a discovery call.',
             'points' => array(
                 'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal.',
-                'Each package lists the pages that are included.',
-                'You add what the site must do, the about text, the public phone and email, a preferred domain, a deadline, and the business address.',
-                'A different page count is a different package, chosen here. It is not arranged over the phone.'
+                'Each package names the pages included, such as home, about, services, and contact. A different set of pages is a different package.',
+                'You write what the site must do, the about text, the public phone and email, a preferred domain, a deadline, and the business address.',
+                'Domain, hosting, and email are separate purchases. This price is the website itself, paid once.'
+            ),
+            'after' => array(
+                'The saved form is the brief the team builds from. Photos and extra words can be added in that same brief.',
+                'The date you enter is the deadline you are asking for. The booking is the request to start.',
+                'This is a one-time booking. It does not renew from the wallet.'
             )
         ),
         'cyber-security' => array(
             'kicker' => 'Field cyber training',
-            'lead' => 'The trainer comes to your address. Directors, staff, and members learn how to use current technology, how the wrong use creates risk, and how to reduce cyber attacks.',
+            'lead' => 'The trainer comes to your address. Directors, staff, and members learn how to use current tools, how the wrong use creates risk, and how to reduce cyber attacks.',
             'points' => array(
-                'Separate sessions for directors (sanchalak), staff (karmachari), and members (sadasya), plus a full field day.',
-                'Topics stay practical: phones, email, passwords, fake links, payment fraud, and what to do when an account looks compromised.',
-                'You enter the venue address, district, headcount, preferred date, and the topics to spend time on. That booking is the request to come to you.',
-                'Headcount cannot be higher than the package. Choose the larger session if the room is bigger.'
+                'Directors (sanchalak) up to 25 people. Staff (karmachari) up to 40. Members (sadasya) up to 100. The full field day is one day for those groups together, up to 120 people.',
+                'Topics you can choose: safe use of phones, email, and online tools; risk from sharing passwords, OTPs, or links; fake messages, fraud calls, and payment traps; and what to do when an account or payment looks wrong.',
+                'Type the organization, the venue address, the district, the headcount, and a preferred date. Add a note if the room, the language mix, or one topic needs more time.',
+                'The headcount cannot be higher than the package. Choose the larger session if more people will attend.'
+            ),
+            'after' => array(
+                'The booking is the request for the trainer to come to that address. The date you pick is the date you are asking for.',
+                'The team uses the topics and the note you saved. There is no separate briefing call.',
+                'This is one visit, paid once. It does not renew from the wallet.'
             )
         )
     );
@@ -1220,11 +1257,20 @@ function billing_training_topics()
     );
 }
 
+function billing_buy_steps()
+{
+    return array(
+        'Create a client account.',
+        'Add wallet funds by eSewa, Khalti, or bank transfer. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
+        'Fill the form for this service, review the price, and pay from the wallet. Domain, hosting, email, and managed server renew from that wallet on the due date.'
+    );
+}
+
 function billing_checkout_asks($slug)
 {
     $asks = array(
-        'bulk-sms' => array('Who it is for', 'Why it is being sent', 'How many SMS', 'Sender name', 'The exact message', 'Send date, if known', 'Number list, or add it later from Messages', 'A signed declaration that the message is lawful'),
-        'bulk-voice' => array('Who it is for', 'Why it is being sent', 'How many calls', 'Nepali or English', 'The exact script', 'Send date, if known', 'Number list, or add it later from Messages', 'A signed declaration that the call is lawful'),
+        'bulk-sms' => array('Who it is for', 'Why it is being sent', 'How many SMS, inside one row of the rate table', 'Sender name, 3 to 11 letters or numbers', 'The exact message', 'Send date, if you already know it', 'Optional 10-digit number list, only when the count matches the quantity', 'The declaration that the message is lawful'),
+        'bulk-voice' => array('Who it is for', 'Why it is being sent', 'How many calls, inside one row of the rate table', 'Nepali or English', 'The exact script', 'Send date, if you already know it', 'Optional 10-digit number list, only when the count matches the quantity', 'The declaration that the call is lawful'),
         'domain-registration' => array('The exact domain', 'Organization or person name'),
         'hosting-server' => array('Domain', 'Organization', 'Whether it hosts a new site, an existing site, or site plus email'),
         'professional-email' => array('Your domain', 'Organization', 'One mailbox name per line, matching the package'),
