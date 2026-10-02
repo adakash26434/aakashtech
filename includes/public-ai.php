@@ -152,7 +152,7 @@ function site_ai_public_notes($conn)
         }
     }
     $lines[] = '';
-    $lines[] = 'A .com name is checked in the .com registry. A .com.np name is checked at register.com.np. A free name can be requested. The team registers it after the wallet payment, then marks it active. If it cannot be registered, the amount returns to the wallet. Hosting, email, and a website are separate.';
+    $lines[] = 'A .com name is checked in the .com registry. Nepal endings such as .com.np and .coop.np are checked at register.com.np. A free name can be requested. The team registers it after the wallet payment, then marks it active. If it cannot be registered, the amount returns to the wallet. Hosting, email, and a website are separate.';
     return implode("\n", $lines);
 }
 

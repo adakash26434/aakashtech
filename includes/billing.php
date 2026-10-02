@@ -21,9 +21,9 @@ function billing_service_definitions()
         ),
         'domain-registration' => array(
             'title' => 'Domain registration',
-            'summary' => 'Check a .com or .com.np name, then request the year.',
+            'summary' => 'Check a .com name, or a Nepal name such as .com.np or .coop.np, then request the year.',
             'icon' => 'globe',
-            'tags' => array('.com', '.com.np', 'Auto-renew'),
+            'tags' => array('.com', '.com.np', '.coop.np'),
             'contact' => 'Domain Registration',
             'action' => 'Register'
         ),
@@ -68,7 +68,7 @@ function billing_default_plans()
         array('code' => 'sms-slab', 'service_slug' => 'bulk-sms', 'name' => 'SMS by volume', 'summary' => 'Pay the slab rate for the exact number of informational SMS you need.', 'billing_cycle' => 'one_time', 'price' => 0, 'unit_kind' => 'sms', 'unit_quantity' => 0, 'auto_renew_default' => 0, 'needs_detail' => 'sms', 'sort_order' => 10),
         array('code' => 'voice-slab', 'service_slug' => 'bulk-voice', 'name' => 'Auto voice calls by volume', 'summary' => 'Pay the slab rate for the exact number of auto voice calls you need.', 'billing_cycle' => 'one_time', 'price' => 0, 'unit_kind' => 'voice_calls', 'unit_quantity' => 0, 'auto_renew_default' => 0, 'needs_detail' => 'voice', 'sort_order' => 20),
         array('code' => 'domain-com', 'service_slug' => 'domain-registration', 'name' => '.com domain', 'summary' => 'One .com domain for a year, renewed from your wallet.', 'billing_cycle' => 'yearly', 'price' => 2400, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'domain', 'sort_order' => 30),
-        array('code' => 'domain-np', 'service_slug' => 'domain-registration', 'name' => '.com.np domain', 'summary' => 'One .com.np domain for a year, renewed from your wallet.', 'billing_cycle' => 'yearly', 'price' => 1500, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'domain', 'sort_order' => 40),
+        array('code' => 'domain-np', 'service_slug' => 'domain-registration', 'name' => '.np domain', 'summary' => 'One Nepal name, such as .com.np or .coop.np, for a year. Renewed from the wallet.', 'billing_cycle' => 'yearly', 'price' => 1500, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'domain', 'sort_order' => 40),
         array('code' => 'hosting-business', 'service_slug' => 'hosting-server', 'name' => 'Website hosting', 'summary' => 'Yearly hosting with SSL for one website, plus routine server care.', 'billing_cycle' => 'yearly', 'price' => 4800, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'hosting', 'sort_order' => 50),
         array('code' => 'hosting-managed', 'service_slug' => 'hosting-server', 'name' => 'Managed server', 'summary' => 'Monthly server management for a site or mail server that needs a person watching it.', 'billing_cycle' => 'monthly', 'price' => 8500, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'hosting', 'sort_order' => 60),
         array('code' => 'email-1', 'service_slug' => 'professional-email', 'name' => '1 Zoho mailbox', 'summary' => 'One name@yourdomain.com mailbox on Zoho, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 1800, 'unit_kind' => 'mailbox', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 70),
@@ -171,11 +171,11 @@ function billing_page_copy()
         ),
         'domain-registration' => array(
             'kicker' => 'Domain registration in Nepal',
-            'lead' => 'Check whether the name is free, then request .com or .com.np for a year. The year starts when the team marks it active.',
+            'lead' => 'Check whether the name is free, then request .com or a Nepal ending such as .com.np or .coop.np for a year. The year starts when the team marks it active.',
             'points' => array(
-                '.com and .com.np are the two names requested here. The price beside each one is the yearly list price.',
-                'Check the name on the Domain registration page first. .com.np is checked at register.com.np. .com is checked in the .com registry record.',
-                'If the name is free, send the request with the holder and address. A .com.np request also includes the registry document. Pay the yearly bill from the wallet after that. The team registers the name only once it is paid, then marks it active.',
+                '.com is one yearly price. Every Nepal ending on register.com.np uses the other yearly price: .com.np, .edu.np, .gov.np, .net.np, .org.np, .info.np, .mil.np, .name.np, and .coop.np. The registry decides who can hold .edu.np, .gov.np, and .mil.np.',
+                'Check the name on the Domain registration page first. A Nepal ending is checked at register.com.np. .com is checked in the .com registry record.',
+                'If the name is free, send the request with the holder and address. A Nepal request also includes the registry document. Pay the yearly bill from the wallet after that. The team registers the name only once it is paid, then marks it active.',
                 'Hosting and email are separate. Requesting the name does not put a website or mailboxes online.'
             ),
             'after' => array(
@@ -303,9 +303,9 @@ function billing_service_guide()
         ),
         'domain-registration' => array(
             'includes' => array(
-                '.com checked in the Verisign record, .com.np checked at register.com.np',
+                '.com checked in the Verisign record, Nepal endings such as .com.np and .coop.np checked at register.com.np',
                 'One year, then renewal from the wallet',
-                'A .com.np request includes the registry document',
+                'A Nepal request includes the registry document',
                 'The team registers a paid name, then the portal shows Active'
             ),
             'steps' => array(
@@ -319,7 +319,7 @@ function billing_service_guide()
             ),
             'plans' => array(
                 'domain-com' => 'A .com name for one year',
-                'domain-np' => 'A .com.np name for one year'
+                'domain-np' => 'A Nepal name, such as .com.np or .coop.np, for one year'
             ),
             'next' => array(
                 array('hosting-server', 'Keep a site online'),
@@ -448,7 +448,7 @@ function billing_catalog_rows()
     return array(
         array('Bulk SMS Service', 'bulk-sms', 'Informational SMS for cooperatives, companies, parties, and personal use, priced by volume.', 'message-square-text', 'AGM,Election,Festival', 1),
         array('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
-        array('Domain Registration', 'domain-registration', 'Register a .com or .com.np domain and renew it automatically.', 'globe', '.com,.com.np,Auto-renew', 3),
+        array('Domain Registration', 'domain-registration', 'Register a .com name, or a Nepal name such as .com.np or .coop.np, and renew it from the wallet.', 'globe', '.com,.com.np,.coop.np,Auto-renew', 3),
         array('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
         array('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
         array('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),
@@ -2419,6 +2419,20 @@ function billing_sync_catalog($conn)
         $insert->execute();
     }
     $insert->close();
+    foreach (billing_catalog_rows() as $row) {
+        if ($row[1] !== 'domain-registration') {
+            continue;
+        }
+        $oldDescription = 'Register a .com or .com.np domain and renew it automatically.';
+        $oldFeatures = '.com,.com.np,Auto-renew';
+        $description = $row[2];
+        $features = $row[4];
+        $slug = $row[1];
+        $update = $conn->prepare('UPDATE services SET description = ?, features = ? WHERE slug = ? AND description = ? AND features = ?');
+        $update->bind_param('sssss', $description, $features, $slug, $oldDescription, $oldFeatures);
+        $update->execute();
+        $update->close();
+    }
 }
 
 function billing_catalog_overrides($conn)

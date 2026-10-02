@@ -18,7 +18,7 @@ $askToken = function_exists('csrf_token') ? csrf_token() : '';
         <form class="ask-form">
             <input type="hidden" name="csrf_token" value="<?= site_escape($askToken) ?>">
             <label class="ask-label" for="ask-question">Your question</label>
-            <textarea id="ask-question" name="question" rows="2" maxlength="600" required placeholder="For example, what does a .com.np name include?"></textarea>
+            <textarea id="ask-question" name="question" rows="2" maxlength="600" required placeholder="For example, what does a .coop.np name include?"></textarea>
             <button class="button button--primary" type="submit">Ask</button>
         </form>
     </section>

@@ -58,7 +58,7 @@ $fundsLeft = $balance;
             <?php if ($status !== 'declined'): ?>
             <ol class="domain-steps">
                 <li class="is-done">Name checked as available</li>
-                <li class="is-done">Request sent<?= $row['document_path'] !== '' ? ' with the .com.np document' : '' ?></li>
+                <li class="is-done">Request sent<?= $row['document_path'] !== '' ? ' with the registry document' : '' ?></li>
                 <li class="<?= $paid ? 'is-done' : 'is-current' ?>"><?= $price > 0 ? 'Yearly bill paid from the wallet' : 'No separate bill on this request' ?></li>
                 <li class="<?= $status === 'active' ? 'is-done' : ($registering ? 'is-current' : '') ?>">The team registers this name at the registry</li>
                 <li class="<?= $status === 'active' ? 'is-done' : '' ?>">Active, then the year renews from the wallet</li>

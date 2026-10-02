@@ -240,7 +240,7 @@ $navBase = 'index.php';
                                     $planHref = billing_buy_href_plan($plan['code']);
                                     $planAction = $service['action'];
                                     if ($plan['code'] === 'domain-com' || $plan['code'] === 'domain-np') {
-                                        $planHref = 'domain.php?tld=' . ($plan['code'] === 'domain-np' ? 'com.np' : 'com');
+                                        $planHref = $plan['code'] === 'domain-np' ? 'domain.php' : 'domain.php?tld=com';
                                         $planAction = 'Check this name';
                                     }
                                     ?>

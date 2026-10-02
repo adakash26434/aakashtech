@@ -39,7 +39,7 @@ function site_seo_phrases()
         ),
         'domain-registration' => array(
             'title' => 'Domain registration in Nepal',
-            'description' => 'Register a .com or .com.np domain in Nepal. The yearly price is on this page and can renew from your wallet. Hosting and email are separate.'
+            'description' => 'Register a .com name, or a Nepal name such as .com.np or .coop.np. The yearly price is on this page and can renew from your wallet. Hosting and email are separate.'
         ),
         'hosting-server' => array(
             'title' => 'Hosting provider in Nepal',
@@ -74,8 +74,8 @@ function site_seo_faqs($slug)
             array('How is the voice-call rate calculated?', 'The row that contains your quantity is the price per call. A quantity outside the table cannot be ordered.')
         ),
         'domain-registration' => array(
-            array('Which domains can I register?', '.com and .com.np. The Domain registration page checks the name, then you request it and pay the yearly bill from the wallet.'),
-            array('Does the site check if the name is free?', 'Yes. .com.np is checked at register.com.np and .com is checked in the Verisign registry record. The team registers a paid request, then marks it active. If the name cannot be registered, the amount returns to the wallet.')
+            array('Which domains can I register?', '.com, and the Nepal endings listed on register.com.np, including .com.np and .coop.np. The Domain registration page checks the name, then you request it and pay the yearly bill from the wallet.'),
+            array('Does the site check if the name is free?', 'Yes. A Nepal ending is checked at register.com.np and .com is checked in the Verisign registry record. The team registers a paid request, then marks it active. If the name cannot be registered, the amount returns to the wallet.')
         ),
         'hosting-server' => array(
             array('What does this hosting provider include?', 'Yearly hosting is one website, SSL, and routine care. Monthly managed server is for a site or mail server that needs a person watching it.'),

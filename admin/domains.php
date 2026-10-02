@@ -56,13 +56,13 @@ try {
             <?php if ($price > 0): ?>
                 <p class="text-slate-300 text-sm mb-3">Yearly bill <?= e(billing_money_label($price)) ?>, already including 13% VAT.</p>
             <?php endif; ?>
-            <?php if ($row['tld'] === 'com.np'): ?>
-                <p class="text-slate-400 text-sm mb-3">Register this name at <a class="text-brand-400" href="https://register.com.np/" target="_blank" rel="noopener">register.com.np</a> with the holder, address, and document below.</p>
+            <?php if (domain_is_np($row['tld'])): ?>
+                <p class="text-slate-400 text-sm mb-3">Register this .<?= e($row['tld']) ?> name at <a class="text-brand-400" href="https://register.com.np/" target="_blank" rel="noopener">register.com.np</a> with the holder, address, and document below.</p>
             <?php else: ?>
                 <p class="text-slate-400 text-sm mb-3">Register this .com name at the registrar you use, with the holder and address below.</p>
             <?php endif; ?>
             <?php if ($row['document_path'] !== ''): ?>
-                <p class="mb-2"><a class="text-brand-400 text-sm" href="domain-file.php?id=<?= (int) $row['id'] ?>">Open the .com.np document</a></p>
+                <p class="mb-2"><a class="text-brand-400 text-sm" href="domain-file.php?id=<?= (int) $row['id'] ?>">Open the registry document</a></p>
                 <?php if ($fileNote !== ''): ?><p class="text-yellow-200 text-sm mb-3"><?= e($fileNote) ?></p><?php endif; ?>
             <?php endif; ?>
             <?php if ($row['status'] === 'requested' && $price > 0): ?>

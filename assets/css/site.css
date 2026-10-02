@@ -1821,6 +1821,7 @@ a.contact-method:hover strong {
 }
 
 .domain-check input[type="text"],
+.domain-check select,
 .domain-request input[type="text"],
 .domain-request input[type="email"],
 .domain-request input[type="tel"],

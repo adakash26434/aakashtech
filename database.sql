@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS services (
 INSERT IGNORE INTO services (title, slug, description, icon, features, sort_order) VALUES
 ('Bulk SMS Service', 'bulk-sms', 'Informational SMS for cooperatives, companies, parties, and personal use, priced by volume.', 'message-square-text', 'AGM,Election,Festival', 1),
 ('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
-('Domain Registration', 'domain-registration', 'Register a .com or .com.np domain and renew it automatically.', 'globe', '.com,.com.np,Auto-renew', 3),
+('Domain Registration', 'domain-registration', 'Register a .com name, or a Nepal name such as .com.np or .coop.np, and renew it from the wallet.', 'globe', '.com,.com.np,.coop.np,Auto-renew', 3),
 ('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
 ('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
 ('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),

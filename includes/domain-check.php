@@ -1,12 +1,34 @@
 <?php
 
+function domain_np_tlds()
+{
+    return array('com.np', 'edu.np', 'gov.np', 'net.np', 'org.np', 'info.np', 'mil.np', 'name.np', 'coop.np');
+}
+
+function domain_is_np($tld)
+{
+    return in_array((string) $tld, domain_np_tlds(), true);
+}
+
 function domain_label($raw)
 {
     $raw = strtolower(trim((string) $raw));
     $raw = preg_replace('#^https?://#', '', $raw);
     $raw = preg_replace('#^www\.#', '', $raw);
-    $raw = preg_replace('#\.(com\.np|com)$#', '', $raw);
     $raw = trim((string) $raw, '.');
+    $endings = domain_np_tlds();
+    $endings[] = 'com';
+    usort($endings, function ($left, $right) {
+        return strlen($right) - strlen($left);
+    });
+    foreach ($endings as $ending) {
+        $suffix = '.' . $ending;
+        $suffixLength = strlen($suffix);
+        if (strlen($raw) > $suffixLength && substr($raw, -$suffixLength) === $suffix) {
+            $raw = substr($raw, 0, -$suffixLength);
+            break;
+        }
+    }
     if (!preg_match('/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/', $raw)) {
         return '';
     }
@@ -15,18 +37,23 @@ function domain_label($raw)
 
 function domain_tld($raw)
 {
-    return $raw === 'com.np' ? 'com.np' : 'com';
+    $raw = strtolower(trim((string) $raw));
+    $raw = ltrim($raw, '.');
+    if ($raw === 'com' || domain_is_np($raw)) {
+        return $raw;
+    }
+    return '';
 }
 
 function domain_check_result($label, $tld)
 {
     $label = domain_label($label);
     $tld = domain_tld($tld);
-    if ($label === '') {
-        return array('status' => 'invalid', 'domain' => '');
+    if ($label === '' || $tld === '') {
+        return array('status' => 'invalid', 'domain' => '', 'tld' => $tld, 'label' => $label);
     }
     $domain = $label . '.' . $tld;
-    $status = $tld === 'com.np' ? domain_check_np($label) : domain_check_com($domain);
+    $status = domain_is_np($tld) ? domain_check_np($label, $tld) : domain_check_com($domain);
     return array('status' => $status, 'domain' => $domain, 'tld' => $tld, 'label' => $label);
 }
 
@@ -70,7 +97,7 @@ function domain_curl($url, $post, $cookieFile, $follow, $headOnly = false)
     return array('code' => $code, 'body' => substr($raw, $headerSize), 'location' => $location);
 }
 
-function domain_check_np($label)
+function domain_check_np($label, $tld)
 {
     $cookie = tempnam(sys_get_temp_dir(), 'npdomain');
     if ($cookie === false) {
@@ -85,10 +112,15 @@ function domain_check_np($label)
         @unlink($cookie);
         return 'unknown';
     }
+    $extension = domain_tld($tld);
+    if (!domain_is_np($extension)) {
+        @unlink($cookie);
+        return 'unknown';
+    }
     $check = domain_curl('https://register.com.np/checkdomain', array(
         '_token' => $token,
         'domainName' => $label,
-        'domainExtension' => '.com.np'
+        'domainExtension' => '.' . $extension
     ), $cookie, false);
     @unlink($cookie);
     if (strpos($check['location'], 'domainavailable') !== false) {
@@ -149,7 +181,7 @@ function domain_store_document($clientId, $file)
 {
     $clientId = (int) $clientId;
     if (!is_array($file) || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
-        return array('ok' => false, 'error' => 'Attach the document for this .com.np name.');
+        return array('ok' => false, 'error' => 'Attach the document for this Nepal name.');
     }
     if ((int) $file['error'] !== UPLOAD_ERR_OK) {
         return array('ok' => false, 'error' => 'The document could not be uploaded.');
@@ -259,7 +291,11 @@ function domain_request_queue($conn)
 
 function domain_year_bill($conn, $tld)
 {
-    $code = domain_tld($tld) === 'com.np' ? 'domain-np' : 'domain-com';
+    $tld = domain_tld($tld);
+    if ($tld === '') {
+        return array('total' => '0.00', 'label' => '');
+    }
+    $code = domain_is_np($tld) ? 'domain-np' : 'domain-com';
     $plan = billing_find_plan($conn, $code);
     if (!$plan || (float) $plan['price'] <= 0) {
         return array('total' => '0.00', 'label' => '');
@@ -363,8 +399,8 @@ function domain_start_service($conn, $row)
     $next = billing_add_cycle($today, $cycle);
     $auto = 1;
     $status = 'active';
-    $planCode = $row['tld'] === 'com.np' ? 'domain-np' : 'domain-com';
-    $name = $row['tld'] === 'com.np' ? 'Domain registration — .com.np domain' : 'Domain registration — .com domain';
+    $planCode = domain_is_np($row['tld']) ? 'domain-np' : 'domain-com';
+    $name = 'Domain registration — .' . $row['tld'];
     $description = 'One ' . $row['tld'] . ' domain for a year, renewed from the wallet.';
     $detail = $row['domain_name'];
     $address = isset($row['holder_address']) ? $row['holder_address'] : '';

@@ -14,7 +14,7 @@ $siteFooter = $publicSite['footer_text'];
 $siteLogo = $publicSite['logo_path'];
 $loggedIn = is_client_logged_in();
 $freshClient = false;
-$tld = isset($_GET['tld']) ? domain_tld($_GET['tld']) : (isset($_POST['tld']) ? domain_tld($_POST['tld']) : 'com.np');
+$tld = isset($_GET['tld']) ? domain_tld($_GET['tld']) : (isset($_POST['tld']) ? domain_tld($_POST['tld']) : '');
 $error = '';
 $typedLabel = '';
 $offer = isset($_SESSION['domain_offer']) && is_array($_SESSION['domain_offer']) ? $_SESSION['domain_offer'] : null;
@@ -36,8 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_domain'])) {
         $_SESSION['domain_check_at'] = time();
         $typedLabel = trim((string) (isset($_POST['label']) ? $_POST['label'] : ''));
         $tld = domain_tld(isset($_POST['tld']) ? $_POST['tld'] : '');
-        $result = domain_check_result(isset($_POST['label']) ? $_POST['label'] : '', $tld);
-        if ($result['status'] === 'invalid') {
+        $result = $tld === '' ? array('status' => 'invalid') : domain_check_result(isset($_POST['label']) ? $_POST['label'] : '', $tld);
+        if ($tld === '') {
+            $error = 'Choose an ending, such as .com.np, .coop.np, or .com.';
+            unset($_SESSION['domain_offer']);
+            $offer = null;
+        } elseif ($result['status'] === 'invalid') {
             $error = 'Enter the name only, such as yourcoop. Leave out www and the ending.';
             unset($_SESSION['domain_offer']);
             $offer = null;
@@ -128,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
         }
     }
     $document = '';
-    if ($error === '' && $offer && $offer['tld'] === 'com.np') {
+    if ($error === '' && $offer && domain_is_np($offer['tld'])) {
         $stored = domain_store_document($clientId, isset($_FILES['document']) ? $_FILES['document'] : array());
         if (!$stored['ok']) {
             $error = $stored['error'];
@@ -202,14 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
     }
 }
 
-$prices = array('com' => '', 'com.np' => '');
-foreach (array('com' => 'domain-com', 'com.np' => 'domain-np') as $priceTld => $planCode) {
-    $plan = billing_find_plan($conn, $planCode);
-    if ($plan && (float) $plan['price'] > 0) {
-        $bill = billing_vat_bill(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0));
-        $prices[$priceTld] = billing_money_label($bill['total']) . ' with 13% VAT for one year';
-    }
-}
+$yearBill = $offer ? domain_year_bill($conn, $offer['tld']) : array('label' => '');
 $checkedLabel = $offer ? $offer['label'] : $typedLabel;
 $checkedTld = $offer ? $offer['tld'] : $tld;
 if (!isset($holderName)) {
@@ -254,7 +251,7 @@ if (!isset($accountPhone)) {
                 <div>
                     <p class="section-kicker">Domain registration</p>
                     <h1 class="font-heading">Check the name, then request it.</h1>
-                    <p class="domain-lead">.com.np is checked on Nepal's official register at register.com.np. .com is checked in the Verisign .com registry record. A free name can be requested. You pay the yearly bill from the wallet, the team registers that name, and the client portal shows Active after that. The paid year starts then and renews from the wallet.</p>
+                    <p class="domain-lead">Choose the ending. Nepal names such as .com.np and .coop.np are checked at register.com.np. .com is checked in the Verisign record. A Nepal request includes the registry document. .edu.np, .gov.np, and .mil.np are on that official list, and the registry decides who can hold them. A free name can be requested. You pay the yearly bill from the wallet, the team registers that name, and the client portal shows Active after that. The paid year starts then and renews from the wallet.</p>
                     <h2 class="detail-subhead font-heading">After the name is active</h2>
                     <ul class="detail-points">
                         <li><a href="service.php?slug=hosting-server">Hosting</a> keeps a website online. It is a separate yearly or monthly bill.</li>
@@ -270,10 +267,14 @@ if (!isset($accountPhone)) {
                         <input type="hidden" name="csrf_token" value="<?= site_escape(csrf_token()) ?>">
                         <label for="label">Name</label>
                         <input id="label" name="label" type="text" maxlength="63" required placeholder="yourcoop" value="<?= site_escape($checkedLabel) ?>">
-                        <div class="domain-tlds">
-                            <label><input type="radio" name="tld" value="com.np" <?= $checkedTld === 'com.np' ? 'checked' : '' ?>> .com.np</label>
-                            <label><input type="radio" name="tld" value="com" <?= $checkedTld === 'com' ? 'checked' : '' ?>> .com</label>
-                        </div>
+                    <label for="tld">Ending</label>
+                    <select id="tld" name="tld" class="domain-ending" required>
+                        <option value="" <?= $checkedTld === '' ? 'selected' : '' ?>>Choose an ending</option>
+                        <?php foreach (domain_np_tlds() as $ending): ?>
+                            <option value="<?= site_escape($ending) ?>" <?= $checkedTld === $ending ? 'selected' : '' ?>>.<?= site_escape($ending) ?></option>
+                        <?php endforeach; ?>
+                        <option value="com" <?= $checkedTld === 'com' ? 'selected' : '' ?>>.com</option>
+                    </select>
                         <label for="human_check">What is <?= site_escape(auth_math_prompt('domain-check')) ?>?</label>
                         <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
                         <button class="button button--primary" type="submit" name="check_domain" value="1">Check availability</button>
@@ -281,10 +282,10 @@ if (!isset($accountPhone)) {
                     <?php if ($offer && $offer['status'] === 'taken'): ?>
                         <p class="domain-result domain-result--taken"><?= site_escape($offer['domain']) ?> is already registered. Choose another name.</p>
                     <?php elseif ($offer && $offer['status'] === 'available'): ?>
-                        <p class="domain-result domain-result--free"><?= site_escape($offer['domain']) ?> is available. Send the request below.<?php if ($prices[$offer['tld']] !== ''): ?> Yearly bill <?= site_escape($prices[$offer['tld']]) ?>.<?php endif; ?></p>
+                        <p class="domain-result domain-result--free"><?= site_escape($offer['domain']) ?> is available. Send the request below.<?php if ($yearBill['label'] !== ''): ?> Yearly bill <?= site_escape($yearBill['label']) ?>.<?php endif; ?></p>
                         <form method="POST" enctype="multipart/form-data" class="domain-request">
                             <input type="hidden" name="csrf_token" value="<?= site_escape(csrf_token()) ?>">
-                            <label for="holder_name"><?= $offer['tld'] === 'com.np' ? 'Person or organization on the document' : 'Person or organization' ?></label>
+                            <label for="holder_name"><?= domain_is_np($offer['tld']) ? 'Person or organization on the document' : 'Person or organization' ?></label>
                             <input id="holder_name" name="holder_name" type="text" maxlength="200" required value="<?= site_escape($holderName) ?>">
                             <div class="domain-tlds">
                                 <label><input type="radio" name="holder_kind" value="individual" <?= $holderKind !== 'organization' ? 'checked' : '' ?>> Individual</label>
@@ -292,7 +293,7 @@ if (!isset($accountPhone)) {
                             </div>
                             <label for="holder_address">Address for the registration</label>
                             <input id="holder_address" name="holder_address" type="text" maxlength="200" required value="<?= site_escape($holderAddress) ?>">
-                            <?php if ($offer['tld'] === 'com.np'): ?>
+                            <?php if (domain_is_np($offer['tld'])): ?>
                                 <label for="document">Registry document</label>
                                 <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. register.com.np accepts a JPG or PNG.</p>
                                 <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">

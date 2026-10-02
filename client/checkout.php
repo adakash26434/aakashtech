@@ -13,7 +13,7 @@ if (!preg_match('/^[a-z0-9-]{2,40}$/', $requestedPlan)) {
     exit;
 }
 if ($requestedPlan === 'domain-com' || $requestedPlan === 'domain-np') {
-    header('Location: ../domain.php?tld=' . ($requestedPlan === 'domain-np' ? 'com.np' : 'com'));
+    header('Location: ' . ($requestedPlan === 'domain-np' ? '../domain.php' : '../domain.php?tld=com'));
     exit;
 }
 

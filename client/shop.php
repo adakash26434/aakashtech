@@ -80,7 +80,7 @@ foreach (billing_load_plans($conn) as $plan) {
                             $planHref = 'checkout.php?plan=' . rawurlencode($plan['code']);
                             $planLabel = $service['action'];
                             if ($plan['code'] === 'domain-com' || $plan['code'] === 'domain-np') {
-                                $planHref = '../domain.php?tld=' . ($plan['code'] === 'domain-np' ? 'com.np' : 'com');
+                                $planHref = $plan['code'] === 'domain-np' ? '../domain.php' : '../domain.php?tld=com';
                                 $planLabel = 'Check this name';
                             }
                             ?>
