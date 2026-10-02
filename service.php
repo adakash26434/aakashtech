@@ -165,6 +165,14 @@ $navBase = 'index.php';
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                        <?php
+                        $sample = billing_start_slab($slabs);
+                        $sampleQty = (int) $sample['min_qty'];
+                        $sampleUnit = billing_selling_price($sample['unit_price'], isset($sample['offer_price']) ? $sample['offer_price'] : 0);
+                        $sampleBill = billing_vat_bill(round($sampleUnit * $sampleQty, 2));
+                        $sampleName = $slug === 'bulk-voice' ? 'calls' : 'SMS';
+                        ?>
+                        <p class="bill-example">Example for <?= number_format($sampleQty) ?> <?= service_escape($sampleName) ?>: <?= service_escape(billing_money_label($sampleBill['net'])) ?> plus VAT <?= service_escape(billing_money_label($sampleBill['vat'])) ?>. The bill is <?= service_escape(billing_money_label($sampleBill['total'])) ?>.</p>
                     <?php else: ?>
                         <h2 class="font-heading">Choose a package</h2>
                         <p>The amount below is the list price. The bill adds 13% VAT. Yearly and monthly plans renew that bill on the due date. A one-time booking is paid once.</p>
@@ -176,7 +184,11 @@ $navBase = 'index.php';
                                 <p><?= service_escape($plan['summary']) ?></p>
                                 <div class="plan-buy">
                                     <?php if ((float) $plan['price'] > 0): ?>
-                                        <strong><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
+                                        <?php $planBill = billing_vat_bill(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0)); ?>
+                                        <span>
+                                            <strong><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
+                                            <span class="bill-example">Bill <?= service_escape(billing_money_label($planBill['total'])) ?> with 13% VAT</span>
+                                        </span>
                                     <?php else: ?>
                                         <?php $startSlab = $slabs ? billing_start_slab($slabs) : null; ?>
                                         <strong><?php if ($startSlab): ?>Starts from <?= billing_rate_markup($startSlab['unit_price'], isset($startSlab['offer_price']) ? $startSlab['offer_price'] : 0, true, ' each') ?><?php else: ?>Volume rate<?php endif; ?></strong>

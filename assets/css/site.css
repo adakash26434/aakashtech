@@ -1142,6 +1142,19 @@ body.site-public textarea {
     line-height: 1.55;
 }
 
+.bill-example {
+    display: block;
+    margin: 6px 0 0;
+    color: var(--site-muted);
+    font-size: var(--type-body);
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.slab-table + .bill-example {
+    margin-top: 14px;
+}
+
 .detail-plans .plan-buy {
     display: flex;
     flex-wrap: wrap;

@@ -131,10 +131,10 @@ function billing_page_copy()
             'kicker' => 'Bulk SMS provider in Nepal',
             'lead' => 'Send an informational text to members, customers, voters, or your own list. The table on this page is the price. A smaller quantity costs more per SMS. A larger quantity costs less.',
             'points' => array(
-                'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
+                'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per SMS. The homepage Starts from label is only the row chosen for the front page.',
                 'The sender name is 3 to 11 letters or numbers, such as Sahakari. Write the exact message people should receive.',
-                'A number list is optional. If you paste one, each line must be one 10-digit mobile and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
+                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
                 'Before payment you accept a declaration: the message will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
             ),
             'after' => array(
@@ -147,10 +147,10 @@ function billing_page_copy()
             'kicker' => 'Bulk voice calls in Nepal',
             'lead' => 'A recorded call carries the same kind of notice as an SMS when people are more likely to listen than to read. You type the exact words and choose Nepali or English.',
             'points' => array(
-                'For a cooperative, a company, a party, or personal use. Typical notices are an AGM, program, event, election, festival, or a general notice.',
+                'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per call. The homepage Starts from label is only the row chosen for the front page.',
                 'Write the exact script people should hear, and choose Nepali or English. Add a send date if you already know it.',
-                'A number list is optional. If you paste one, each line must be one 10-digit mobile and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
+                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
                 'Before payment you accept a declaration: the call will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
             ),
             'after' => array(
