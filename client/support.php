@@ -1,0 +1,109 @@
+<?php
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
+$cid = get_client_id();
+$msg = '';
+$err = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
+    verify_csrf();
+    $subject = substr(trim($_POST['subject'] ?? ''), 0, 160);
+    $desc = substr(trim($_POST['description'] ?? ''), 0, 4000);
+    $priority = $_POST['priority'] ?? 'medium';
+    $priorities = array('low', 'medium', 'high', 'urgent');
+    if (!in_array($priority, $priorities, true)) {
+        $priority = 'medium';
+    }
+    if ($subject === '' || $desc === '') {
+        $err = 'Subject and description are required.';
+    } else {
+        $stmt = $conn->prepare("INSERT INTO support_tickets (client_id, subject, description, priority) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("isss", $cid, $subject, $desc, $priority);
+        if ($stmt->execute()) {
+            $msg = 'Support ticket created! We will respond shortly.';
+        } else {
+            $err = 'Failed to create ticket.';
+        }
+        $stmt->close();
+    }
+}
+
+$tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid ORDER BY created_at DESC");
+?>
+<div class="mb-8">
+    <h1 class="font-heading font-bold text-white text-2xl mb-1">Support</h1>
+    <p class="text-slate-500 text-sm">Get help from our support team</p>
+</div>
+
+<?php if ($msg): ?>
+    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
+<?php endif; ?>
+<?php if ($err): ?>
+    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
+<?php endif; ?>
+
+<!-- Create Ticket -->
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Open New Ticket</h3></div>
+    <form method="POST" action="" class="p-5 space-y-4">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5">Subject *</label>
+            <input type="text" name="subject" required class="form-input" placeholder="Brief description of your issue">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5">Description *</label>
+            <textarea name="description" required rows="4" class="form-input resize-none" placeholder="Describe your issue in detail..."></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5">Priority</label>
+            <select name="priority" class="form-input w-auto">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+            </select>
+        </div>
+        <button type="submit" name="create_ticket" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit Ticket</button>
+    </form>
+</div>
+
+<!-- Ticket List -->
+<div class="grid gap-4">
+    <?php if ($tickets && $tickets->num_rows > 0): ?>
+        <?php while ($t = $tickets->fetch_assoc()): ?>
+            <div class="dash-panel">
+                <div class="p-5">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="font-heading font-semibold text-white text-base"><?= e($t['subject']) ?></h3>
+                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full <?=
+                                    $t['priority'] === 'urgent' ? 'bg-red-500/20 text-red-400' :
+                                    ($t['priority'] === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                                    ($t['priority'] === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'))
+                                ?>"><?= ucfirst($t['priority']) ?></span>
+                            </div>
+                            <p class="text-slate-500 text-xs"><?= date('M d, Y · h:i A', strtotime($t['created_at'])) ?></p>
+                        </div>
+                        <span class="px-2 py-1 text-[10px] font-medium rounded-full <?=
+                            $t['status'] === 'open' ? 'bg-green-500/20 text-green-400' :
+                            ($t['status'] === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
+                            ($t['status'] === 'resolved' ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-600/20 text-slate-400'))
+                        ?>"><?= str_replace('_', ' ', ucfirst($t['status'])) ?></span>
+                    </div>
+                    <p class="text-slate-300 text-sm mb-3"><?= e($t['description']) ?></p>
+                    <?php if (!empty($t['admin_reply'])): ?>
+                        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl">
+                            <p class="text-brand-400 text-xs font-medium mb-1">Support Team Reply:</p>
+                            <p class="text-slate-300 text-sm"><?= e($t['admin_reply']) ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm">No support tickets. Open one above!</p></div>
+    <?php endif; ?>
+</div>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -1,0 +1,74 @@
+# Aakash Technologies — .htaccess
+
+# Enable URL rewriting
+RewriteEngine On
+Options -Indexes
+
+# Force HTTPS (uncomment after SSL is set up)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Default to index.php
+DirectoryIndex index.php
+
+# Hide config and the cPanel settings file. PHP can still read them.
+<FilesMatch "^(config\.php|cpanel-config\.php|router\.php|README\.md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Hide SQL file
+<Files "*.sql">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</Files>
+
+RewriteRule ^includes/ - [F,L]
+
+# Protect .htaccess itself
+<Files ".htaccess">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Gzip Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Browser Caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Remove .php extension from URLs (optional)
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME}.php -f
+# RewriteRule ^(.*)$ $1.php [L]
+
+# Custom 404 page (create 404.php if needed)
+# ErrorDocument 404 /404.php
