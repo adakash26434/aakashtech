@@ -813,6 +813,25 @@ body.site-public textarea {
     font-weight: 600;
 }
 
+.service-start {
+    margin: 18px 0 0;
+    color: var(--site-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.service-start strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--site-ink);
+    font-family: var(--site-heading);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+
 .service-price {
     display: grid;
     gap: 6px;
@@ -1035,13 +1054,21 @@ body.site-public textarea {
     line-height: 1.55;
 }
 
+.detail-plans .plan-buy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+}
+
 .detail-plans strong {
     color: var(--site-ink);
     font-size: 16px;
 }
 
 .detail-plans .button {
-    justify-self: start;
+    justify-self: end;
 }
 
 .service-pricing-disclaimer {
@@ -1056,6 +1083,7 @@ body.site-public textarea {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 8px 14px;
     margin-top: auto;
     padding-top: 16px;
@@ -1962,7 +1990,7 @@ a.contact-method:hover strong {
     }
 
     .section-heading--center {
-        text-align: left;
+        text-align: center;
     }
 
     .about-layout {

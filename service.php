@@ -111,12 +111,14 @@ $navBase = 'index.php';
                             <article>
                                 <h3 class="font-heading"><?= service_escape($plan['name']) ?></h3>
                                 <p><?= service_escape($plan['summary']) ?></p>
-                                <?php if ((float) $plan['price'] > 0): ?>
-                                    <strong><?= service_escape(billing_money_label($plan['price'])) ?><?= service_escape(billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
-                                <?php else: ?>
-                                    <strong>Calculated from the slab</strong>
-                                <?php endif; ?>
-                                <a class="button button--small button--primary" href="<?= service_escape(billing_buy_href_plan($plan['code'])) ?>"><?= service_escape($service['action']) ?></a>
+                                <div class="plan-buy">
+                                    <?php if ((float) $plan['price'] > 0): ?>
+                                        <strong><?= service_escape(billing_money_label($plan['price'])) ?><?= service_escape(billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
+                                    <?php else: ?>
+                                        <strong>Calculated from the slab</strong>
+                                    <?php endif; ?>
+                                    <a class="button button--small button--primary" href="<?= service_escape(billing_buy_href_plan($plan['code'])) ?>"><?= service_escape($service['action']) ?></a>
+                                </div>
                             </article>
                         <?php endforeach; ?>
                     </div>

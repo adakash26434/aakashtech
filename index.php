@@ -11,7 +11,7 @@ function site_posted_value($key)
     return isset($_POST[$key]) && is_string($_POST[$key]) ? trim($_POST[$key]) : '';
 }
 
-function site_render_service_price($pricing, $slug)
+function site_render_service_price($pricing, $slug, $compact = false)
 {
     if (!isset($pricing[$slug]) || !is_array($pricing[$slug])) {
         return;
@@ -22,6 +22,18 @@ function site_render_service_price($pricing, $slug)
     $amount = trim((string) ($item['amount'] ?? ''));
     $details = trim((string) ($item['details'] ?? ''));
     if ($label === '' && $amount === '' && $details === '') {
+        return;
+    }
+
+    if ($compact) {
+        $shown = $amount;
+        if (stripos($shown, 'From ') === 0) {
+            $shown = trim(substr($shown, 5));
+        }
+        if ($shown === '') {
+            return;
+        }
+        echo '<p class="service-start">Starts from <strong>' . site_escape($shown) . '</strong></p>';
         return;
     }
 
@@ -324,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                                     <span><?= site_escape($tag) ?></span>
                                 <?php endforeach; ?>
                             </div>
-                            <?php site_render_service_price(array($card['slug'] => $card['price']), $card['slug']); ?>
+                            <?php site_render_service_price(array($card['slug'] => $card['price']), $card['slug'], true); ?>
                             <div class="service-card-actions">
                                 <a class="button button--small button--primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>">See rates</a>
                             </div>
