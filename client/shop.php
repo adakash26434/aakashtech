@@ -62,12 +62,12 @@ foreach (billing_load_plans($conn) as $plan) {
                             </div>
                             <p class="text-slate-500 text-sm mb-4"><?= e($plan['summary']) ?></p>
                             <?php if ((float) $plan['price'] > 0): ?>
-                                <p class="font-heading font-bold text-white text-xl mb-4"><?= e(billing_money_label($plan['price'])) ?><span class="text-slate-500 text-sm font-medium"><?= e(billing_cycle_suffix($plan['billing_cycle'])) ?></span></p>
+                                <p class="font-heading font-bold text-white text-xl mb-4"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></p>
                             <?php elseif ($startBand): ?>
-                                <p class="font-heading font-bold text-white text-xl mb-2">Starts from <?= e(billing_unit_label($startBand['unit_price'])) ?> each</p>
+                                <p class="font-heading font-bold text-white text-xl mb-2">Starts from <?= billing_rate_markup($startBand['unit_price'], isset($startBand['offer_price']) ? $startBand['offer_price'] : 0, true, ' each') ?></p>
                                 <ul class="text-slate-500 text-xs space-y-1 mb-4">
                                     <?php foreach ($bands as $band): ?>
-                                        <li><?= number_format($band['min_qty']) ?>–<?= number_format($band['max_qty']) ?> · <?= e(billing_unit_label($band['unit_price'])) ?><?= !empty($band['is_start']) ? ' · starts from' : '' ?></li>
+                                        <li><?= number_format($band['min_qty']) ?>–<?= number_format($band['max_qty']) ?> · <?= billing_rate_markup($band['unit_price'], isset($band['offer_price']) ? $band['offer_price'] : 0, true) ?><?= !empty($band['is_start']) ? ' · starts from' : '' ?></li>
                                     <?php endforeach; ?>
                                 </ul>
                             <?php else: ?>

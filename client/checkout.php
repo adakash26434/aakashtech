@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['review_order']) || i
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 $balance = billing_balance($conn, (int) get_client_id());
-$due = $preview ? (float) $preview['price'] : (float) $plan['price'];
+$due = $preview ? (float) $preview['price'] : billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0);
 $short = $due > 0 && ($balance + 0.001 < $due);
 $slabs = ($needs === 'sms' || $needs === 'voice') ? billing_slabs_for($conn, $plan['service_slug']) : array();
 
@@ -289,10 +289,10 @@ function checkout_value($values, $key)
             <?php if ($slabs): ?>
                 <p class="text-white font-medium">Volume rates</p>
                 <?php foreach ($slabs as $slab): ?>
-                    <div class="flex justify-between gap-3"><span class="text-slate-500"><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></span><strong class="text-white"><?= e(billing_unit_label($slab['unit_price'])) ?></strong></div>
+                    <div class="flex justify-between gap-3"><span class="text-slate-500"><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></span><strong class="text-white"><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true) ?></strong></div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">Price</span><strong class="text-white"><?= e(billing_money_label($plan['price'])) ?><?= e(billing_cycle_suffix($plan['billing_cycle'])) ?></strong></div>
+                <div class="flex justify-between gap-3"><span class="text-slate-500">Price</span><strong class="text-white"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong></div>
             <?php endif; ?>
             <div class="flex justify-between gap-3"><span class="text-slate-500">Wallet</span><strong class="text-white"><?= e(billing_money_label($balance)) ?></strong></div>
             <p class="text-slate-500 text-xs leading-relaxed pt-2">Fill this form completely. The saved answers are what the team uses. Recurring domain, hosting, email, and server plans renew from the wallet.</p>

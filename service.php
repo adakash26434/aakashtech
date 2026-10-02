@@ -119,7 +119,7 @@ $navBase = 'index.php';
                                 <?php foreach ($slabs as $slab): ?>
                                     <tr<?= !empty($slab['is_start']) ? ' class="slab-row--start"' : '' ?>>
                                         <td><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></td>
-                                        <td><?= service_escape(billing_unit_label($slab['unit_price'])) ?><?php if (!empty($slab['is_start'])): ?> <span class="slab-start">Starts from</span><?php endif; ?></td>
+                                        <td><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true) ?><?php if (!empty($slab['is_start'])): ?> <span class="slab-start">Starts from</span><?php endif; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -135,9 +135,10 @@ $navBase = 'index.php';
                                 <p><?= service_escape($plan['summary']) ?></p>
                                 <div class="plan-buy">
                                     <?php if ((float) $plan['price'] > 0): ?>
-                                        <strong><?= service_escape(billing_money_label($plan['price'])) ?><?= service_escape(billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
+                                        <strong><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong>
                                     <?php else: ?>
-                                        <strong>Starts from <?= service_escape(billing_unit_label(billing_start_slab($slabs)['unit_price'])) ?> each</strong>
+                                        <?php $startSlab = $slabs ? billing_start_slab($slabs) : null; ?>
+                                        <strong><?php if ($startSlab): ?>Starts from <?= billing_rate_markup($startSlab['unit_price'], isset($startSlab['offer_price']) ? $startSlab['offer_price'] : 0, true, ' each') ?><?php else: ?>Volume rate<?php endif; ?></strong>
                                     <?php endif; ?>
                                     <a class="button button--small button--primary" href="<?= service_escape(billing_buy_href_plan($plan['code'])) ?>"><?= service_escape($service['action']) ?></a>
                                 </div>

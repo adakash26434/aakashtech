@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS service_plans (
     summary     TEXT NOT NULL,
     billing_cycle VARCHAR(20) NOT NULL,
     price       DECIMAL(12,2) NOT NULL,
+    offer_price DECIMAL(12,2) NOT NULL DEFAULT 0,
     unit_kind   VARCHAR(40) DEFAULT '',
     unit_quantity INT DEFAULT 0,
     auto_renew_default TINYINT(1) DEFAULT 0,
@@ -266,5 +267,6 @@ CREATE TABLE IF NOT EXISTS rate_slabs (
     unit_price  DECIMAL(12,2) NOT NULL,
     sort_order  INT DEFAULT 0,
     is_start    TINYINT(1) NOT NULL DEFAULT 0,
+    offer_price DECIMAL(12,2) NOT NULL DEFAULT 0,
     INDEX idx_slab_service (service_slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

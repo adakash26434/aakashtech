@@ -264,6 +264,48 @@ function billing_money_label($amount)
     return 'NPR ' . $formatted;
 }
 
+function billing_active_offer($regular, $offer)
+{
+    $regular = (float) $regular;
+    $offer = (float) $offer;
+    if ($offer > 0 && $offer < $regular) {
+        return $offer;
+    }
+    return 0.0;
+}
+
+function billing_selling_price($regular, $offer)
+{
+    $active = billing_active_offer($regular, $offer);
+    return $active > 0 ? $active : (float) $regular;
+}
+
+function billing_rate_markup($regular, $offer, $each = false, $suffix = '')
+{
+    $regular = (float) $regular;
+    $active = billing_active_offer($regular, $offer);
+    $suffix = (string) $suffix;
+    $format = $each ? 'billing_unit_label' : 'billing_money_label';
+    $current = $format($active > 0 ? $active : $regular) . $suffix;
+    if ($active <= 0) {
+        return htmlspecialchars($current, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+    $was = $format($regular) . $suffix;
+    return '<s class="rate-was">' . htmlspecialchars($was, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</s> <span class="rate-now">' . htmlspecialchars($current, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span> <span class="rate-offer-tag">Offer</span>';
+}
+
+function billing_parse_offer($raw, $regular)
+{
+    $raw = trim((string) $raw);
+    if ($raw === '') {
+        return array('ok' => true, 'price' => '0.00');
+    }
+    if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $raw) || (float) $raw <= 0 || (float) $raw >= (float) $regular) {
+        return array('ok' => false, 'price' => '0.00');
+    }
+    return array('ok' => true, 'price' => billing_money($raw));
+}
+
 function billing_unit_label($amount)
 {
     $value = (float) $amount;
@@ -387,6 +429,7 @@ function billing_create_tables($conn)
             summary TEXT NOT NULL,
             billing_cycle TEXT NOT NULL,
             price NUMERIC NOT NULL,
+            offer_price NUMERIC DEFAULT 0,
             unit_kind TEXT DEFAULT "",
             unit_quantity INTEGER DEFAULT 0,
             auto_renew_default INTEGER DEFAULT 0,
@@ -432,7 +475,8 @@ function billing_create_tables($conn)
             max_qty INTEGER NOT NULL,
             unit_price NUMERIC NOT NULL,
             sort_order INTEGER DEFAULT 0,
-            is_start INTEGER DEFAULT 0
+            is_start INTEGER DEFAULT 0,
+            offer_price NUMERIC DEFAULT 0
         )');
         billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -462,6 +506,7 @@ function billing_create_tables($conn)
         summary TEXT NOT NULL,
         billing_cycle VARCHAR(20) NOT NULL,
         price DECIMAL(12,2) NOT NULL,
+        offer_price DECIMAL(12,2) NOT NULL DEFAULT 0,
         unit_kind VARCHAR(40) DEFAULT "",
         unit_quantity INT DEFAULT 0,
         auto_renew_default TINYINT(1) DEFAULT 0,
@@ -511,6 +556,7 @@ function billing_create_tables($conn)
         unit_price DECIMAL(12,2) NOT NULL,
         sort_order INT DEFAULT 0,
         is_start TINYINT(1) NOT NULL DEFAULT 0,
+        offer_price DECIMAL(12,2) NOT NULL DEFAULT 0,
         INDEX idx_slab_service (service_slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
     billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
@@ -740,6 +786,7 @@ function billing_ensure($conn)
     billing_refresh_plans($conn);
     billing_seed_slabs($conn);
     billing_ensure_slab_start($conn);
+    billing_ensure_offer_prices($conn);
     billing_sync_catalog($conn);
     site_ensure_public_settings($conn);
 }
@@ -1559,6 +1606,7 @@ function billing_normalize_plan($row)
         'summary' => (string) $row['summary'],
         'billing_cycle' => (string) $row['billing_cycle'],
         'price' => (float) $row['price'],
+        'offer_price' => isset($row['offer_price']) ? (float) $row['offer_price'] : 0,
         'unit_kind' => (string) ($row['unit_kind'] ?? ''),
         'unit_quantity' => (int) ($row['unit_quantity'] ?? 0),
         'auto_renew_default' => (int) ($row['auto_renew_default'] ?? 0),
@@ -1588,7 +1636,7 @@ function billing_find_plan($conn, $code)
     return $row ? billing_normalize_plan($row) : null;
 }
 
-function billing_update_price($conn, $code, $raw)
+function billing_update_price($conn, $code, $raw, $offerRaw = '')
 {
     if (!is_string($code) || !preg_match('/^[a-z0-9-]{2,40}$/', $code)) {
         return false;
@@ -1601,8 +1649,13 @@ function billing_update_price($conn, $code, $raw)
     if ((float) $price <= 0) {
         return false;
     }
-    $stmt = $conn->prepare('UPDATE service_plans SET price = ? WHERE code = ?');
-    $stmt->bind_param('ss', $price, $code);
+    $offer = billing_parse_offer($offerRaw, $price);
+    if (empty($offer['ok'])) {
+        return false;
+    }
+    $offerPrice = $offer['price'];
+    $stmt = $conn->prepare('UPDATE service_plans SET price = ?, offer_price = ? WHERE code = ?');
+    $stmt->bind_param('sss', $price, $offerPrice, $code);
     $ok = $stmt->execute();
     $stmt->close();
     return (bool) $ok;
@@ -1645,23 +1698,47 @@ function billing_public_cards($conn)
         if ($slabs) {
             $label = 'Volume rate';
             $startSlab = billing_start_slab($slabs);
-            $amount = 'From ' . billing_unit_label($startSlab['unit_price']) . ' each';
+            $startOffer = isset($startSlab['offer_price']) ? $startSlab['offer_price'] : 0;
+            $amount = 'From ' . billing_unit_label(billing_selling_price($startSlab['unit_price'], $startOffer)) . ' each';
+            $was = billing_active_offer($startSlab['unit_price'], $startOffer) > 0 ? billing_unit_label($startSlab['unit_price']) . ' each' : '';
             foreach ($slabs as $slab) {
-                $lines[] = number_format($slab['min_qty']) . '–' . number_format($slab['max_qty']) . ' — ' . billing_unit_label($slab['unit_price']) . ' each';
+                $offer = isset($slab['offer_price']) ? $slab['offer_price'] : 0;
+                $line = number_format($slab['min_qty']) . '–' . number_format($slab['max_qty']) . ' — ' . billing_unit_label(billing_selling_price($slab['unit_price'], $offer)) . ' each';
+                if (billing_active_offer($slab['unit_price'], $offer) > 0) {
+                    $line .= ' (was ' . billing_unit_label($slab['unit_price']) . ')';
+                }
+                $lines[] = $line;
             }
         } else {
             $lowest = null;
+            $lowestWas = '';
+            $lowestSuffix = '';
             foreach ($servicePlans as $plan) {
                 if ((float) $plan['price'] <= 0) {
                     continue;
                 }
-                $lowest = $lowest === null ? (float) $plan['price'] : min($lowest, (float) $plan['price']);
-                $lines[] = $plan['name'] . ' — ' . billing_money_label($plan['price']) . billing_cycle_suffix($plan['billing_cycle']);
+                $offer = isset($plan['offer_price']) ? $plan['offer_price'] : 0;
+                $selling = billing_selling_price($plan['price'], $offer);
+                $suffix = billing_cycle_suffix($plan['billing_cycle']);
+                if ($lowest === null || $selling < $lowest) {
+                    $lowest = $selling;
+                    $lowestSuffix = $suffix;
+                    $lowestWas = billing_active_offer($plan['price'], $offer) > 0 ? billing_money_label($plan['price']) : '';
+                }
+                $line = $plan['name'] . ' — ' . billing_money_label($selling) . $suffix;
+                if (billing_active_offer($plan['price'], $offer) > 0) {
+                    $line .= ' (was ' . billing_money_label($plan['price']) . $suffix . ')';
+                }
+                $lines[] = $line;
             }
             $amount = ($lowest !== null && count($lines) > 1 ? 'From ' : '') . ($lowest === null ? '' : billing_money_label($lowest));
             if ($lowest !== null && count($lines) === 1) {
-                $amount .= billing_cycle_suffix($servicePlans[0]['billing_cycle']);
+                $amount .= $lowestSuffix;
+                if ($lowestWas !== '') {
+                    $lowestWas .= $lowestSuffix;
+                }
             }
+            $was = $lowestWas;
         }
         $cards[] = array(
             'slug' => $slug,
@@ -1674,6 +1751,7 @@ function billing_public_cards($conn)
             'price' => array(
                 'label' => $label,
                 'amount' => $amount,
+                'was' => isset($was) ? $was : '',
                 'details' => implode("\n", $lines)
             )
         );
@@ -1892,6 +1970,7 @@ function billing_load_slabs($conn, $slug)
             'min_qty' => (int) $row['min_qty'],
             'max_qty' => (int) $row['max_qty'],
             'unit_price' => (float) $row['unit_price'],
+            'offer_price' => isset($row['offer_price']) ? (float) $row['offer_price'] : 0,
             'sort_order' => (int) $row['sort_order'],
             'is_start' => !empty($row['is_start']) ? 1 : 0
         );
@@ -1948,6 +2027,44 @@ function billing_ensure_slab_start($conn)
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $stmt->close();
+    }
+}
+
+function billing_column_names($conn, $table)
+{
+    if (!preg_match('/^[a-z_]+$/', $table)) {
+        return array();
+    }
+    $names = array();
+    if (DB_DRIVER === 'sqlite') {
+        $result = billing_exec($conn, 'PRAGMA table_info(' . $table . ')');
+        while ($row = $result->fetch_assoc()) {
+            $names[] = (string) $row['name'];
+        }
+        return $names;
+    }
+    $result = billing_exec($conn, 'SHOW COLUMNS FROM ' . $table);
+    while ($row = $result->fetch_assoc()) {
+        $names[] = (string) $row['Field'];
+    }
+    return $names;
+}
+
+function billing_ensure_offer_prices($conn)
+{
+    if (!in_array('offer_price', billing_column_names($conn, 'rate_slabs'), true)) {
+        if (DB_DRIVER === 'sqlite') {
+            billing_exec($conn, 'ALTER TABLE rate_slabs ADD COLUMN offer_price NUMERIC DEFAULT 0');
+        } else {
+            billing_exec($conn, 'ALTER TABLE rate_slabs ADD COLUMN offer_price DECIMAL(12,2) NOT NULL DEFAULT 0');
+        }
+    }
+    if (!in_array('offer_price', billing_column_names($conn, 'service_plans'), true)) {
+        if (DB_DRIVER === 'sqlite') {
+            billing_exec($conn, 'ALTER TABLE service_plans ADD COLUMN offer_price NUMERIC DEFAULT 0');
+        } else {
+            billing_exec($conn, 'ALTER TABLE service_plans ADD COLUMN offer_price DECIMAL(12,2) NOT NULL DEFAULT 0');
+        }
     }
 }
 
@@ -2031,7 +2148,11 @@ function billing_prepare_order($conn, $plan, $post)
     $needs = (string) $plan['needs_detail'];
     $brief = array();
     $detail = '';
-    $price = (float) $plan['price'];
+    $price = billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0);
+    if ($needs !== 'sms' && $needs !== 'voice' && billing_active_offer($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0) > 0) {
+        $brief['Regular price'] = billing_money_label($plan['price']);
+        $brief['Offer price'] = billing_money_label($price);
+    }
     $quantity = (int) $plan['unit_quantity'];
     $unitKind = (string) $plan['unit_kind'];
     $status = ($needs === 'website' || $needs === 'training') ? 'booked' : 'active';
@@ -2082,11 +2203,15 @@ function billing_prepare_order($conn, $plan, $post)
             }
             $parsedNumbers = $parsed['numbers'];
         }
-        $price = round((float) $slab['unit_price'] * $quantity, 2);
+        $unitPrice = billing_selling_price($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0);
+        $price = round($unitPrice * $quantity, 2);
         $brief['Audience'] = $audiences[$audience];
         $brief['Purpose'] = $purposes[$purpose];
         $brief['Quantity'] = number_format($quantity);
-        $brief['Rate'] = billing_unit_label($slab['unit_price']) . ' each';
+        $brief['Rate'] = billing_unit_label($unitPrice) . ' each';
+        if (billing_active_offer($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0) > 0) {
+            $brief['Regular rate'] = billing_unit_label($slab['unit_price']) . ' each';
+        }
         if ($needs === 'sms') {
             $sender = billing_plain_line(billing_posted($post, 'sender_id'), 11);
             if (!preg_match('/^[A-Za-z0-9]{3,11}$/', $sender)) {
@@ -2274,10 +2399,15 @@ function billing_save_slabs($conn, $posted, $starts = array())
             $min = isset($row['min']) ? (int) $row['min'] : 0;
             $max = isset($row['max']) ? (int) $row['max'] : 0;
             $raw = isset($row['price']) ? trim((string) $row['price']) : '';
+            $offerRaw = isset($row['offer']) ? $row['offer'] : '';
             if ($min < 1 || $max < $min || !preg_match('/^\d{1,5}(\.\d{1,2})?$/', $raw) || (float) $raw <= 0) {
                 return 'Each band needs a minimum, a higher maximum, and a rate above zero.';
             }
-            $grouped[$slug][] = array('id' => (int) $slab['id'], 'min' => $min, 'max' => $max, 'price' => billing_money($raw));
+            $offer = billing_parse_offer($offerRaw, $raw);
+            if (empty($offer['ok'])) {
+                return 'An offer rate must be lower than the regular rate. Leave it blank when there is no offer.';
+            }
+            $grouped[$slug][] = array('id' => (int) $slab['id'], 'min' => $min, 'max' => $max, 'price' => billing_money($raw), 'offer' => $offer['price']);
         }
     }
     foreach ($grouped as $rows) {
@@ -2295,14 +2425,15 @@ function billing_save_slabs($conn, $posted, $starts = array())
             $previousMax = $row['max'];
         }
     }
-    $stmt = $conn->prepare('UPDATE rate_slabs SET min_qty = ?, max_qty = ?, unit_price = ? WHERE id = ?');
+    $stmt = $conn->prepare('UPDATE rate_slabs SET min_qty = ?, max_qty = ?, unit_price = ?, offer_price = ? WHERE id = ?');
     foreach ($grouped as $rows) {
         foreach ($rows as $row) {
             $min = $row['min'];
             $max = $row['max'];
             $price = $row['price'];
+            $offer = $row['offer'];
             $id = $row['id'];
-            $stmt->bind_param('iisi', $min, $max, $price, $id);
+            $stmt->bind_param('iissi', $min, $max, $price, $offer, $id);
             $stmt->execute();
         }
     }

@@ -40,6 +40,31 @@ body.portal-shell.bg-dark-950,
     color: var(--portal-ink);
 }
 
+.portal-shell .rate-was {
+    color: var(--portal-muted);
+    font-weight: 600;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+.portal-shell .rate-now {
+    color: var(--portal-ink);
+    font-weight: 700;
+}
+.portal-shell .rate-offer-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    color: var(--portal-brand-dark);
+    background: #e7f6f3;
+    border-radius: 999px;
+    font-size: var(--type-label);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+}
+
 .portal-shell button.text-white,
 .portal-shell a.text-white,
 .portal-shell .portal-logo-letter,

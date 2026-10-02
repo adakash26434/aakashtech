@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS service_plans (
     summary TEXT NOT NULL,
     billing_cycle TEXT NOT NULL,
     price NUMERIC NOT NULL,
+    offer_price NUMERIC DEFAULT 0,
     unit_kind TEXT DEFAULT '',
     unit_quantity INTEGER DEFAULT 0,
     auto_renew_default INTEGER DEFAULT 0,
@@ -190,7 +191,8 @@ CREATE TABLE IF NOT EXISTS rate_slabs (
     max_qty INTEGER NOT NULL,
     unit_price NUMERIC NOT NULL,
     sort_order INTEGER DEFAULT 0,
-    is_start INTEGER DEFAULT 0
+    is_start INTEGER DEFAULT 0,
+    offer_price NUMERIC DEFAULT 0
 );
 
 INSERT OR IGNORE INTO admin_users (name, email, password, role) VALUES

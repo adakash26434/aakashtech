@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = $msg === '' ? 'That top-up could not be rejected.' : '';
     } elseif (isset($_POST['save_slabs']) && isset($_POST['slab']) && is_array($_POST['slab'])) {
         $slabError = billing_save_slabs($conn, $_POST['slab'], isset($_POST['start']) ? $_POST['start'] : array());
-        $msg = $slabError === '' ? 'SMS and voice rates updated. The selected row is the Starts from price on the homepage.' : '';
+        $msg = $slabError === '' ? 'SMS and voice rates updated. A filled offer rate replaces that row until you clear it. The selected row is the Starts from price on the homepage.' : '';
         $err = $slabError;
     } elseif (isset($_POST['refund_domain'])) {
         $refundError = billing_refund_domain($conn, (int) $_POST['service_id']);
@@ -26,13 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = $refundError;
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
+        $failed = 0;
         foreach ($_POST['price'] as $code => $value) {
-            if (billing_update_price($conn, (string) $code, (string) $value)) {
+            $offer = isset($_POST['offer'][$code]) ? (string) $_POST['offer'][$code] : '';
+            if (billing_update_price($conn, (string) $code, (string) $value, $offer)) {
                 $saved++;
+            } else {
+                $failed++;
             }
         }
-        $msg = $saved > 0 ? 'Plan prices updated. New purchases use these amounts. Existing renewals keep the price from when they were bought.' : '';
-        $err = $saved > 0 ? '' : 'Enter a valid price for each plan.';
+        $msg = $saved > 0 && $failed === 0 ? 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.' : '';
+        $err = $failed > 0 ? 'Each offer rate must be lower than its regular rate, or left blank. Regular rates must stay above zero.' : ($saved > 0 ? '' : 'Enter a valid price for each plan.');
     }
 }
 
@@ -102,7 +106,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">SMS and voice volume rates</h3>
-        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Choose Starts from on the row that should appear on the homepage. Checkout still uses the row that matches the quantity.</p>
+        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Leave Offer blank to keep the regular rate. A lower offer is shown with the regular rate crossed out, and checkout charges the offer until you clear it. Choose Starts from on the row that should appear on the homepage.</p>
     </div>
     <form method="POST" class="p-5 space-y-6">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
@@ -123,14 +127,15 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
                 <div class="space-y-3">
                     <?php foreach ($slabRows as $index => $slab): ?>
                         <?php $checked = !empty($slab['is_start']) || (!$hasStart && $index === 0); ?>
-                        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr_1fr_1fr] gap-3 items-center">
+                        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr_1fr_1fr_1fr] gap-3 items-center">
                             <label class="flex items-center gap-2 text-slate-300 text-sm">
                                 <input type="radio" name="start[<?= e($slug) ?>]" value="<?= (int) $slab['id'] ?>" <?= $checked ? 'checked' : '' ?>>
                                 Starts from
                             </label>
                             <input name="slab[<?= (int) $slab['id'] ?>][min]" value="<?= (int) $slab['min_qty'] ?>" class="form-input" inputmode="numeric" aria-label="Minimum quantity">
                             <input name="slab[<?= (int) $slab['id'] ?>][max]" value="<?= (int) $slab['max_qty'] ?>" class="form-input" inputmode="numeric" aria-label="Maximum quantity">
-                            <input name="slab[<?= (int) $slab['id'] ?>][price]" value="<?= e(billing_money($slab['unit_price'])) ?>" class="form-input" inputmode="decimal" aria-label="Rate each">
+                            <input name="slab[<?= (int) $slab['id'] ?>][price]" value="<?= e(billing_money($slab['unit_price'])) ?>" class="form-input" inputmode="decimal" aria-label="Regular rate each">
+                            <input name="slab[<?= (int) $slab['id'] ?>][offer]" value="<?= !empty($slab['offer_price']) && (float) $slab['offer_price'] > 0 ? e(billing_money($slab['offer_price'])) : '' ?>" class="form-input" inputmode="decimal" placeholder="Offer" aria-label="Offer rate each">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -143,7 +148,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">Package prices</h3>
-        <p class="text-slate-500 text-xs mt-1">These amounts appear on the website and at checkout. The homepage Starts from price for each service is the lowest price saved here.</p>
+        <p class="text-slate-500 text-xs mt-1">These amounts appear on the website and at checkout. Leave Offer blank when there is no special rate. A lower offer crosses out the regular price until you clear it. The homepage Starts from price is the lowest amount a visitor would pay.</p>
     </div>
     <form method="POST" class="p-5">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
@@ -153,7 +158,10 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
                 <label class="block rounded-2xl border border-slate-800 bg-dark-950 p-4">
                     <span class="block text-white text-sm font-medium mb-1"><?= e($plan['name']) ?></span>
                     <span class="block text-slate-500 text-xs mb-3"><?= e(billing_cycle_label($plan['billing_cycle'])) ?><?= (int) $plan['auto_renew_default'] === 1 ? ' · auto-renew' : '' ?></span>
-                    <input name="price[<?= e($plan['code']) ?>]" value="<?= e(billing_money($plan['price'])) ?>" class="form-input" inputmode="decimal">
+                    <span class="block text-slate-500 text-xs mb-1">Regular rate</span>
+                    <input name="price[<?= e($plan['code']) ?>]" value="<?= e(billing_money($plan['price'])) ?>" class="form-input" inputmode="decimal" aria-label="Regular rate">
+                    <span class="block text-slate-500 text-xs mt-3 mb-1">Offer rate</span>
+                    <input name="offer[<?= e($plan['code']) ?>]" value="<?= !empty($plan['offer_price']) && (float) $plan['offer_price'] > 0 ? e(billing_money($plan['offer_price'])) : '' ?>" class="form-input" inputmode="decimal" placeholder="Leave blank for no offer" aria-label="Offer rate">
                 </label>
             <?php endforeach; ?>
         </div>

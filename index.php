@@ -33,7 +33,16 @@ function site_render_service_price($pricing, $slug, $compact = false)
         if ($shown === '') {
             return;
         }
-        echo '<p class="service-start">Starts from <strong>' . site_escape($shown) . '</strong></p>';
+        $was = trim((string) ($item['was'] ?? ''));
+        echo '<p class="service-start">Starts from ';
+        if ($was !== '') {
+            echo '<s class="rate-was">' . site_escape($was) . '</s> ';
+        }
+        echo '<strong>' . site_escape($shown) . '</strong>';
+        if ($was !== '') {
+            echo ' <span class="rate-offer-tag">Offer</span>';
+        }
+        echo '</p>';
         return;
     }
 
