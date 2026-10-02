@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = billing_reject_topup($conn, (int) $_POST['entry_id']) ? 'Top-up rejected.' : '';
         $err = $msg === '' ? 'That top-up could not be rejected.' : '';
     } elseif (isset($_POST['save_slabs']) && isset($_POST['slab']) && is_array($_POST['slab'])) {
-        $slabError = billing_save_slabs($conn, $_POST['slab']);
-        $msg = $slabError === '' ? 'SMS and voice rates updated. The public pages and checkout use these slabs.' : '';
+        $slabError = billing_save_slabs($conn, $_POST['slab'], isset($_POST['start']) ? $_POST['start'] : array());
+        $msg = $slabError === '' ? 'SMS and voice rates updated. The selected row is the Starts from price on the homepage.' : '';
         $err = $slabError;
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
@@ -98,16 +98,32 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">SMS and voice volume rates</h3>
-        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Raise the rate for smaller sends and lower it for larger ones.</p>
+        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Choose Starts from on the row that should appear on the homepage. Checkout still uses the row that matches the quantity.</p>
     </div>
     <form method="POST" class="p-5 space-y-6">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <?php foreach (array('Bulk SMS' => $smsSlabs, 'Auto voice calls' => $voiceSlabs) as $heading => $slabRows): ?>
+        <?php foreach (array('bulk-sms' => array('Bulk SMS', $smsSlabs), 'bulk-voice' => array('Auto voice calls', $voiceSlabs)) as $slug => $pair): ?>
+            <?php
+            $heading = $pair[0];
+            $slabRows = $pair[1];
+            $hasStart = false;
+            foreach ($slabRows as $slab) {
+                if (!empty($slab['is_start'])) {
+                    $hasStart = true;
+                    break;
+                }
+            }
+            ?>
             <div>
                 <h4 class="text-white text-sm font-medium mb-3"><?= e($heading) ?></h4>
                 <div class="space-y-3">
-                    <?php foreach ($slabRows as $slab): ?>
-                        <div class="grid grid-cols-3 gap-3">
+                    <?php foreach ($slabRows as $index => $slab): ?>
+                        <?php $checked = !empty($slab['is_start']) || (!$hasStart && $index === 0); ?>
+                        <div class="grid grid-cols-1 sm:grid-cols-[140px_1fr_1fr_1fr] gap-3 items-center">
+                            <label class="flex items-center gap-2 text-slate-300 text-sm">
+                                <input type="radio" name="start[<?= e($slug) ?>]" value="<?= (int) $slab['id'] ?>" <?= $checked ? 'checked' : '' ?>>
+                                Starts from
+                            </label>
                             <input name="slab[<?= (int) $slab['id'] ?>][min]" value="<?= (int) $slab['min_qty'] ?>" class="form-input" inputmode="numeric" aria-label="Minimum quantity">
                             <input name="slab[<?= (int) $slab['id'] ?>][max]" value="<?= (int) $slab['max_qty'] ?>" class="form-input" inputmode="numeric" aria-label="Maximum quantity">
                             <input name="slab[<?= (int) $slab['id'] ?>][price]" value="<?= e(billing_money($slab['unit_price'])) ?>" class="form-input" inputmode="decimal" aria-label="Rate each">
@@ -123,7 +139,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">Package prices</h3>
-        <p class="text-slate-500 text-xs mt-1">These amounts appear on the website and at checkout.</p>
+        <p class="text-slate-500 text-xs mt-1">These amounts appear on the website and at checkout. The homepage Starts from price for each service is the lowest price saved here.</p>
     </div>
     <form method="POST" class="p-5">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">

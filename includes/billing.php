@@ -394,7 +394,8 @@ function billing_create_tables($conn)
             min_qty INTEGER NOT NULL,
             max_qty INTEGER NOT NULL,
             unit_price NUMERIC NOT NULL,
-            sort_order INTEGER DEFAULT 0
+            sort_order INTEGER DEFAULT 0,
+            is_start INTEGER DEFAULT 0
         )');
         billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -461,6 +462,7 @@ function billing_create_tables($conn)
         max_qty INT NOT NULL,
         unit_price DECIMAL(12,2) NOT NULL,
         sort_order INT DEFAULT 0,
+        is_start TINYINT(1) NOT NULL DEFAULT 0,
         INDEX idx_slab_service (service_slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
     billing_exec($conn, 'CREATE TABLE IF NOT EXISTS site_settings (
@@ -670,6 +672,7 @@ function billing_ensure($conn)
     billing_seed_plans($conn);
     billing_refresh_plans($conn);
     billing_seed_slabs($conn);
+    billing_ensure_slab_start($conn);
     billing_sync_catalog($conn);
     site_ensure_public_settings($conn);
 }
@@ -1260,7 +1263,7 @@ function billing_seed_slabs($conn)
         $check = $conn->prepare('SELECT COUNT(*) AS c FROM rate_slabs WHERE service_slug = ?');
         $check->bind_param('s', $slug);
         $check->execute();
-        $row = $check->get_result()->fetch_assoc();
+        $row = db_fetch_assoc($check);
         $check->close();
         if ($row && (int) $row['c'] > 0) {
             continue;
@@ -1406,7 +1409,8 @@ function billing_public_cards($conn)
         $label = 'Buy or book online';
         if ($slabs) {
             $label = 'Volume rate';
-            $amount = 'From ' . billing_unit_label($slabs[0]['unit_price']) . ' each';
+            $startSlab = billing_start_slab($slabs);
+            $amount = 'From ' . billing_unit_label($startSlab['unit_price']) . ' each';
             foreach ($slabs as $slab) {
                 $lines[] = number_format($slab['min_qty']) . '–' . number_format($slab['max_qty']) . ' — ' . billing_unit_label($slab['unit_price']) . ' each';
             }
@@ -1629,20 +1633,71 @@ function billing_load_slabs($conn, $slug)
     $stmt = $conn->prepare('SELECT * FROM rate_slabs WHERE service_slug = ? ORDER BY sort_order, min_qty');
     $stmt->bind_param('s', $slug);
     $stmt->execute();
-    $result = $stmt->get_result();
     $slabs = array();
-    while ($row = $result->fetch_assoc()) {
+    foreach (db_fetch_all($stmt) as $row) {
         $slabs[] = array(
             'id' => (int) $row['id'],
             'service_slug' => (string) $row['service_slug'],
             'min_qty' => (int) $row['min_qty'],
             'max_qty' => (int) $row['max_qty'],
             'unit_price' => (float) $row['unit_price'],
-            'sort_order' => (int) $row['sort_order']
+            'sort_order' => (int) $row['sort_order'],
+            'is_start' => !empty($row['is_start']) ? 1 : 0
         );
     }
     $stmt->close();
     return $slabs;
+}
+
+function billing_start_slab($slabs)
+{
+    foreach ($slabs as $slab) {
+        if (!empty($slab['is_start'])) {
+            return $slab;
+        }
+    }
+    return $slabs[0];
+}
+
+function billing_ensure_slab_start($conn)
+{
+    $present = array();
+    if (DB_DRIVER === 'sqlite') {
+        $result = billing_exec($conn, 'PRAGMA table_info(rate_slabs)');
+        while ($row = $result->fetch_assoc()) {
+            $present[(string) $row['name']] = true;
+        }
+    } else {
+        $result = billing_exec($conn, 'SHOW COLUMNS FROM rate_slabs');
+        while ($row = $result->fetch_assoc()) {
+            $present[(string) $row['Field']] = true;
+        }
+    }
+    if (!isset($present['is_start'])) {
+        if (DB_DRIVER === 'sqlite') {
+            billing_exec($conn, 'ALTER TABLE rate_slabs ADD COLUMN is_start INTEGER DEFAULT 0');
+        } else {
+            billing_exec($conn, 'ALTER TABLE rate_slabs ADD COLUMN is_start TINYINT(1) NOT NULL DEFAULT 0');
+        }
+    }
+    foreach (array('bulk-sms', 'bulk-voice') as $slug) {
+        $slabs = billing_load_slabs($conn, $slug);
+        $chosen = 0;
+        foreach ($slabs as $slab) {
+            if (!empty($slab['is_start'])) {
+                $chosen = (int) $slab['id'];
+                break;
+            }
+        }
+        if ($chosen !== 0 || !$slabs) {
+            continue;
+        }
+        $id = (int) $slabs[0]['id'];
+        $stmt = $conn->prepare('UPDATE rate_slabs SET is_start = 1 WHERE id = ?');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 function billing_slabs_for($conn, $slug)
@@ -1938,10 +1993,13 @@ function billing_order_ready($detail, $brief, $price, $quantity, $unitKind, $sta
     );
 }
 
-function billing_save_slabs($conn, $posted)
+function billing_save_slabs($conn, $posted, $starts = array())
 {
     if (!is_array($posted)) {
         return 'No rates were submitted.';
+    }
+    if (!is_array($starts)) {
+        $starts = array();
     }
     $grouped = array();
     foreach (array('bulk-sms', 'bulk-voice') as $slug) {
@@ -1987,6 +2045,27 @@ function billing_save_slabs($conn, $posted)
         }
     }
     $stmt->close();
+    $clear = $conn->prepare('UPDATE rate_slabs SET is_start = 0 WHERE service_slug = ?');
+    $mark = $conn->prepare('UPDATE rate_slabs SET is_start = 1 WHERE id = ? AND service_slug = ?');
+    foreach ($grouped as $slug => $rows) {
+        $startId = isset($starts[$slug]) ? (int) $starts[$slug] : 0;
+        $allowed = false;
+        foreach ($rows as $row) {
+            if ((int) $row['id'] === $startId) {
+                $allowed = true;
+                break;
+            }
+        }
+        if (!$allowed) {
+            $startId = (int) $rows[0]['id'];
+        }
+        $clear->bind_param('s', $slug);
+        $clear->execute();
+        $mark->bind_param('is', $startId, $slug);
+        $mark->execute();
+    }
+    $clear->close();
+    $mark->close();
     return '';
 }
 
