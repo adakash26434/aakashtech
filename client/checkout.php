@@ -12,6 +12,10 @@ if (!preg_match('/^[a-z0-9-]{2,40}$/', $requestedPlan)) {
     header('Location: shop.php');
     exit;
 }
+if ($requestedPlan === 'domain-com' || $requestedPlan === 'domain-np') {
+    header('Location: ../domain.php?tld=' . ($requestedPlan === 'domain-np' ? 'com.np' : 'com'));
+    exit;
+}
 
 if (!is_client_logged_in()) {
     $_SESSION['client_next'] = client_safe_next('checkout.php?plan=' . $requestedPlan);
@@ -299,10 +303,16 @@ function checkout_value($values, $key)
                     </div>
                 <?php endif; ?>
 
-                <?php if ($preview && !empty($preview['ok']) && !$short): ?>
+                <?php if ($needs !== 'sms' && $needs !== 'voice' && !$short): ?>
+                    <button type="submit" name="confirm_purchase" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
+                        Pay <?= e(billing_money_label($due)) ?> from wallet
+                    </button>
+                <?php elseif ($preview && !empty($preview['ok']) && !$short): ?>
                     <button type="submit" name="confirm_purchase" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
                         Pay <?= e(billing_money_label($preview['price'])) ?> from wallet
                     </button>
+                <?php elseif ($needs !== 'sms' && $needs !== 'voice' && $short): ?>
+                    <p class="text-slate-400 text-sm">The bill is already on this page. Add the wallet funds, then come back and pay.</p>
                 <?php else: ?>
                     <button type="submit" name="review_order" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
                         Review price

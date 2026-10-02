@@ -5,12 +5,13 @@ require_once __DIR__ . '/includes/sidebar.php';
 $allowedFilters = array('new', 'read', 'replied', 'closed');
 $filter = (isset($_GET['status']) && in_array($_GET['status'], $allowedFilters, true)) ? $_GET['status'] : 'all';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_read'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_inquiry_status'])) {
     verify_csrf();
     $id = (int) ($_POST['inquiry_id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $conn->prepare("UPDATE inquiries SET status = 'read' WHERE id = ? AND status = 'new'");
-        $stmt->bind_param('i', $id);
+    $status = isset($_POST['inquiry_status']) ? (string) $_POST['inquiry_status'] : '';
+    if ($id > 0 && in_array($status, $allowedFilters, true)) {
+        $stmt = $conn->prepare('UPDATE inquiries SET status = ? WHERE id = ?');
+        $stmt->bind_param('si', $status, $id);
         $stmt->execute();
         $stmt->close();
     }
@@ -72,7 +73,6 @@ try {
                         <tr class="hover:bg-slate-800/50 transition">
                             <td class="px-4 py-3">
                                 <p class="text-white text-sm font-medium"><?= e($row['name']) ?></p>
-                                <p class="text-slate-500 text-xs truncate max-w-[200px]"><?= e($row['message']) ?></p>
                             </td>
                             <td class="px-4 py-3">
                                 <p class="text-slate-300 text-sm"><?= e($row['email']) ?></p>
@@ -88,15 +88,21 @@ try {
                                 ?>"><?= ucfirst($row['status']) ?></span>
                             </td>
                             <td class="px-4 py-3">
-                                <?php if ($row['status'] === 'new'): ?>
-                                    <form method="POST">
-                                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                                        <input type="hidden" name="inquiry_id" value="<?= (int) $row['id'] ?>">
-                                        <button type="submit" name="mark_read" class="text-brand-400 hover:text-brand-300 text-sm bg-transparent border-0 cursor-pointer p-0">Mark read</button>
-                                    </form>
-                                <?php else: ?>
-                                    <span class="text-slate-500 text-sm">Saved</span>
-                                <?php endif; ?>
+                                <form method="POST" class="flex flex-wrap items-center gap-2">
+                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                    <input type="hidden" name="inquiry_id" value="<?= (int) $row['id'] ?>">
+                                    <select name="inquiry_status" class="form-input w-auto text-sm" aria-label="Inquiry status">
+                                        <?php foreach ($allowedFilters as $choice): ?>
+                                            <option value="<?= e($choice) ?>" <?= $row['status'] === $choice ? 'selected' : '' ?>><?= e(ucfirst($choice)) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="submit" name="set_inquiry_status" value="1" class="text-brand-400 hover:text-brand-300 text-sm bg-transparent border-0 cursor-pointer p-0">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/50 transition">
+                            <td colspan="6" class="px-4 pb-4">
+                                <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($row['message']) ?></p>
                             </td>
                         </tr>
                     <?php endforeach; ?>

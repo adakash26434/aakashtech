@@ -18,11 +18,6 @@ function domain_tld($raw)
     return $raw === 'com.np' ? 'com.np' : 'com';
 }
 
-function domain_full_name($label, $tld)
-{
-    return domain_label($label) . '.' . domain_tld($tld);
-}
-
 function domain_check_result($label, $tld)
 {
     $label = domain_label($label);
@@ -122,9 +117,27 @@ function domain_check_com($domain)
     return 'unknown';
 }
 
+function domain_keep_first_request($conn, $domain, $requestId)
+{
+    $requestId = (int) $requestId;
+    $stmt = $conn->prepare("SELECT id FROM domain_requests WHERE domain_name = ? AND status IN ('requested', 'paid', 'active') AND id < ? LIMIT 1");
+    $stmt->bind_param('si', $domain, $requestId);
+    $stmt->execute();
+    $earlier = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$earlier) {
+        return true;
+    }
+    $drop = $conn->prepare("DELETE FROM domain_requests WHERE id = ? AND status = 'requested'");
+    $drop->bind_param('i', $requestId);
+    $drop->execute();
+    $drop->close();
+    return false;
+}
+
 function domain_request_open($conn, $domain)
 {
-    $stmt = $conn->prepare("SELECT id FROM domain_requests WHERE domain_name = ? AND status IN ('requested', 'active') LIMIT 1");
+    $stmt = $conn->prepare("SELECT id FROM domain_requests WHERE domain_name = ? AND status IN ('requested', 'paid', 'active') LIMIT 1");
     $stmt->bind_param('s', $domain);
     $stmt->execute();
     $row = db_fetch_assoc($stmt);
@@ -244,6 +257,135 @@ function domain_request_queue($conn)
     return $rows;
 }
 
+function domain_year_bill($conn, $tld)
+{
+    $code = domain_tld($tld) === 'com.np' ? 'domain-np' : 'domain-com';
+    $plan = billing_find_plan($conn, $code);
+    if (!$plan || (float) $plan['price'] <= 0) {
+        return array('total' => '0.00', 'label' => '');
+    }
+    $selling = billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0);
+    $bill = billing_vat_bill($selling);
+    return array(
+        'total' => billing_money($bill['total']),
+        'label' => billing_money_label($bill['total']) . ' with 13% VAT for one year'
+    );
+}
+
+function domain_registry_file_note($clientId, $relative)
+{
+    $full = domain_safe_file($clientId, $relative);
+    if ($full === '') {
+        return '';
+    }
+    $ext = strtolower(pathinfo($full, PATHINFO_EXTENSION));
+    $size = filesize($full);
+    if (($ext === 'jpg' || $ext === 'png') && $size !== false && $size <= 819200) {
+        return '';
+    }
+    return 'register.com.np accepts a JPG or PNG up to about 800 KB. Prepare a smaller JPG or PNG before you upload this file there.';
+}
+
+function domain_pay_request($conn, $clientId, $requestId)
+{
+    $clientId = (int) $clientId;
+    $requestId = (int) $requestId;
+    $stmt = $conn->prepare('SELECT * FROM domain_requests WHERE id = ? AND client_id = ?');
+    $stmt->bind_param('ii', $requestId, $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row || $row['status'] !== 'requested') {
+        return 'That request is not waiting for payment.';
+    }
+    $price = billing_money($row['price']);
+    if ((float) $price <= 0) {
+        return 'That request has no yearly bill.';
+    }
+    $again = domain_check_result(domain_label($row['domain_name']), $row['tld']);
+    if ($again['status'] === 'unknown') {
+        return 'The registry could not be checked just now. Try the payment again in a moment.';
+    }
+    if ($again['status'] !== 'available' || $again['domain'] !== $row['domain_name']) {
+        $status = 'declined';
+        $note = 'The name was no longer free, so it was not charged.';
+        $update = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ? WHERE id = ? AND status = \'requested\'');
+        $update->bind_param('ssi', $status, $note, $requestId);
+        $update->execute();
+        $update->close();
+        return 'That name is no longer free. It was not charged. Check another name.';
+    }
+    if (!billing_wallet_debit($conn, $clientId, $price)) {
+        return 'The wallet does not have enough for this year. Add funds, then pay again.';
+    }
+    $status = 'paid';
+    $update = $conn->prepare('UPDATE domain_requests SET status = ? WHERE id = ? AND client_id = ? AND status = \'requested\'');
+    $update->bind_param('sii', $status, $requestId, $clientId);
+    $update->execute();
+    $saved = billing_affected($conn) === 1;
+    $update->close();
+    if (!$saved) {
+        billing_wallet_credit($conn, $clientId, $price);
+        return 'The payment could not be saved. The wallet was not charged.';
+    }
+    billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', 'Domain request ' . $row['domain_name'], 0);
+    billing_notify($conn, 'Domain paid: ' . $row['domain_name'], array(
+        'A domain request is paid and waiting to be registered.',
+        'Domain: ' . $row['domain_name'],
+        'Holder: ' . $row['holder_name'],
+        'Amount: NPR ' . $price,
+        'Client: ' . billing_notify_client_label($conn, $clientId),
+        'Register the name, then mark it Active in Admin → Domains.'
+    ));
+    return '';
+}
+
+function domain_cancel_request($conn, $clientId, $requestId)
+{
+    $clientId = (int) $clientId;
+    $requestId = (int) $requestId;
+    $status = 'declined';
+    $note = 'Cancelled before payment.';
+    $stmt = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ? WHERE id = ? AND client_id = ? AND status = \'requested\'');
+    $stmt->bind_param('ssii', $status, $note, $requestId, $clientId);
+    $stmt->execute();
+    $saved = billing_affected($conn) === 1;
+    $stmt->close();
+    return $saved ? '' : 'That request can no longer be cancelled.';
+}
+
+function domain_start_service($conn, $row)
+{
+    $clientId = (int) $row['client_id'];
+    $price = billing_money($row['price']);
+    $today = date('Y-m-d');
+    $cycle = 'yearly';
+    $next = billing_add_cycle($today, $cycle);
+    $auto = 1;
+    $status = 'active';
+    $planCode = $row['tld'] === 'com.np' ? 'domain-np' : 'domain-com';
+    $name = $row['tld'] === 'com.np' ? 'Domain registration — .com.np domain' : 'Domain registration — .com domain';
+    $description = 'One ' . $row['tld'] . ' domain for a year, renewed from the wallet.';
+    $detail = $row['domain_name'];
+    $address = isset($row['holder_address']) ? $row['holder_address'] : '';
+    $brief = json_encode(array(
+        'domain' => $row['domain_name'],
+        'holder' => $row['holder_name'],
+        'address' => $address
+    ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($brief === false) {
+        $brief = '';
+    }
+    $unitKind = '';
+    $quantity = 1;
+    $stmt = $conn->prepare('INSERT INTO client_services (client_id, service_name, description, status, start_date, end_date, price, plan_code, billing_cycle, auto_renew, next_renewal, detail_label, order_brief, unit_kind, unit_quantity) VALUES (?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?)');
+    $stmt->bind_param('issssssssissssi', $clientId, $name, $description, $status, $today, $next, $price, $planCode, $cycle, $auto, $next, $detail, $brief, $unitKind, $quantity);
+    $ok = $stmt->execute();
+    $serviceId = (int) $conn->insert_id;
+    $stmt->close();
+    return ($ok && $serviceId > 0) ? $serviceId : 0;
+}
+
 function domain_mark_request($conn, $requestId, $decision, $note)
 {
     $requestId = (int) $requestId;
@@ -252,17 +394,49 @@ function domain_mark_request($conn, $requestId, $decision, $note)
     $stmt->execute();
     $row = db_fetch_assoc($stmt);
     $stmt->close();
-    if (!$row || $row['status'] !== 'requested') {
+    if (!$row || ($row['status'] !== 'requested' && $row['status'] !== 'paid')) {
         return 'That request is not waiting for registration.';
     }
+    $legacy = $row['status'] === 'requested' && (float) $row['price'] <= 0;
     if ($decision === 'active') {
+        if ($row['status'] !== 'paid' && !$legacy) {
+            return 'The client has not paid the yearly bill yet.';
+        }
         $status = 'active';
-        $note = '';
+        $blank = '';
         $when = date('Y-m-d H:i:s');
-        $update = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ?, activated_at = ? WHERE id = ?');
-        $update->bind_param('sssi', $status, $note, $when, $requestId);
+        $update = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ?, activated_at = ? WHERE id = ? AND status IN (\'paid\', \'requested\')');
+        $update->bind_param('sssi', $status, $blank, $when, $requestId);
         $update->execute();
+        $saved = billing_affected($conn) === 1;
         $update->close();
+        if (!$saved) {
+            return 'That request is not waiting for registration.';
+        }
+        if ((float) $row['price'] <= 0) {
+            return '';
+        }
+        $serviceId = domain_start_service($conn, $row);
+        if ($serviceId < 1) {
+            $back = $legacy ? 'requested' : 'paid';
+            $revert = $conn->prepare('UPDATE domain_requests SET status = ?, activated_at = NULL WHERE id = ? AND status = \'active\'');
+            $revert->bind_param('si', $back, $requestId);
+            $revert->execute();
+            $revert->close();
+            return 'The yearly service could not be saved. The request is still waiting.';
+        }
+        $link = $conn->prepare('UPDATE domain_requests SET service_id = ? WHERE id = ?');
+        $link->bind_param('ii', $serviceId, $requestId);
+        $link->execute();
+        $link->close();
+        $email = billing_client_email($conn, (int) $row['client_id']);
+        if ($email !== '') {
+            billing_mail_person($conn, $email, 'Domain active: ' . $row['domain_name'], array(
+                $row['domain_name'] . ' is marked Active.',
+                'The paid year starts now and renews from the wallet.',
+                'See it under My domains in the client panel.'
+            ));
+        }
         return '';
     }
     if ($decision === 'declined') {
@@ -271,10 +445,29 @@ function domain_mark_request($conn, $requestId, $decision, $note)
             return 'Write why this name was not registered.';
         }
         $status = 'declined';
-        $update = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ? WHERE id = ?');
+        $update = $conn->prepare('UPDATE domain_requests SET status = ?, admin_note = ? WHERE id = ? AND status IN (\'paid\', \'requested\')');
         $update->bind_param('ssi', $status, $note, $requestId);
         $update->execute();
+        $saved = billing_affected($conn) === 1;
         $update->close();
+        if (!$saved) {
+            return 'That request is not waiting for registration.';
+        }
+        if ($row['status'] === 'paid' && (float) $row['price'] > 0) {
+            billing_wallet_credit($conn, (int) $row['client_id'], $row['price']);
+            billing_record_entry($conn, (int) $row['client_id'], $row['price'], 'credit', 'refund', 'completed', 'wallet', 'Domain not registered: ' . $row['domain_name'], 0);
+        }
+        $email = billing_client_email($conn, (int) $row['client_id']);
+        if ($email !== '') {
+            $refundLine = ($row['status'] === 'paid' && (float) $row['price'] > 0)
+                ? 'The amount was returned to the wallet.'
+                : 'It was not charged.';
+            billing_mail_person($conn, $email, 'Domain request closed: ' . $row['domain_name'], array(
+                'The domain request for ' . $row['domain_name'] . ' was not registered.',
+                $refundLine,
+                'Note: ' . $note
+            ));
+        }
         return '';
     }
     return 'That decision is not available.';

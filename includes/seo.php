@@ -26,19 +26,6 @@ function site_seo_escape($value)
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function site_seo_phone($phone)
-{
-    $phone = trim((string) $phone);
-    if ($phone === '' || stripos($phone, 'x') !== false) {
-        return '';
-    }
-    $digits = preg_replace('/\D+/', '', $phone);
-    if (!is_string($digits) || strlen($digits) < 8) {
-        return '';
-    }
-    return $phone;
-}
-
 function site_seo_phrases()
 {
     return array(
@@ -87,8 +74,8 @@ function site_seo_faqs($slug)
             array('How is the voice-call rate calculated?', 'The row that contains your quantity is the price per call. A quantity outside the table cannot be ordered.')
         ),
         'domain-registration' => array(
-            array('Which domains can I register?', 'This page sells .com and .com.np. The price beside each one is for one year and can renew from the wallet.'),
-            array('Does the site check if the name is free?', 'No. The team registers the name after payment. If that name is already taken, the price is returned to the wallet once.')
+            array('Which domains can I register?', '.com and .com.np. The Domain registration page checks the name, then you request it and pay the yearly bill from the wallet.'),
+            array('Does the site check if the name is free?', 'Yes. .com.np is checked at register.com.np and .com is checked in the Verisign registry record. The team registers a paid request, then marks it active. If the name cannot be registered, the amount returns to the wallet.')
         ),
         'hosting-server' => array(
             array('What does this hosting provider include?', 'Yearly hosting is one website, SSL, and routine care. Monthly managed server is for a site or mail server that needs a person watching it.'),
@@ -129,10 +116,6 @@ function site_seo_business($publicSite, $sameAs)
     $email = trim((string) $publicSite['site_email']);
     if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $business['email'] = $email;
-    }
-    $phone = site_seo_phone(isset($publicSite['site_phone']) ? $publicSite['site_phone'] : '');
-    if ($phone !== '') {
-        $business['telephone'] = $phone;
     }
     $logo = trim((string) $publicSite['logo_path']);
     if ($logo !== '' && strpos($logo, '..') === false) {

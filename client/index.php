@@ -39,9 +39,41 @@ try {
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Welcome, <?= e(get_client_name()) ?>!</h1>
     <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($walletBalance)) ?> · <?= number_format($unitBalances['sms']) ?> SMS · <?= number_format((int) $unitBalances['voice_calls'] + (int) $unitBalances['voice_minutes']) ?> voice calls</p>
 </div>
-<?php if (!billing_kyc_approved($conn, $cid)): ?>
+<?php
+require_once __DIR__ . '/../includes/domain-check.php';
+$unpaidDomains = 0;
+$paidDomains = 0;
+foreach (domain_client_requests($conn, $cid) as $domainRow) {
+    if ($domainRow['status'] === 'requested' && isset($domainRow['price']) && (float) $domainRow['price'] > 0) {
+        $unpaidDomains++;
+    }
+    if ($domainRow['status'] === 'paid') {
+        $paidDomains++;
+    }
+}
+$identity = billing_kyc_load($conn, $cid);
+$identityStatus = (string) $identity['status'];
+$showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending' || $identityStatus === 'rejected' || billing_client_has_messaging($conn, $cid));
+?>
+<?php if ($unpaidDomains > 0): ?>
     <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
-        SMS sending stays closed until your identity is approved. <a href="kyc.php" class="text-brand-300">Submit identity</a>
+        A domain request is waiting for the yearly bill. <a href="domains.php" class="text-brand-300">Pay from the wallet</a>
+    </div>
+<?php endif; ?>
+<?php if ($paidDomains > 0): ?>
+    <div class="mb-6 p-4 bg-brand-500/10 border border-brand-500/30 rounded-xl text-sm text-brand-100">
+        The domain bill is paid. The team registers the name, then it shows Active. <a href="domains.php" class="text-brand-300">See the request</a>
+    </div>
+<?php endif; ?>
+<?php if ($showIdentity): ?>
+    <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
+        <?php if ($identityStatus === 'pending'): ?>
+            Identity is with the team. SMS sending stays closed until it is approved.
+        <?php elseif ($identityStatus === 'rejected'): ?>
+            Identity was sent back. <a href="kyc.php" class="text-brand-300">Update it</a>
+        <?php else: ?>
+            SMS sending stays closed until your identity is approved. <a href="kyc.php" class="text-brand-300">Submit identity</a>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 
@@ -79,10 +111,22 @@ try {
         <div class="dash-action-icon bg-brand-500/20 group-hover:bg-brand-500/30"><svg class="w-6 h-6 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 12H6L5 9z"/></svg></div>
         <div><p class="text-white font-medium text-sm">Buy or book</p><p class="text-slate-500 text-xs">SMS, voice, domains, hosting, email, websites, training</p></div>
     </a>
+    <?php if ($messagingActive && $identityStatus === 'approved'): ?>
     <a href="sms-portal.php" class="dash-action-card group">
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
         <div><p class="text-white font-medium text-sm">SMS portal</p><p class="text-slate-500 text-xs">Username and password for sending</p></div>
     </a>
+    <?php elseif ($messagingActive || $identityStatus === 'pending' || $identityStatus === 'rejected'): ?>
+    <a href="kyc.php" class="dash-action-card group">
+        <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
+        <div><p class="text-white font-medium text-sm">Identity</p><p class="text-slate-500 text-xs">Needed before the SMS portal login appears</p></div>
+    </a>
+    <?php else: ?>
+    <a href="shop.php?service=bulk-sms" class="dash-action-card group">
+        <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
+        <div><p class="text-white font-medium text-sm">Buy SMS credit</p><p class="text-slate-500 text-xs">The portal login appears after the credit is active</p></div>
+    </a>
+    <?php endif; ?>
     <a href="support.php" class="dash-action-card group">
         <div class="dash-action-icon bg-orange-500/20 group-hover:bg-orange-500/30"><svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
         <div><p class="text-white font-medium text-sm">Open Support Ticket</p><p class="text-slate-500 text-xs">Get help from our team</p></div>

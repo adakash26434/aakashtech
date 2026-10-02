@@ -78,6 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         }
     }
 }
+
+$totpNote = array('msg' => '', 'err' => '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['totp_action'])) {
+    $totpNote = totp_manage_post($conn, 'client', $cid);
+}
+$totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) $client['email'] : '');
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">My Profile</h1>
@@ -116,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Mobile (10 digits)</label>
-                <input type="tel" name="phone" inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="98XXXXXXXX" value="<?= e($client['phone'] ?? '') ?>">
+                <input type="tel" name="phone" inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($client['phone'] ?? '') ?>">
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Company</label>
@@ -150,5 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
             <button type="submit" name="change_password" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Change Password</button>
         </form>
     </div>
+    <?php require __DIR__ . '/../includes/totp-manage-card.php'; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

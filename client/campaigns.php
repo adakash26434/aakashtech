@@ -113,7 +113,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Numbers, one per line</label>
-                <textarea name="numbers" required rows="4" class="form-input" placeholder="98XXXXXXXX"></textarea>
+                <textarea name="numbers" required rows="4" class="form-input" placeholder="One 10-digit number per line"></textarea>
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Send time, optional</label>
@@ -158,7 +158,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Numbers, one per line</label>
-                <textarea name="numbers" required rows="4" class="form-input" placeholder="98XXXXXXXX"></textarea>
+                <textarea name="numbers" required rows="4" class="form-input" placeholder="One 10-digit number per line"></textarea>
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Call time, optional</label>

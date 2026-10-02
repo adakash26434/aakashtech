@@ -13,10 +13,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     if (!in_array($status, $statuses, true)) {
         $status = 'resolved';
     }
+    $lookup = $conn->prepare('SELECT t.subject, c.email FROM support_tickets t JOIN client_users c ON c.id = t.client_id WHERE t.id = ? LIMIT 1');
+    $ticketEmail = '';
+    $ticketSubject = '';
+    if ($lookup) {
+        $lookup->bind_param('i', $id);
+        $lookup->execute();
+        $ticketRow = db_fetch_assoc($lookup);
+        $lookup->close();
+        if ($ticketRow) {
+            $ticketEmail = (string) $ticketRow['email'];
+            $ticketSubject = (string) $ticketRow['subject'];
+        }
+    }
     $stmt = $conn->prepare("UPDATE support_tickets SET admin_reply = ?, status = ? WHERE id = ?");
     $stmt->bind_param("ssi", $reply, $status, $id);
     $stmt->execute();
     $stmt->close();
+    if ($reply !== '' && $ticketEmail !== '') {
+        billing_mail_person($conn, $ticketEmail, 'Reply on your support ticket', array(
+            'There is a reply on: ' . $ticketSubject,
+            $reply,
+            'Open Support in the client panel to read it.'
+        ));
+    }
     header('Location: tickets.php');
     exit;
 }

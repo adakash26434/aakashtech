@@ -20,6 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
         $stmt = $conn->prepare("INSERT INTO support_tickets (client_id, subject, description, priority) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $cid, $subject, $desc, $priority);
         if ($stmt->execute()) {
+            billing_notify($conn, 'Support ticket: ' . $subject, array(
+                'A client opened a support ticket.',
+                'Subject: ' . $subject,
+                'Priority: ' . $priority,
+                'Message: ' . billing_notify_clip($desc, 800),
+                'Client: ' . billing_notify_client_label($conn, $cid),
+                'Open Admin → Support Tickets.'
+            ));
             $msg = 'Support ticket created! We will respond shortly.';
         } else {
             $err = 'Failed to create ticket.';

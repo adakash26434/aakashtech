@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+unset($_SESSION['totp_gate']);
 
 if (is_admin_logged_in()) {
     header('Location: index.php');
@@ -36,24 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($error === '' && $admin && (int)$admin['is_active'] === 1 && password_verify($password, (string) $admin['password'])) {
             auth_clear_attempts($conn, 'admin');
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_name'] = $admin['name'];
-            $_SESSION['admin_email'] = $admin['email'];
-            $_SESSION['admin_role'] = $admin['role'];
-            auth_fresh_session();
-            try {
-                $adminId = (int) $admin['id'];
-                $stamp = date('Y-m-d H:i:s');
-                $touch = $conn->prepare('UPDATE admin_users SET last_login = ? WHERE id = ?');
-                if ($touch) {
-                    $touch->bind_param('si', $stamp, $adminId);
-                    $touch->execute();
-                    $touch->close();
-                }
-            } catch (Throwable $exception) {
-                error_log('Admin last login could not be saved.');
-            }
-            header('Location: index.php');
+            totp_open_gate($conn, 'admin', array(
+                'id' => (int) $admin['id'],
+                'name' => $admin['name'],
+                'email' => $admin['email'],
+                'admin_role' => $admin['role']
+            ), 'index.php');
+            header('Location: two-factor.php');
             exit;
         } elseif ($error === '') {
             auth_note_attempt($conn, 'admin');
@@ -114,7 +104,7 @@ try {
                 <?php endif; ?>
             </a>
             <h1 class="font-heading font-bold text-white text-2xl">Admin Panel</h1>
-            <p class="text-slate-500 text-sm mt-1">Sign in to manage your dashboard</p>
+            <p class="text-slate-500 text-sm mt-1">Password, then a Google Authenticator code</p>
         </div>
 
         <form method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-5">
@@ -134,6 +124,7 @@ try {
             <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                 Sign In
             </button>
+            <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
         </form>
 
         <p class="text-center text-slate-600 text-xs mt-6">

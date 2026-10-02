@@ -29,6 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_authenticator'])) {
+    verify_csrf();
+    $id = (int) (isset($_POST['client_id']) ? $_POST['client_id'] : 0);
+    if ($id > 0) {
+        totp_clear($conn, 'client', $id);
+        flash('client_notice', 'Authenticator reset. That client sets it up again on the next sign-in.');
+    }
+    header('Location: clients.php');
+    exit;
+}
+
+$clientNotice = flash('client_notice');
+
 $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
 ?>
 <div class="mb-8">
@@ -36,6 +49,9 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
     <p class="text-slate-500 text-sm">Manage registered clients and the SMS portal username each one uses at sms.aakashtechnologies.com.np.</p>
 </div>
 
+<?php if ($clientNotice !== ''): ?>
+    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
+<?php endif; ?>
 <?php if ($portalMessage !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($portalMessage) ?></div>
 <?php endif; ?>
@@ -91,6 +107,15 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                                     <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
                                     <button type="submit" name="toggle_client" class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                                 </form>
+                                <?php if (isset($cl['totp_secret']) && $cl['totp_secret'] !== ''): ?>
+                                    <form method="POST" class="mt-2" onsubmit="return confirm('Reset Google Authenticator for this client? They set it up again at the next sign-in.');">
+                                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                        <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
+                                        <button type="submit" name="reset_authenticator" class="text-xs bg-transparent border-0 cursor-pointer p-0 text-slate-400 hover:text-white">Reset authenticator</button>
+                                    </form>
+                                <?php else: ?>
+                                    <p class="text-slate-500 text-xs mt-2">Authenticator not set up</p>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endwhile; ?>

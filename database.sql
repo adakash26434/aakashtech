@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
     role        ENUM('super_admin', 'admin', 'staff') DEFAULT 'admin',
     is_active   TINYINT(1) DEFAULT 1,
     last_login  DATETIME DEFAULT NULL,
+    totp_secret VARCHAR(64) NOT NULL DEFAULT '',
+    totp_last_step INT NOT NULL DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email)
@@ -36,10 +38,22 @@ CREATE TABLE IF NOT EXISTS client_users (
     avatar_color VARCHAR(20) DEFAULT '#06b6d4',
     sms_portal_username VARCHAR(80) DEFAULT '',
     sms_portal_password VARCHAR(80) DEFAULT '',
+    totp_secret VARCHAR(64) NOT NULL DEFAULT '',
+    totp_last_step INT NOT NULL DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS auth_recovery_codes (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    account_kind VARCHAR(10) NOT NULL,
+    account_id   INT NOT NULL,
+    code_hash    VARCHAR(255) NOT NULL,
+    used_at      DATETIME DEFAULT NULL,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_recovery_account (account_kind, account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== Inquiries (from main site contact form) ======
@@ -140,18 +154,13 @@ CREATE TABLE IF NOT EXISTS services (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO services (title, slug, description, icon, features, sort_order) VALUES
-('Bulk SMS Service', 'bulk-sms', 'Reach customers with campaigns, alerts, and scheduled messages.', 'message-square-text',
- 'Campaigns,Scheduling,Reporting', 1),
-('Bulk Voice Call', 'bulk-voice', 'Send recorded voice calls for reminders, offers, and notices.', 'phone-call',
- 'Voice calls,Reminders,Minutes', 2),
-('Domain Registration', 'domain-registration', 'Register a domain and renew it automatically.', 'globe',
- '.com,.com.np,Auto-renew', 3),
-('Domain Hosting & Server Management', 'hosting-server', 'Hosting, SSL, and server care that stays online.', 'server',
- 'Hosting,SSL,Server care', 4),
-('Professional Email', 'professional-email', 'Business mailboxes on your own domain.', 'mail',
- 'Mailboxes,Your domain,Auto-renew', 5),
-('Cyber Security Training', 'cyber-security', 'Practical training that helps a team work more safely online.', 'shield-check',
- 'Awareness,Team session,Safe habits', 6);
+('Bulk SMS Service', 'bulk-sms', 'Informational SMS for cooperatives, companies, parties, and personal use, priced by volume.', 'message-square-text', 'AGM,Election,Festival', 1),
+('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
+('Domain Registration', 'domain-registration', 'Register a .com or .com.np domain and renew it automatically.', 'globe', '.com,.com.np,Auto-renew', 3),
+('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
+('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
+('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),
+('Cyber Security Training', 'cyber-security', 'On-site training for directors, staff, and members.', 'shield-check', 'Directors,Staff,Members', 7);
 
 -- ====== Site Settings ======
 CREATE TABLE IF NOT EXISTS site_settings (
@@ -163,9 +172,13 @@ CREATE TABLE IF NOT EXISTS site_settings (
 
 INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('site_name', 'Aakash Technologies'),
-('site_email', 'info@aakashtechnologies.com'),
-('site_phone', '+977 98XXXXXXXX'),
+('site_email', 'info@aakashtechnologies.com.np'),
+('notify_email', 'info@aakashtechnologies.com.np'),
+('mail_from', 'noreply@aakashtechnologies.com.np'),
+('site_phone', ''),
 ('whatsapp_number', ''),
+('viber_number', ''),
+('messenger_url', ''),
 ('notice_enabled', '0'),
 ('notice_title', ''),
 ('notice_body', ''),
@@ -184,12 +197,6 @@ INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('esewa_id', ''),
 ('khalti_id', ''),
 ('bank_details', '');
-
-INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
-('service_pricing_bulk-sms', '{"label":"Indicative rate","amount":"NPR 0.65–0.95 per SMS","details":"Lower per-message rates at higher volume."}'),
-('service_pricing_domain-hosting', '{"label":"Typical yearly costs","amount":"","details":".com domain — NPR 2,400/year\\nHosting / server — from NPR 3,500/year\\nStandard SSL — Often included\\nPaid DV SSL — from NPR 5,000/year"}'),
-('service_pricing_website-design', '{"label":"Project pricing","amount":"Custom quote","details":"Based on pages, features and scope."}'),
-('service_pricing_cyber-security', '{"label":"One-time team session","amount":"NPR 30,000–50,000","details":"Final quote depends on team size and session scope."}');
 
 -- ====== Login attempts ======
 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -305,7 +312,10 @@ CREATE TABLE IF NOT EXISTS domain_requests (
     tld         VARCHAR(20) NOT NULL,
     holder_kind VARCHAR(20) DEFAULT 'individual',
     holder_name VARCHAR(200) DEFAULT '',
+    holder_address VARCHAR(200) DEFAULT '',
     document_path VARCHAR(255) DEFAULT '',
+    price       DECIMAL(12,2) DEFAULT 0,
+    service_id  INT DEFAULT 0,
     status      VARCHAR(20) DEFAULT 'requested',
     admin_note  TEXT,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

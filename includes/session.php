@@ -45,3 +45,54 @@ function aakash_security_headers()
 }
 
 aakash_start_session();
+
+function auth_math_key($key)
+{
+    $key = preg_replace('/[^a-z0-9_-]/', '', (string) $key);
+    return $key === '' ? 'form' : $key;
+}
+
+function auth_math_issue($key)
+{
+    $key = auth_math_key($key);
+    if (!isset($_SESSION['math_check']) || !is_array($_SESSION['math_check'])) {
+        $_SESSION['math_check'] = array();
+    }
+    $current = isset($_SESSION['math_check'][$key]) ? $_SESSION['math_check'][$key] : null;
+    if (is_array($current) && isset($current['a'], $current['b'], $current['at']) && (time() - (int) $current['at']) < 1800) {
+        return $current;
+    }
+    $row = array('a' => random_int(2, 9), 'b' => random_int(1, 8), 'at' => time());
+    $_SESSION['math_check'][$key] = $row;
+    return $row;
+}
+
+function auth_math_prompt($key)
+{
+    $row = auth_math_issue($key);
+    return (int) $row['a'] . ' + ' . (int) $row['b'];
+}
+
+function auth_math_verify($key, $answer)
+{
+    $key = auth_math_key($key);
+    $stored = (isset($_SESSION['math_check'][$key]) && is_array($_SESSION['math_check'][$key])) ? $_SESSION['math_check'][$key] : null;
+    if (!is_array($stored) || !isset($stored['a'], $stored['b'])) {
+        return 'The check expired. Reload the page and try again.';
+    }
+    $given = trim((string) $answer);
+    $expected = (int) $stored['a'] + (int) $stored['b'];
+    if (!preg_match('/^\d{1,2}$/', $given) || (int) $given !== $expected) {
+        unset($_SESSION['math_check'][$key]);
+        return 'The answer to the sum is not right. Try the new sum.';
+    }
+    return '';
+}
+
+function auth_math_clear($key)
+{
+    $key = auth_math_key($key);
+    if (isset($_SESSION['math_check'][$key])) {
+        unset($_SESSION['math_check'][$key]);
+    }
+}

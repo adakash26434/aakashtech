@@ -2,10 +2,11 @@
 $navBase = (basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '') === 'index.php') ? '' : 'index.php';
 if (!isset($siteName)) { $siteName = 'Aakash Technologies'; }
 if (!isset($siteEmail)) { $siteEmail = ''; }
-if (!isset($sitePhone)) { $sitePhone = ''; }
 if (!isset($siteWhatsapp)) { $siteWhatsapp = ''; }
-$whatsappShown = $siteWhatsapp !== '' ? $siteWhatsapp : $sitePhone;
-$whatsappHref = function_exists('site_whatsapp_href') ? site_whatsapp_href($whatsappShown) : '';
+$chatSettings = (isset($publicSite) && is_array($publicSite)) ? $publicSite : array(
+    'whatsapp_number' => isset($siteWhatsapp) ? $siteWhatsapp : ''
+);
+$chatChannels = function_exists('site_chat_channels') ? site_chat_channels($chatSettings) : array();
 $mailHref = function_exists('site_mail_href') ? site_mail_href($siteEmail, $siteName) : '';
 if (!isset($siteLocation)) { $siteLocation = ''; }
 if (!isset($siteTagline)) { $siteTagline = ''; }
@@ -38,11 +39,11 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                     <?= site_escape($siteLocation) ?>
                 </span>
                 <?php endif; ?>
-                <?php if ($whatsappHref !== '' || $siteSocials): ?>
+                <?php if ($chatChannels || $siteSocials): ?>
                 <div class="footer-social" aria-label="Social contact">
-                    <?php if ($whatsappHref !== ''): ?>
-                        <a href="<?= site_escape($whatsappHref) ?>" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zM12 20.3a8.3 8.3 0 0 1-4.2-1.1l-.3-.2-3.5.7.7-3.4-.2-.3A8.3 8.3 0 1 1 12 20.3zm4.6-6.2c-.3-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.8 6.8 0 0 1-2-1.2 7.5 7.5 0 0 1-1.4-1.7c-.1-.3 0-.4.1-.5l.4-.5.2-.3a.5.5 0 0 0 0-.5c-.1-.1-.6-1.4-.8-1.9s-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.5 4 4.2 4.2 0 0 0 3 .4 2.5 2.5 0 0 0 1.6-1.2 2 2 0 0 0 .1-1.2c-.1-.1-.3-.2-.6-.3z"/></svg></a>
-                    <?php endif; ?>
+                    <?php foreach ($chatChannels as $channel): ?>
+                        <a href="<?= site_escape($channel['href']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= site_escape($channel['label']) ?>"><?= $channel['icon'] ?></a>
+                    <?php endforeach; ?>
                     <?php foreach ($siteSocials as $social): ?>
                         <a href="<?= site_escape($social['href']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= site_escape($social['label']) ?>"><?= $social['icon'] ?></a>
                     <?php endforeach; ?>
@@ -77,18 +78,16 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                     <?= site_escape($siteEmail) ?>
                 </a>
                 <?php endif; ?>
-                <?php if ($whatsappHref !== ''): ?>
-                <a href="<?= site_escape($whatsappHref) ?>" target="_blank" rel="noopener noreferrer">
-                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zM12 20.3a8.3 8.3 0 0 1-4.2-1.1l-.3-.2-3.5.7.7-3.4-.2-.3A8.3 8.3 0 1 1 12 20.3zm4.6-6.2c-.3-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.8 6.8 0 0 1-2-1.2 7.5 7.5 0 0 1-1.4-1.7c-.1-.3 0-.4.1-.5l.4-.5.2-.3a.5.5 0 0 0 0-.5c-.1-.1-.6-1.4-.8-1.9s-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.5 4 4.2 4.2 0 0 0 3 .4 2.5 2.5 0 0 0 1.6-1.2 2 2 0 0 0 .1-1.2c-.1-.1-.3-.2-.6-.3z"/></svg>
-                    WhatsApp <?= site_escape($whatsappShown) ?>
+                <?php foreach ($chatChannels as $channel): ?>
+                <a href="<?= site_escape($channel['href']) ?>" target="_blank" rel="noopener noreferrer">
+                    <?= $channel['icon'] ?>
+                    <?= site_escape($channel['label']) ?>
                 </a>
-                <?php endif; ?>
-                <?php if ($sitePhone !== ''): ?>
-                <a href="tel:<?= site_escape(preg_replace('/\s+/', '', $sitePhone)) ?>">
-                    <i data-lucide="phone" aria-hidden="true"></i>
-                    <?= site_escape($sitePhone) ?>
+                <?php endforeach; ?>
+                <a href="client/support.php">
+                    <i data-lucide="ticket" aria-hidden="true"></i>
+                    Support ticket
                 </a>
-                <?php endif; ?>
                 <a href="<?= site_escape($contactHref) ?>" class="footer-contact-link">
                     Tell us what you need
                     <i data-lucide="arrow-up-right" aria-hidden="true"></i>
@@ -102,3 +101,19 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
         </div>
     </div>
 </footer>
+<?php
+$guestChats = array();
+foreach ($chatChannels as $channel) {
+    if ($channel['key'] === 'whatsapp' || $channel['key'] === 'messenger') {
+        $guestChats[] = $channel;
+    }
+}
+if ($guestChats) {
+    $guestClass = 'guest-chat guest-chat--dock';
+    include __DIR__ . '/site-guest-chat.php';
+}
+$aiReady = isset($conn) && $conn && function_exists('site_ai_ready') && site_ai_ready($conn);
+if ($aiReady) {
+    include __DIR__ . '/site-ask.php';
+}
+?>

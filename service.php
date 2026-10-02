@@ -17,6 +17,8 @@ if (!isset($definitions[$slug]) || !isset($pages[$slug])) {
 }
 
 $page = $pages[$slug];
+$guides = billing_service_guide();
+$guide = isset($guides[$slug]) ? $guides[$slug] : array('includes' => array(), 'steps' => array(), 'notes' => array(), 'plans' => array(), 'next' => array());
 $publicSite = site_public_defaults();
 $conn = null;
 try {
@@ -27,7 +29,6 @@ try {
 }
 $siteName = $publicSite['site_name'];
 $siteEmail = $publicSite['site_email'];
-$sitePhone = $publicSite['site_phone'];
 $siteWhatsapp = $publicSite['whatsapp_number'];
 $siteSocials = site_social_links($publicSite);
 $siteLocation = $publicSite['site_location'];
@@ -111,33 +112,60 @@ $navBase = 'index.php';
                     <span class="section-kicker"><?= service_escape($page['kicker']) ?></span>
                     <h1 class="font-heading"><?= service_escape($service['title']) ?></h1>
                     <p class="detail-lead"><?= service_escape($page['lead']) ?></p>
-                    <ul class="detail-points">
-                        <?php foreach ($page['points'] as $point): ?>
-                            <li><?= service_escape($point) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php $asks = billing_checkout_asks($slug); ?>
-                    <?php if ($asks): ?>
-                        <h2 class="detail-subhead font-heading">What you enter before paying</h2>
-                        <ul class="detail-points">
-                            <?php foreach ($asks as $ask): ?>
-                                <li><?= service_escape($ask) ?></li>
+                    <?php if ($slug === 'domain-registration'): ?>
+                        <a class="button button--primary detail-cta" href="domain.php">Check a name</a>
+                    <?php else: ?>
+                        <a class="button button--primary detail-cta" href="#buy"><?= service_escape($service['action']) ?></a>
+                    <?php endif; ?>
+                    <?php if (!empty($guide['includes'])): ?>
+                        <h2 class="detail-subhead font-heading">Included</h2>
+                        <ul class="include-list">
+                            <?php foreach ($guide['includes'] as $item): ?>
+                                <li><?= service_escape($item) ?></li>
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
-                    <h2 class="detail-subhead font-heading">How you buy it</h2>
-                    <ul class="detail-points">
-                        <?php foreach (billing_buy_steps() as $step): ?>
-                            <li><?= service_escape($step) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php if (!empty($page['after'])): ?>
-                        <h2 class="detail-subhead font-heading">After you pay</h2>
+                    <?php if (!empty($guide['steps'])): ?>
+                        <h2 class="detail-subhead font-heading">How it works</h2>
+                        <ol class="plain-steps">
+                            <?php foreach ($guide['steps'] as $step): ?>
+                                <li><?= service_escape($step) ?></li>
+                            <?php endforeach; ?>
+                        </ol>
+                    <?php endif; ?>
+                    <?php if (!empty($guide['notes'])): ?>
+                        <h2 class="detail-subhead font-heading">Worth knowing</h2>
                         <ul class="detail-points">
-                            <?php foreach ($page['after'] as $after): ?>
-                                <li><?= service_escape($after) ?></li>
+                            <?php foreach ($guide['notes'] as $note): ?>
+                                <li><?= service_escape($note) ?></li>
                             <?php endforeach; ?>
                         </ul>
+                    <?php endif; ?>
+                    <?php if (!empty($page['examples'])): ?>
+                        <h2 class="detail-subhead font-heading">A notice you can copy</h2>
+                        <p class="detail-lead">Replace the words in brackets. Each number receives this same notice. Sending is done in the SMS portal.</p>
+                        <?php foreach ($page['examples'] as $example): ?>
+                            <figure class="notice-sample">
+                                <figcaption><?= service_escape($example[0]) ?></figcaption>
+                                <blockquote><?= service_escape($example[1]) ?></blockquote>
+                            </figure>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                    <?php if (!empty($guide['next'])): ?>
+                        <h2 class="detail-subhead font-heading">Often added with this</h2>
+                        <div class="next-services">
+                            <?php foreach ($guide['next'] as $next): ?>
+                                <?php
+                                $nextSlug = $next[0];
+                                $nextTitle = isset($definitions[$nextSlug]) ? $definitions[$nextSlug]['title'] : $next[1];
+                                $nextHref = $nextSlug === 'domain-registration' ? 'domain.php' : ('service.php?slug=' . rawurlencode($nextSlug));
+                                ?>
+                                <a href="<?= service_escape($nextHref) ?>">
+                                    <strong><?= service_escape($nextTitle) ?></strong>
+                                    <span><?= service_escape($next[1]) ?></span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
                     <?php endif; ?>
                     <?php $faqs = site_seo_faqs($slug); ?>
                     <?php if ($faqs): ?>
@@ -150,7 +178,7 @@ $navBase = 'index.php';
                         </dl>
                     <?php endif; ?>
                 </div>
-                <aside class="detail-panel">
+                <aside class="detail-panel" id="buy">
                     <?php if ($slabs): ?>
                         <h2 class="font-heading">Rate by volume</h2>
                         <p>Use the row that contains your quantity. That row is the price for each one. A quantity outside the table cannot be ordered. The bill adds 13% VAT to that amount.</p>
@@ -193,6 +221,9 @@ $navBase = 'index.php';
                         <?php foreach ($plans as $plan): ?>
                             <article>
                                 <h3 class="font-heading"><?= service_escape($plan['name']) ?></h3>
+                                <?php if (!empty($guide['plans'][$plan['code']])): ?>
+                                    <p class="plan-fit"><?= service_escape($guide['plans'][$plan['code']]) ?></p>
+                                <?php endif; ?>
                                 <p><?= service_escape($plan['summary']) ?></p>
                                 <div class="plan-buy">
                                     <?php if ((float) $plan['price'] > 0): ?>

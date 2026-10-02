@@ -59,9 +59,9 @@ Upload every file into `public_html`. The domain should open `index.php`.
 ### Step 3: Write the settings file
 Open `public_html/cpanel-config.php` in File Manager → Edit. Fill in the cPanel database name, user, and password, plus the admin email and a password of at least 6 characters. Save the file, then open the website once. Admin login is `your-domain/admin/login.php` with that email and password.
 
-Contact email, phone, eSewa, Khalti, and bank text are in the same file. The browser cannot open `cpanel-config.php` or `config.php`.
+Contact email, eSewa, Khalti, and bank text are in the same file. The browser cannot open `cpanel-config.php` or `config.php`.
 
-After the first save in **Admin → Settings**, the public site uses the email, phone, WhatsApp number, and footer text from that screen. Leave WhatsApp blank to use the public phone. A number that still contains `X` is shown as a phone number only, not as a WhatsApp link.
+After the first save in **Admin → Settings**, the public site uses the email, footer text, and the chat links from that screen. WhatsApp, Viber, and Messenger appear only after a real number or an https://m.me/ link is saved. Those numbers are not printed on the site, and the site does not publish a call number.
 
 ### Step 4: Visit the site
 Open the domain. Clients register from the client login page.
@@ -81,8 +81,7 @@ public_html/
 │   ├── css/style.css      (shared panel components)
 │   ├── css/portal.css     (unified admin and client portal theme)
 │   ├── js/site.js         (public website interactions)
-│   ├── js/portal.js       (portal Lucide icons)
-│   └── js/main.js         (admin and client panel interactions)
+│   └── js/portal.js       (portal Lucide icons)
 ├── includes/
 │   ├── site-header.php    (shared public navigation)
 │   ├── site-footer.php    (shared public footer)
@@ -173,6 +172,7 @@ public_html/
 
 ## Security Notes
 - Passwords are hashed with PHP's `password_hash()` (bcrypt)
+- Admin and client sign-in continue with Google Authenticator. The first sign-in shows a QR code and eight backup codes. Each backup code works once. Admin → Clients can reset a client's authenticator. If the only admin loses the phone and the backup codes, clear `totp_secret` for that admin row in the database, then sign in and set it up again.
 - CSRF token protection on admin and public contact forms
 - `.htaccess` blocks direct access to `config.php` and `.sql` files
 - The local PHP preview router also blocks internal configuration and schema files

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
+unset($_SESSION['totp_gate']);
 
 if (isset($_GET['next'])) {
     $_SESSION['client_next'] = client_safe_next($_GET['next']);
@@ -54,13 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         }
         if ($error === '' && $client && $client['status'] === 'active' && password_verify($password, (string) $client['password'])) {
             auth_clear_attempts($conn, 'client');
-            $_SESSION['client_id'] = $client['id'];
-            $_SESSION['client_name'] = $client['name'];
-            $_SESSION['client_email'] = $client['email'];
             $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
-            unset($_SESSION['client_next']);
-            auth_fresh_session();
-            header('Location: ' . $next);
+            totp_open_gate($conn, 'client', array(
+                'id' => (int) $client['id'],
+                'name' => $client['name'],
+                'email' => $client['email']
+            ), $next);
+            header('Location: two-factor.php');
             exit;
         } elseif ($error === '') {
             auth_note_attempt($conn, 'client');
@@ -88,8 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         'company' => $company
     );
 
+    $mathError = auth_math_verify('register', isset($_POST['human_check']) ? $_POST['human_check'] : '');
     if (!csrf_is_valid()) {
         $error = 'The form expired. Refresh the page and try again.';
+    } elseif ($mathError !== '') {
+        $error = $mathError;
     } elseif ($honeypot !== '') {
         header('Location: login.php');
         exit;
@@ -130,14 +134,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 $stmt->execute();
                 $stmt->close();
                 auth_note_attempt($conn, 'register');
-                $_SESSION['client_id'] = $conn->insert_id;
-                $_SESSION['client_name'] = $name;
-                $_SESSION['client_email'] = $email;
-                $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
-                unset($_SESSION['client_next']);
-                auth_fresh_session();
-                header('Location: ' . $next);
-                exit;
+                auth_math_clear('register');
+                $newId = (int) $conn->insert_id;
+                if ($newId < 1) {
+                    $error = 'The account could not be created. Refresh the page and try again.';
+                } else {
+                    $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
+                    totp_open_gate($conn, 'client', array(
+                        'id' => $newId,
+                        'name' => $name,
+                        'email' => $email
+                    ), $next);
+                    header('Location: two-factor.php');
+                    exit;
+                }
             }
         } catch (Throwable $exception) {
             error_log('Client registration failed: ' . $exception->getMessage());
@@ -201,7 +211,7 @@ try {
                 <?php endif; ?>
             </a>
             <h1 class="font-heading font-bold text-white text-2xl">Client Portal</h1>
-            <p class="text-slate-500 text-sm mt-1"><?= $showRegister ? 'Create your account' : 'Sign in to your account' ?></p>
+            <p class="text-slate-500 text-sm mt-1"><?= $showRegister ? 'Create your account, then add Google Authenticator' : 'Password, then a Google Authenticator code' ?></p>
         </div>
 
         <?php if ($error): ?>
@@ -223,6 +233,7 @@ try {
                 <button type="submit" name="login" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Sign In
                 </button>
+                <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
             </form>
             <p class="text-center text-slate-600 text-sm mt-6">
                 Don't have an account? <a href="?action=register" class="text-brand-400 hover:text-brand-300 font-medium">Register here</a><br>
@@ -247,7 +258,7 @@ try {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Mobile *</label>
-                        <input type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="98XXXXXXXX" value="<?= e($registerValues['phone']) ?>">
+                        <input type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($registerValues['phone']) ?>">
                     </div>
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Company</label>
@@ -263,6 +274,10 @@ try {
                         <label class="block text-slate-300 text-sm font-medium mb-2">Confirm *</label>
                         <input type="password" name="confirm_password" required autocomplete="new-password" class="form-input" placeholder="Repeat">
                     </div>
+                </div>
+                <div>
+                    <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e(auth_math_prompt('register')) ?>? *</label>
+                    <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" class="form-input" placeholder="Answer">
                 </div>
                 <button type="submit" name="register" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Create Account

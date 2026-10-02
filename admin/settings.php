@@ -10,8 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
     $fields = array(
         'site_name' => 80,
         'site_email' => 120,
-        'site_phone' => 40,
         'whatsapp_number' => 40,
+        'viber_number' => 40,
+        'messenger_url' => 200,
         'site_location' => 120,
         'footer_tagline' => 180,
         'footer_text' => 180,
@@ -33,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         $values[$key] = substr(trim($_POST[$key] ?? ''), 0, $limit);
     }
     $values['notice_enabled'] = !empty($_POST['notice_enabled']) ? '1' : '0';
-    $linkKeys = array('notice_link', 'facebook_url', 'instagram_url', 'youtube_url', 'tiktok_url', 'linkedin_url');
+    $linkKeys = array('notice_link', 'messenger_url', 'facebook_url', 'instagram_url', 'youtube_url', 'tiktok_url', 'linkedin_url');
     $badLink = false;
     foreach ($linkKeys as $linkKey) {
         if ($values[$linkKey] === '') {
@@ -48,6 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
     }
     if ($values['site_name'] === '') {
         $err = 'Site name is required.';
+    } elseif ($values['whatsapp_number'] !== '' && site_chat_digits($values['whatsapp_number']) === '') {
+        $err = 'WhatsApp needs a real mobile number. The number is used for the link and is not printed on the site.';
+    } elseif ($values['viber_number'] !== '' && site_chat_digits($values['viber_number']) === '') {
+        $err = 'Viber needs a real mobile number. The number is used for the link and is not printed on the site.';
     } elseif ($values['site_email'] !== '' && !filter_var($values['site_email'], FILTER_VALIDATE_EMAIL)) {
         $err = 'Enter a valid public email address.';
     } elseif ($badLink) {
@@ -83,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
                 } elseif ($noticeImage['path'] !== null) {
                     $values['notice_image'] = $noticeImage['path'];
                 }
+                $values['site_phone'] = '';
                 foreach ($values as $key => $value) {
                     billing_set_setting($conn, $key, $value);
                 }
@@ -117,11 +123,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     }
 }
 
+$totpNote = array('msg' => '', 'err' => '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['totp_action'])) {
+    $totpNote = totp_manage_post($conn, 'admin', (int) $_SESSION['admin_id']);
+}
+$totpView = totp_manage_view('admin', (int) $_SESSION['admin_id'], isset($_SESSION['admin_email']) ? (string) $_SESSION['admin_email'] : '');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_notify']) || isset($_POST['send_notify_test']))) {
+    verify_csrf();
+    $notifyEmail = strtolower(trim((string) (isset($_POST['notify_email']) ? $_POST['notify_email'] : '')));
+    $mailFrom = strtolower(trim((string) (isset($_POST['mail_from']) ? $_POST['mail_from'] : '')));
+    if ($mailFrom === '') {
+        $mailFrom = site_sender_email();
+    }
+    if ($notifyEmail !== '' && !billing_mail_ok($notifyEmail)) {
+        $err = 'Enter a valid email for request notifications.';
+    } elseif (!billing_mail_ok($mailFrom)) {
+        $err = 'Enter a valid sending address.';
+    } else {
+        billing_set_setting($conn, 'mail_from', $mailFrom);
+        billing_set_setting($conn, 'notify_email', $notifyEmail);
+        if (isset($_POST['send_notify_test'])) {
+            $test = billing_notify_test($conn);
+            if (!empty($test['ok'])) {
+                $msg = 'The server accepted the test. Open ' . $notifyEmail . ', including the spam folder, and confirm the message is there.';
+            } else {
+                $err = $test['error'];
+            }
+        } else {
+            $msg = $notifyEmail === '' ? 'Request emails are off until an address is saved.' : 'Request emails will go to ' . $notifyEmail . '.';
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai'])) {
+    verify_csrf();
+    $provider = isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : '';
+    if ($provider !== 'gemini' && $provider !== 'deepseek') {
+        $provider = '';
+    }
+    $geminiInput = trim((string) (isset($_POST['ai_gemini_key']) ? $_POST['ai_gemini_key'] : ''));
+    $deepseekInput = trim((string) (isset($_POST['ai_deepseek_key']) ? $_POST['ai_deepseek_key'] : ''));
+    $geminiKey = billing_setting($conn, 'ai_gemini_key');
+    $deepseekKey = billing_setting($conn, 'ai_deepseek_key');
+    if (!empty($_POST['clear_gemini'])) {
+        $geminiKey = '';
+    } elseif ($geminiInput !== '') {
+        $geminiKey = site_ai_key_ok($geminiInput) ? $geminiInput : null;
+    }
+    if (!empty($_POST['clear_deepseek'])) {
+        $deepseekKey = '';
+    } elseif ($deepseekInput !== '') {
+        $deepseekKey = site_ai_key_ok($deepseekInput) ? $deepseekInput : null;
+    }
+    if ($geminiKey === null || $deepseekKey === null) {
+        $err = 'A key should be the long value from Gemini or DeepSeek, with no spaces.';
+    } elseif ($provider === 'gemini' && $geminiKey === '') {
+        $err = 'Paste a Gemini key, or choose DeepSeek.';
+    } elseif ($provider === 'deepseek' && $deepseekKey === '') {
+        $err = 'Paste a DeepSeek key, or choose Gemini.';
+    } else {
+        billing_set_setting($conn, 'ai_provider', $provider);
+        billing_set_setting($conn, 'ai_gemini_key', $geminiKey);
+        billing_set_setting($conn, 'ai_deepseek_key', $deepseekKey);
+        $msg = $provider === '' ? 'The public assistant is off.' : 'The public assistant will answer from the service pages.';
+    }
+}
+
 $settings = site_public_settings($conn);
+$notifyEmail = billing_notify_address($conn);
+$mailFrom = billing_mail_from_address($conn);
+$notifyTestAt = billing_setting($conn, 'notify_test_at');
+$notifyTestResult = billing_setting($conn, 'notify_test_result');
+$notifyTestError = billing_setting($conn, 'notify_test_error');
+$notifyLastAt = billing_setting($conn, 'notify_last_at');
+$notifyLastResult = billing_setting($conn, 'notify_last_result');
+$aiProvider = billing_setting($conn, 'ai_provider');
+$geminiSaved = billing_setting($conn, 'ai_gemini_key') !== '';
+$deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Settings</h1>
-    <p class="text-slate-500 text-sm">Logo, name, and the contact details shown on the public site</p>
+    <p class="text-slate-500 text-sm">Logo, public contact details, and the inbox that receives new requests</p>
+</div>
+
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Request emails</h3></div>
+    <form method="POST" action="" class="p-5 space-y-4">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <p class="text-slate-400 text-sm">When a contact message, service order, domain request, paid domain, wallet top-up, identity check, or support ticket arrives, this address gets an email. You do not have to stay signed in to notice it.</p>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="notify_email">Notification email</label>
+            <input id="notify_email" type="email" name="notify_email" maxlength="120" class="form-input" value="<?= e($notifyEmail) ?>" placeholder="info@aakashtechnologies.com.np">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="mail_from">Sending address</label>
+            <input id="mail_from" type="email" name="mail_from" maxlength="120" class="form-input" value="<?= e($mailFrom) ?>" placeholder="noreply@aakashtechnologies.com.np">
+        </div>
+        <p class="text-slate-500 text-xs">Queries and notices arrive at the notification email. Automatic mail is sent from the sending address, and a reply goes to the public email below. On cPanel, noreply@aakashtechnologies.com.np and info@aakashtechnologies.com.np should both be mailboxes on this domain. Leave the notification email blank to stop the emails. The requests still appear in the admin panel.</p>
+        <?php if ($notifyTestAt !== ''): ?>
+            <p class="text-slate-400 text-sm">Last test <?= e($notifyTestAt) ?>: <?= $notifyTestResult === 'accepted' ? 'the server accepted it. Confirm it is in the inbox.' : 'the server refused it.' ?><?= $notifyTestError !== '' ? ' ' . e($notifyTestError) : '' ?></p>
+        <?php endif; ?>
+        <?php if ($notifyLastAt !== ''): ?>
+            <p class="text-slate-400 text-sm">Last request email <?= e($notifyLastAt) ?>: <?= $notifyLastResult === 'accepted' ? 'the server accepted it.' : 'the server refused it.' ?></p>
+        <?php endif; ?>
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" name="save_notify" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save notification email</button>
+            <button type="submit" name="send_notify_test" value="1" class="px-6 py-2.5 border border-slate-600 text-white text-sm font-medium rounded-xl transition">Send a test email</button>
+        </div>
+    </form>
+</div>
+
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Public assistant</h3></div>
+    <form method="POST" action="" class="p-5 space-y-4" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <p class="text-slate-400 text-sm">Visitors can ask about the services from the public pages. The assistant reads those pages only. It is not given passwords, portal logins, wallet records, identity files, or payment account numbers.</p>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="ai_provider">Which key to use</label>
+            <select id="ai_provider" name="ai_provider" class="form-input">
+                <option value="" <?= $aiProvider === '' ? 'selected' : '' ?>>Off</option>
+                <option value="gemini" <?= $aiProvider === 'gemini' ? 'selected' : '' ?>>Gemini</option>
+                <option value="deepseek" <?= $aiProvider === 'deepseek' ? 'selected' : '' ?>>DeepSeek</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="ai_gemini_key">Gemini key</label>
+            <input id="ai_gemini_key" type="password" name="ai_gemini_key" maxlength="200" class="form-input" value="" autocomplete="new-password" placeholder="<?= $geminiSaved ? 'A key is saved. Paste a new one to replace it.' : 'Paste the Gemini key' ?>">
+            <?php if ($geminiSaved): ?>
+                <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" name="clear_gemini" value="1"> Remove the saved Gemini key
+                </label>
+            <?php endif; ?>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="ai_deepseek_key">DeepSeek key</label>
+            <input id="ai_deepseek_key" type="password" name="ai_deepseek_key" maxlength="200" class="form-input" value="" autocomplete="new-password" placeholder="<?= $deepseekSaved ? 'A key is saved. Paste a new one to replace it.' : 'Paste the DeepSeek key' ?>">
+            <?php if ($deepseekSaved): ?>
+                <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" name="clear_deepseek" value="1"> Remove the saved DeepSeek key
+                </label>
+            <?php endif; ?>
+        </div>
+        <p class="text-slate-500 text-xs">The key stays on the server. It is not shown again and it is not printed on the website. Gemini uses gemini-2.5-flash. DeepSeek uses deepseek-chat. Choose Off to hide the assistant.</p>
+        <button type="submit" name="save_ai" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save assistant</button>
+    </form>
 </div>
 
 <?php if ($msg): ?>
@@ -160,13 +306,19 @@ $settings = site_public_settings($conn);
                 <input type="email" name="site_email" maxlength="120" class="form-input" value="<?= e($settings['site_email'] ?? '') ?>">
             </div>
             <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Public phone</label>
-                <input type="text" name="site_phone" maxlength="40" class="form-input" value="<?= e($settings['site_phone'] ?? '') ?>">
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">WhatsApp number</label>
+                <input type="text" name="whatsapp_number" maxlength="40" class="form-input" value="<?= e($settings['whatsapp_number'] ?? '') ?>" placeholder="10-digit mobile for the chat link">
+                <p class="text-slate-500 text-xs mt-1.5">Used only to open WhatsApp. The number is not printed on the site. A 10-digit Nepal mobile is sent as 977…</p>
             </div>
             <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">WhatsApp number</label>
-                <input type="text" name="whatsapp_number" maxlength="40" class="form-input" value="<?= e($settings['whatsapp_number'] ?? '') ?>" placeholder="Same as the phone if left blank">
-                <p class="text-slate-500 text-xs mt-1.5">Used for the query link in the footer and on the contact section. A 10-digit Nepal mobile is sent as 977…</p>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">Viber number</label>
+                <input type="text" name="viber_number" maxlength="40" class="form-input" value="<?= e($settings['viber_number'] ?? '') ?>" placeholder="10-digit mobile for the chat link">
+                <p class="text-slate-500 text-xs mt-1.5">Used only to open Viber. The number is not printed on the site.</p>
+            </div>
+            <div>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">Messenger link</label>
+                <input type="url" name="messenger_url" maxlength="200" class="form-input" value="<?= e($settings['messenger_url'] ?? '') ?>" placeholder="https://m.me/your-page">
+                <p class="text-slate-500 text-xs mt-1.5">Paste the page’s https://m.me/ link. It is not invented here.</p>
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Location</label>
@@ -213,7 +365,7 @@ $settings = site_public_settings($conn);
                     <input type="url" name="tiktok_url" maxlength="200" class="form-input" placeholder="TikTok https:// link" value="<?= e($settings['tiktok_url'] ?? '') ?>">
                     <input type="url" name="linkedin_url" maxlength="200" class="form-input" placeholder="LinkedIn https:// link" value="<?= e($settings['linkedin_url'] ?? '') ?>">
                 </div>
-                <p class="text-slate-500 text-xs mt-2">Only filled links appear as icons in the footer. WhatsApp uses the number above.</p>
+                <p class="text-slate-500 text-xs mt-2">Only filled links appear as icons in the footer. WhatsApp, Viber, and Messenger use the fields above. A personal mobile is not shown as a call number.</p>
             </div>
             <div class="pt-2 border-t border-slate-800">
                 <h4 class="font-heading font-semibold text-white text-sm mb-3">Online payment</h4>
@@ -250,5 +402,6 @@ $settings = site_public_settings($conn);
             <button type="submit" name="change_password" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Change Password</button>
         </form>
     </div>
+    <?php require __DIR__ . '/../includes/totp-manage-card.php'; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

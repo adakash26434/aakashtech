@@ -78,7 +78,7 @@ $serviceOverrides = billing_catalog_overrides($conn);
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">See rates photos</h3></div>
     <div class="p-5 space-y-5">
-        <p class="text-slate-500 text-sm">Upload a photo or poster for a service. It appears on that service’s See rates page. Leave it empty and nothing is shown.</p>
+        <p class="text-slate-500 text-sm">Upload a photo or poster for a service. It appears at the top of that service page. Leave it empty and nothing is shown.</p>
         <?php foreach ($posterServices as $slug => $service): ?>
             <?php $posterPreview = site_service_poster($conn, $slug); ?>
             <form method="POST" action="" enctype="multipart/form-data" class="grid sm:grid-cols-[140px_1fr] gap-4 items-center border-t border-slate-800 pt-5 first:border-0 first:pt-0">
@@ -109,7 +109,7 @@ $serviceOverrides = billing_catalog_overrides($conn);
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Public service text</h3></div>
     <div class="p-5 space-y-6">
-        <p class="text-slate-500 text-sm">These words appear on the homepage cards and as the heading on each See rates page. Tags are separated by commas.</p>
+        <p class="text-slate-500 text-sm">These words appear on the homepage cards and as the heading on each service page. Tags are separated by commas.</p>
         <?php foreach ($posterServices as $slug => $service): ?>
             <?php $view = billing_saved_service_view($conn, $slug, $serviceOverrides); ?>
             <form method="POST" action="" class="space-y-3 border-t border-slate-800 pt-5 first:border-0 first:pt-0">

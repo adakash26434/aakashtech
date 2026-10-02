@@ -76,7 +76,15 @@ foreach (billing_load_plans($conn) as $plan) {
                             <?php else: ?>
                                 <p class="font-heading font-bold text-white text-xl mb-4">Volume rate</p>
                             <?php endif; ?>
-                            <a href="checkout.php?plan=<?= e(rawurlencode($plan['code'])) ?>" class="mt-auto inline-flex justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition"><?= e($service['action']) ?></a>
+                            <?php
+                            $planHref = 'checkout.php?plan=' . rawurlencode($plan['code']);
+                            $planLabel = $service['action'];
+                            if ($plan['code'] === 'domain-com' || $plan['code'] === 'domain-np') {
+                                $planHref = '../domain.php?tld=' . ($plan['code'] === 'domain-np' ? 'com.np' : 'com');
+                                $planLabel = 'Check this name';
+                            }
+                            ?>
+                            <a href="<?= e($planHref) ?>" class="mt-auto inline-flex justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition"><?= e($planLabel) ?></a>
                         </div>
                     </article>
                 <?php endforeach; ?>

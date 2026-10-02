@@ -5,6 +5,7 @@ if (!isset($siteLogo)) { $siteLogo = ''; }
 $brandLogo = site_logo_web_path($siteLogo);
 $brandLetter = strtoupper(substr($siteName, 0, 1));
 if ($brandLetter === '') { $brandLetter = 'A'; }
+$guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site_guest_chats($publicSite) : array();
 ?>
 <a class="skip-link" href="#main-content">Skip to content</a>
 
@@ -33,6 +34,9 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
         </nav>
 
         <div class="nav-actions">
+            <?php if ($guestChats): ?>
+                <?php $guestClass = 'nav-chats'; include __DIR__ . '/site-guest-chat.php'; ?>
+            <?php endif; ?>
             <a class="portal-link" href="client/login.php">
                 <i data-lucide="user-round" aria-hidden="true"></i>
                 <span>Client portal</span>
@@ -60,6 +64,9 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
         <a href="<?= $navBase ?>#about" @click="mobileOpen = false">Why us</a>
         <a href="<?= $navBase ?>#process" @click="mobileOpen = false">How we work</a>
         <a href="<?= $navBase ?>#contact" @click="mobileOpen = false">Contact</a>
+        <?php if ($guestChats): ?>
+            <?php $guestClass = 'nav-chats nav-chats--mobile'; include __DIR__ . '/site-guest-chat.php'; ?>
+        <?php endif; ?>
         <a href="client/login.php">
             <i data-lucide="user-round" aria-hidden="true"></i>
             Client portal

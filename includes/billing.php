@@ -5,7 +5,7 @@ function billing_service_definitions()
     return array(
         'bulk-sms' => array(
             'title' => 'Bulk SMS',
-            'summary' => 'Informational SMS for cooperatives, companies, parties, and personal use. A smaller send costs more per message. A larger send costs less.',
+            'summary' => 'One notice, sent as a text. Type a quantity and see the bill.',
             'icon' => 'message-square-text',
             'tags' => array('AGM', 'Election', 'Festival'),
             'contact' => 'Bulk SMS Service',
@@ -13,7 +13,7 @@ function billing_service_definitions()
         ),
         'bulk-voice' => array(
             'title' => 'Bulk auto voice calls',
-            'summary' => 'The same notices as a recorded voice call: AGM, program, event, election, or festival. Volume slabs apply.',
+            'summary' => 'The same notice, heard as a recorded call in Nepali or English.',
             'icon' => 'phone-call',
             'tags' => array('Auto call', 'Nepali or English', 'Volume slabs'),
             'contact' => 'Bulk Voice Call',
@@ -21,7 +21,7 @@ function billing_service_definitions()
         ),
         'domain-registration' => array(
             'title' => 'Domain registration',
-            'summary' => 'Register a .com or .com.np domain in Nepal and let it renew before it expires.',
+            'summary' => 'Check a .com or .com.np name, then request the year.',
             'icon' => 'globe',
             'tags' => array('.com', '.com.np', 'Auto-renew'),
             'contact' => 'Domain Registration',
@@ -29,7 +29,7 @@ function billing_service_definitions()
         ),
         'hosting-server' => array(
             'title' => 'Hosting & server management',
-            'summary' => 'Website hosting and hands-on server management for sites that need to stay online in Nepal.',
+            'summary' => 'Keep one website online with SSL, or have a person watch the server each month.',
             'icon' => 'server',
             'tags' => array('Hosting', 'SSL', 'Server care'),
             'contact' => 'Domain Hosting & Server Management',
@@ -37,7 +37,7 @@ function billing_service_definitions()
         ),
         'professional-email' => array(
             'title' => 'Domain email on Zoho',
-            'summary' => 'name@yourdomain.com for a cooperative or any organization. Managed by Aakash Technologies, a Zoho authorized partner in Nepal.',
+            'summary' => 'Open info@yourdomain on Zoho. Choose 1, 5, or 10 mailboxes.',
             'icon' => 'mail',
             'tags' => array('Zoho', 'Your domain', 'Auto-renew'),
             'contact' => 'Professional Email',
@@ -45,7 +45,7 @@ function billing_service_definitions()
         ),
         'custom-websites' => array(
             'title' => 'Custom websites',
-            'summary' => 'A finished website for a company, portfolio, bank or cooperative, restaurant, school, hotel, or news portal. Book the type and send the brief online.',
+            'summary' => 'Pick the kind of site. The pages and the price are on the package.',
             'icon' => 'panels-top-left',
             'tags' => array('Company', 'School', 'Hotel', 'News'),
             'contact' => 'Custom Website',
@@ -53,7 +53,7 @@ function billing_service_definitions()
         ),
         'cyber-security' => array(
             'title' => 'On-site cyber training',
-            'summary' => 'Field training for cooperative directors, staff, and members: how to use today’s tools, what misuse can cause, and how to stay safe from cyber attacks.',
+            'summary' => 'The trainer comes to your address for directors, staff, or members.',
             'icon' => 'shield-check',
             'tags' => array('Directors', 'Staff', 'Members'),
             'contact' => 'Cyber Security Training',
@@ -108,6 +108,7 @@ function billing_audiences()
         'cooperative' => 'Cooperative (Sahakari)',
         'company' => 'Company',
         'party' => 'Party',
+        'school' => 'School',
         'personal' => 'Personal'
     );
 }
@@ -129,7 +130,7 @@ function billing_page_copy()
     return array(
         'bulk-sms' => array(
             'kicker' => 'Bulk SMS provider in Nepal',
-            'lead' => 'Send an informational text to members, customers, voters, or your own list. The table on this page is the price. A smaller quantity costs more per SMS. A larger quantity costs less.',
+            'lead' => 'One notice, sent as a text to the mobiles you choose. Type a quantity and this page shows the bill, including 13% VAT.',
             'points' => array(
                 'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per SMS. The homepage Starts from label is only the row chosen for the front page.',
@@ -141,11 +142,16 @@ function billing_page_copy()
                 'The SMS count is added to your client account as soon as the wallet payment succeeds.',
                 'This website keeps the order and the credits. Sending is done at sms.aakashtechnologies.com.np. The client panel shows the username and password for that portal after the purchase.',
                 'A copy saved under Messages does not reduce those credits. The credits stay until they are used in the SMS portal.'
+            ),
+            'examples' => array(
+                array('AGM', 'Namaste. The annual general meeting of [cooperative] is on [date] at [time], [place]. Please attend.'),
+                array('School', 'Namaste. [School] will remain closed on [date]. Classes resume on [date].'),
+                array('Festival', 'Namaste. [Organization] wishes you a happy [festival]. The office reopens on [date].')
             )
         ),
         'bulk-voice' => array(
             'kicker' => 'Bulk voice calls in Nepal',
-            'lead' => 'A recorded call carries the same kind of notice as an SMS when people are more likely to listen than to read. You type the exact words and choose Nepali or English.',
+            'lead' => 'The same kind of notice, spoken in a recorded call. Choose Nepali or English, type the words, and this page shows the bill with 13% VAT.',
             'points' => array(
                 'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per call. The homepage Starts from label is only the row chosen for the front page.',
@@ -157,26 +163,30 @@ function billing_page_copy()
                 'The call count is added to your client account as soon as the wallet payment succeeds.',
                 'This website keeps the order, the script, and the credits. The calls are sent from the portal at sms.aakashtechnologies.com.np. An active SMS or voice purchase shows that login in the client panel.',
                 'A copy saved under Messages does not reduce those credits.'
+            ),
+            'examples' => array(
+                array('AGM', 'Namaste. This is a notice from [cooperative]. The annual general meeting is on [date] at [time], [place]. Please attend.'),
+                array('School', 'Namaste. This is a notice from [school]. The school will remain closed on [date]. Classes resume on [date].')
             )
         ),
         'domain-registration' => array(
             'kicker' => 'Domain registration in Nepal',
-            'lead' => 'Reserve the web name your cooperative, company, or project will use. Choose .com or .com.np. The price is for one year and can renew from your wallet.',
+            'lead' => 'Check whether the name is free, then request .com or .com.np for a year. The year starts when the team marks it active.',
             'points' => array(
                 '.com and .com.np are the two names requested here. The price beside each one is the yearly list price.',
                 'Check the name on the Domain registration page first. .com.np is checked at register.com.np. .com is checked in the .com registry record.',
-                'If the name is free, send the request. A .com.np request includes the registry document. The team registers the name separately, then marks it active.',
+                'If the name is free, send the request with the holder and address. A .com.np request also includes the registry document. Pay the yearly bill from the wallet after that. The team registers the name only once it is paid, then marks it active.',
                 'Hosting and email are separate. Requesting the name does not put a website or mailboxes online.'
             ),
             'after' => array(
-                'The request appears in the client portal while the team registers the name. It shows Active after that registration is done.',
-                'The year renews from the wallet on the due date. You can turn auto-renew off from the client panel.',
+                'The client portal shows the request, the payment, and Active after the team finishes the registration.',
+                'The paid year starts when the request is marked active, then renews from the wallet. You can turn auto-renew off from the client panel. If the name cannot be registered, the amount returns to the wallet.',
                 'You still buy hosting, email, or a website separately if you need them.'
             )
         ),
         'hosting-server' => array(
             'kicker' => 'Hosting provider in Nepal',
-            'lead' => 'Keep one website online, with SSL and someone responsible for the server. This is hosting or server care. It is not the design of a new website.',
+            'lead' => 'Keep a website online. Yearly hosting is one site and SSL. Monthly care is for a server that needs a person watching it. This is not a new website design.',
             'points' => array(
                 'Website hosting is one site, SSL, and routine care for a year.',
                 'Managed server is monthly care when a person needs to watch the server, for a website or for website plus email.',
@@ -191,7 +201,7 @@ function billing_page_copy()
         ),
         'professional-email' => array(
             'kicker' => 'Domain email for organizations',
-            'lead' => 'Mailboxes such as info@yourcoop.com.np, on Zoho, looked after by Aakash Technologies, a Zoho authorized partner in Nepal.',
+            'lead' => 'An address on your own domain, such as info@yourcoop.com.np, on Zoho. Choose 1, 5, or 10 mailboxes for the year.',
             'points' => array(
                 'For a cooperative or any organization that should send mail from its own domain, such as info@yourcoop.com.np, not from a free Gmail or Yahoo address.',
                 'Choose 1, 5, or 10 mailboxes. Type exactly that many names, one per line, without @. info becomes info@yourdomain.',
@@ -206,7 +216,7 @@ function billing_page_copy()
         ),
         'custom-websites' => array(
             'kicker' => 'Websites built for a specific organization',
-            'lead' => 'Pick the kind of site you need. The price is the full price for the pages named on that package. The booking form is the brief, so the work can start without a discovery call.',
+            'lead' => 'Choose the kind of site. Each package names the pages and the full price. The booking form is the brief.',
             'points' => array(
                 'Company, personal portfolio, bank or cooperative, restaurant, school, hotel, and news portal. The pages are laid out for a phone and a computer.',
                 'Each package names the pages included, such as home, about, services, and contact. A page that is not named is not included.',
@@ -222,7 +232,7 @@ function billing_page_copy()
         ),
         'cyber-security' => array(
             'kicker' => 'Field cyber training',
-            'lead' => 'The trainer comes to your address. Directors, staff, and members learn how to use current tools, how the wrong use creates risk, and how to reduce cyber attacks.',
+            'lead' => 'The trainer comes to your address. Pick the group, the topics, and the date. One visit, paid once.',
             'points' => array(
                 'Directors (sanchalak) up to 25 people. Staff (karmachari) up to 40. Members (sadasya) up to 100. The full field day is one day for those groups together, up to 120 people.',
                 'Topics you can choose: safe use of phones, email, and online tools; risk from sharing passwords, OTPs, or links; fake messages, fraud calls, and payment traps; and what to do when an account or payment looks wrong.',
@@ -233,6 +243,201 @@ function billing_page_copy()
                 'The booking is the request for the trainer to come to that address. The date you pick is the date you are asking for.',
                 'The team uses the topics and the note you saved. There is no separate briefing call.',
                 'This is one visit, paid once. It does not renew from the wallet.'
+            )
+        )
+    );
+}
+
+function billing_service_guide()
+{
+    return array(
+        'bulk-sms' => array(
+            'includes' => array(
+                'The price for your quantity, with 13% VAT shown before you pay',
+                'A sender name of 3 to 11 letters or numbers',
+                'SMS credits added when the wallet payment succeeds',
+                'Sending from the SMS portal after identity is approved'
+            ),
+            'steps' => array(
+                'Type the quantity and read the bill.',
+                'Pay that bill from the wallet.',
+                'Send the notice from the SMS portal.'
+            ),
+            'notes' => array(
+                'A smaller quantity costs more per SMS. A larger quantity costs less. The row that contains your number is the rate.',
+                'Each number receives the same notice. If you paste a list, the count must match the quantity.',
+                'Before payment you accept that the message will not be used for a purpose prohibited by the Government of Nepal or prevailing law, and not to deceive or defraud.'
+            ),
+            'plans' => array(
+                'sms-slab' => 'Any quantity inside the rate table'
+            ),
+            'next' => array(
+                array('bulk-voice', 'Say the same notice in a call'),
+                array('domain-registration', 'Give the organization its own web name')
+            )
+        ),
+        'bulk-voice' => array(
+            'includes' => array(
+                'The price per call, with 13% VAT shown before you pay',
+                'Nepali or English, using the script you write',
+                'Call credits added when the wallet payment succeeds',
+                'Sending from the same portal after identity is approved'
+            ),
+            'steps' => array(
+                'Type the quantity and read the bill.',
+                'Write the script and choose Nepali or English.',
+                'Pay from the wallet, then send from the portal.'
+            ),
+            'notes' => array(
+                'A smaller quantity costs more per call. A larger quantity costs less.',
+                'Each number hears the same script. If you paste a list, the count must match the quantity.',
+                'Before payment you accept that the call will not be used for a purpose prohibited by the Government of Nepal or prevailing law, and not to deceive or defraud.'
+            ),
+            'plans' => array(
+                'voice-slab' => 'Any quantity inside the rate table'
+            ),
+            'next' => array(
+                array('bulk-sms', 'Send the same notice as a text'),
+                array('cyber-security', 'Train the people who receive these notices')
+            )
+        ),
+        'domain-registration' => array(
+            'includes' => array(
+                '.com checked in the Verisign record, .com.np checked at register.com.np',
+                'One year, then renewal from the wallet',
+                'A .com.np request includes the registry document',
+                'The team registers a paid name, then the portal shows Active'
+            ),
+            'steps' => array(
+                'Check the name.',
+                'Send the request and pay the year from the wallet.',
+                'The team registers it and marks it Active. The year starts then.'
+            ),
+            'notes' => array(
+                'The site cannot register the name by itself. If it cannot be registered, the amount returns to the wallet.',
+                'Hosting, email, and a website are separate.'
+            ),
+            'plans' => array(
+                'domain-com' => 'A .com name for one year',
+                'domain-np' => 'A .com.np name for one year'
+            ),
+            'next' => array(
+                array('hosting-server', 'Keep a site online'),
+                array('professional-email', 'Open info@this name'),
+                array('custom-websites', 'Book the website')
+            )
+        ),
+        'hosting-server' => array(
+            'includes' => array(
+                'Yearly hosting for one website, with SSL',
+                'Or monthly care when a person needs to watch the server',
+                'You type the domain and whether it is a new site, an existing site, or a site plus email',
+                'The same bill renews from the wallet'
+            ),
+            'steps' => array(
+                'Use a domain you have, or check a name first.',
+                'Choose yearly hosting or monthly server care.',
+                'Pay from the wallet. The team sets it up from that form.'
+            ),
+            'notes' => array(
+                'This is hosting or server care. A new design is the website service.',
+                'Turning auto-renew off stops the next charge. It does not refund the period already paid.'
+            ),
+            'plans' => array(
+                'hosting-business' => 'One website for a year',
+                'hosting-managed' => 'A person watches the server each month'
+            ),
+            'next' => array(
+                array('domain-registration', 'Check the name first'),
+                array('professional-email', 'Open domain email'),
+                array('custom-websites', 'Book the website design')
+            )
+        ),
+        'professional-email' => array(
+            'includes' => array(
+                'Addresses on your domain, such as info@yourcoop.com.np',
+                '1, 5, or 10 Zoho mailboxes',
+                'The team creates the mailboxes and the records that let mail arrive',
+                'The year renews from the wallet'
+            ),
+            'steps' => array(
+                'Use a domain you already have, or check a name first.',
+                'Choose 1, 5, or 10 names, such as info and accounts.',
+                'Pay the year. The team creates the Zoho mailboxes.'
+            ),
+            'notes' => array(
+                'The domain must already be yours. If it is registered somewhere else, the team sends you the records to add.',
+                'Mail already sitting in another inbox is not moved in this package.',
+                'This website records the order. The team opens the Zoho mailboxes.'
+            ),
+            'plans' => array(
+                'email-1' => 'One address, such as info@',
+                'email-5' => 'A small office',
+                'email-10' => 'A larger office'
+            ),
+            'next' => array(
+                array('domain-registration', 'Check the name first'),
+                array('hosting-server', 'Host the website'),
+                array('custom-websites', 'Book the website')
+            )
+        ),
+        'custom-websites' => array(
+            'includes' => array(
+                'The pages named on the package, for a phone and a computer',
+                'The full price on the package, paid once',
+                'Your words, photos, phone, email, and deadline in the booking form',
+                'The saved form is the brief the team builds from'
+            ),
+            'steps' => array(
+                'Pick the kind of site.',
+                'Write what it must do, the about text, and the public contact details.',
+                'Pay once. The date you enter is the deadline you are asking for.'
+            ),
+            'notes' => array(
+                'A page that is not named is not included. A member login, an eSewa or Khalti checkout, and a live booking calendar are not in these packages.',
+                'The domain, the hosting, and the email are separate.'
+            ),
+            'plans' => array(
+                'web-company' => 'Home, about, services, contact',
+                'web-portfolio' => 'Home, work, about, contact',
+                'web-sahakari' => 'Home, services, notices, team, contact',
+                'web-restaurant' => 'Home, menu, location, contact',
+                'web-school' => 'Home, academics, admissions, notices, contact',
+                'web-hotel' => 'Home, rooms, gallery, a booking enquiry',
+                'web-news' => 'Home, categories, articles, contact'
+            ),
+            'next' => array(
+                array('domain-registration', 'Check the web name'),
+                array('hosting-server', 'Host the finished site'),
+                array('professional-email', 'Open domain email')
+            )
+        ),
+        'cyber-security' => array(
+            'includes' => array(
+                'The trainer comes to the address you write',
+                'A headcount limit on each package',
+                'Topics you choose: phones and email, passwords and OTPs, fake messages and fraud calls, and what to do when something looks wrong',
+                'One visit, paid once'
+            ),
+            'steps' => array(
+                'Pick the group: directors, staff, members, or a full day.',
+                'Write the venue, the district, the headcount, and the date you want.',
+                'Pay once. That form is the brief. There is no separate briefing call.'
+            ),
+            'notes' => array(
+                'Directors up to 25. Staff up to 40. Members up to 100. A full day is those groups together, up to 120.',
+                'The headcount cannot be higher than the package.'
+            ),
+            'plans' => array(
+                'train-directors' => 'Up to 25 directors or board members',
+                'train-staff' => 'Up to 40 staff',
+                'train-members' => 'Up to 100 members',
+                'train-field-day' => 'One day, up to 120 people'
+            ),
+            'next' => array(
+                array('bulk-sms', 'Tell people the session date by SMS'),
+                array('bulk-voice', 'Tell people the session date by call'),
+                array('professional-email', 'Open a proper domain inbox')
             )
         )
     );
@@ -366,7 +571,7 @@ function billing_exec($conn, $sql)
 
 function billing_table_columns($conn, $table)
 {
-    $allowed = array('client_services' => true, 'sms_campaigns' => true, 'client_users' => true);
+    $allowed = array('client_services' => true, 'sms_campaigns' => true, 'client_users' => true, 'domain_requests' => true);
     if (!isset($allowed[$table])) {
         throw new InvalidArgumentException('Unknown table.');
     }
@@ -417,6 +622,201 @@ function billing_set_setting($conn, $key, $value)
     $stmt->bind_param('ss', $value, $key);
     $stmt->execute();
     $stmt->close();
+}
+
+function billing_mail_ok($email)
+{
+    $email = trim((string) $email);
+    if ($email === '' || strlen($email) > 120 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    return (bool) preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/', $email);
+}
+
+function site_official_email()
+{
+    return 'info@aakashtechnologies.com.np';
+}
+
+function site_sender_email()
+{
+    return 'noreply@aakashtechnologies.com.np';
+}
+
+function site_email_or_official($email)
+{
+    $email = strtolower(trim((string) $email));
+    if ($email === '' || $email === 'info@aakashtechnologies.com') {
+        return site_official_email();
+    }
+    return $email;
+}
+
+function billing_notify_address($conn)
+{
+    $key = 'notify_email';
+    $stmt = $conn->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    if (!$stmt) {
+        return site_official_email();
+    }
+    $stmt->bind_param('s', $key);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return site_official_email();
+    }
+    $email = site_email_or_official($row['setting_value']);
+    if (trim((string) $row['setting_value']) === '') {
+        return '';
+    }
+    return billing_mail_ok($email) ? $email : '';
+}
+
+function billing_mail_from_address($conn)
+{
+    $saved = strtolower(trim(billing_setting($conn, 'mail_from')));
+    if (billing_mail_ok($saved)) {
+        return $saved;
+    }
+    return site_sender_email();
+}
+
+function billing_mail_reply_address($conn)
+{
+    $public = site_public_settings($conn);
+    $email = isset($public['site_email']) ? (string) $public['site_email'] : '';
+    $email = site_email_or_official($email);
+    return billing_mail_ok($email) ? $email : site_official_email();
+}
+
+function billing_notify_clip($value, $max)
+{
+    $value = trim(str_replace(array("\r", "\n"), ' ', (string) $value));
+    if (strlen($value) > $max) {
+        $value = substr($value, 0, $max);
+    }
+    return $value;
+}
+
+function billing_notify_client_label($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    $stmt = $conn->prepare('SELECT name, email, phone FROM client_users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return 'Client ' . $clientId;
+    }
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return 'Client ' . $clientId;
+    }
+    return trim($row['name'] . ' · ' . $row['email'] . ($row['phone'] !== '' ? ' · ' . $row['phone'] : ''));
+}
+
+function billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo = '')
+{
+    $to = trim((string) $to);
+    $from = trim((string) $from);
+    $replyTo = trim((string) $replyTo);
+    if (!billing_mail_ok($replyTo)) {
+        $replyTo = $from;
+    }
+    if (!billing_mail_ok($to) || !billing_mail_ok($from)) {
+        return array('ok' => false, 'error' => 'Save a notification email and a sending address first.');
+    }
+    $subject = billing_notify_clip($subject, 140);
+    if ($subject === '') {
+        $subject = 'New request';
+    }
+    $body = str_replace("\r", '', (string) $body);
+    $fromName = trim(str_replace(array("\r", "\n", '"'), '', (string) $fromName));
+    $fromHeader = $fromName === '' ? $from : '=?UTF-8?B?' . base64_encode($fromName) . '?= <' . $from . '>';
+    $headers = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nFrom: " . $fromHeader . "\r\nReply-To: " . $replyTo;
+    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+    $sent = @mail($to, $encodedSubject, $body, $headers, '-f' . $from);
+    if (!$sent) {
+        return array('ok' => false, 'error' => 'This server did not accept the email. On cPanel, noreply@aakashtechnologies.com.np should be a mailbox on this domain.');
+    }
+    return array('ok' => true, 'error' => '');
+}
+
+function billing_notify_send($conn, $subject, $lines, $isTest)
+{
+    $to = billing_notify_address($conn);
+    if ($to === '') {
+        return array('ok' => false, 'error' => 'No notification email is saved.');
+    }
+    $public = site_public_settings($conn);
+    $from = billing_mail_from_address($conn);
+    $replyTo = billing_mail_reply_address($conn);
+    $fromName = isset($public['site_name']) ? (string) $public['site_name'] : 'Aakash Technologies';
+    $body = is_array($lines) ? implode("\n", $lines) : (string) $lines;
+    $result = billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo);
+    $stamp = date('Y-m-d H:i');
+    if ($isTest) {
+        billing_set_setting($conn, 'notify_test_at', $stamp);
+        billing_set_setting($conn, 'notify_test_result', $result['ok'] ? 'accepted' : 'failed');
+        billing_set_setting($conn, 'notify_test_error', $result['error']);
+    } else {
+        billing_set_setting($conn, 'notify_last_at', $stamp);
+        billing_set_setting($conn, 'notify_last_result', $result['ok'] ? 'accepted' : 'failed');
+        billing_set_setting($conn, 'notify_last_error', $result['error']);
+    }
+    return $result;
+}
+
+function billing_notify($conn, $subject, $lines)
+{
+    try {
+        return billing_notify_send($conn, $subject, $lines, false);
+    } catch (Throwable $exception) {
+        error_log('Request email could not be sent.');
+        return array('ok' => false, 'error' => 'The email could not be sent.');
+    }
+}
+
+function billing_client_email($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    $stmt = $conn->prepare('SELECT email FROM client_users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return '';
+    }
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    $email = $row ? trim((string) $row['email']) : '';
+    return billing_mail_ok($email) ? $email : '';
+}
+
+function billing_mail_person($conn, $to, $subject, $lines)
+{
+    try {
+        $public = site_public_settings($conn);
+        $from = billing_mail_from_address($conn);
+        $replyTo = billing_mail_reply_address($conn);
+        $fromName = isset($public['site_name']) ? (string) $public['site_name'] : 'Aakash Technologies';
+        $body = is_array($lines) ? implode("\n", $lines) : (string) $lines;
+        return billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo);
+    } catch (Throwable $exception) {
+        error_log('Client email could not be sent.');
+        return array('ok' => false, 'error' => 'The email could not be sent.');
+    }
+}
+
+function billing_notify_test($conn)
+{
+    $to = billing_notify_address($conn);
+    return billing_notify_send($conn, 'Test: request emails are reaching this inbox', array(
+        'This is a test from the Aakash Technologies admin panel.',
+        'If this message is in the inbox, new requests can be sent to ' . $to . '.',
+        'Requests covered: contact messages, service orders, domain requests, paid domains, wallet top-ups, identity checks, and support tickets.',
+        'Sent at ' . date('Y-m-d H:i') . '.'
+    ), true);
 }
 
 function billing_create_tables($conn)
@@ -805,9 +1205,11 @@ function site_public_defaults()
 {
     return array(
         'site_name' => defined('SITE_NAME') ? SITE_NAME : 'Aakash Technologies',
-        'site_email' => defined('SITE_EMAIL') ? SITE_EMAIL : 'info@aakashtechnologies.com',
-        'site_phone' => defined('SITE_PHONE') ? SITE_PHONE : '',
+        'site_email' => site_email_or_official(defined('SITE_EMAIL') ? SITE_EMAIL : ''),
+        'site_phone' => '',
         'whatsapp_number' => '',
+        'viber_number' => '',
+        'messenger_url' => '',
         'site_location' => defined('SITE_LOCATION') ? SITE_LOCATION : 'Kathmandu, Nepal',
         'notice_enabled' => '0',
         'notice_title' => '',
@@ -829,8 +1231,37 @@ function site_public_defaults()
     );
 }
 
+function site_apply_mail_addresses($conn)
+{
+    $current = strtolower(trim(billing_setting($conn, 'site_email')));
+    if ($current === '' || $current === 'info@aakashtechnologies.com') {
+        billing_set_setting($conn, 'site_email', site_official_email());
+    }
+    $key = 'notify_email';
+    $stmt = $conn->prepare('SELECT setting_value FROM site_settings WHERE setting_key = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        if (!$row) {
+            billing_set_setting($conn, 'notify_email', site_official_email());
+        } else {
+            $notify = strtolower(trim((string) $row['setting_value']));
+            if ($notify === 'info@aakashtechnologies.com') {
+                billing_set_setting($conn, 'notify_email', site_official_email());
+            }
+        }
+    }
+    $from = strtolower(trim(billing_setting($conn, 'mail_from')));
+    if (!billing_mail_ok($from)) {
+        billing_set_setting($conn, 'mail_from', site_sender_email());
+    }
+}
+
 function site_ensure_public_settings($conn)
 {
+    site_apply_mail_addresses($conn);
     foreach (site_public_defaults() as $key => $value) {
         $stmt = $conn->prepare('SELECT id FROM site_settings WHERE setting_key = ?');
         $stmt->bind_param('s', $key);
@@ -917,7 +1348,7 @@ function site_social_links($settings)
     return $links;
 }
 
-function site_whatsapp_href($number)
+function site_chat_digits($number)
 {
     $raw = trim((string) $number);
     if ($raw === '' || stripos($raw, 'x') !== false) {
@@ -930,7 +1361,60 @@ function site_whatsapp_href($number)
     if (strlen($digits) === 10) {
         $digits = '977' . $digits;
     }
+    return $digits;
+}
+
+function site_whatsapp_href($number)
+{
+    $digits = site_chat_digits($number);
+    if ($digits === '') {
+        return '';
+    }
     return 'https://wa.me/' . $digits . '?text=' . rawurlencode('Hello, I have a query.');
+}
+
+function site_viber_href($number)
+{
+    $digits = site_chat_digits($number);
+    if ($digits === '') {
+        return '';
+    }
+    return 'viber://chat?number=%2B' . $digits;
+}
+
+function site_chat_channels($settings)
+{
+    $settings = is_array($settings) ? $settings : array();
+    $icons = array(
+        'whatsapp' => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zM12 20.3a8.3 8.3 0 0 1-4.2-1.1l-.3-.2-3.5.7.7-3.4-.2-.3A8.3 8.3 0 1 1 12 20.3zm4.6-6.2c-.3-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.8 6.8 0 0 1-2-1.2 7.5 7.5 0 0 1-1.4-1.7c-.1-.3 0-.4.1-.5l.4-.5.2-.3a.5.5 0 0 0 0-.5c-.1-.1-.6-1.4-.8-1.9s-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.5 4 4.2 4.2 0 0 0 3 .4 2.5 2.5 0 0 0 1.6-1.2 2 2 0 0 0 .1-1.2c-.1-.1-.3-.2-.6-.3z"/></svg>',
+        'viber' => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.2 3C7.6 3 4.4 5.2 4 9.4c-.2 2.2.4 4 1.5 5.4L4.6 19l4.1-1.1c1 .5 2.1.8 3.3.8 4.7 0 8-2.4 8.2-6.7.2-4.2-3.2-9-8-9zm3.8 10.2c-.2.5-1 .9-1.6 1-.4.1-.9.2-2.6-.6-2.2-1-3.6-3.3-3.7-3.5-.1-.2-.9-1.2-.9-2.3s.6-1.6.8-1.8.4-.3.6-.3h.4c.1 0 .3 0 .5.4.2.5.6 1.6.7 1.7.1.1.1.3 0 .5-.1.2-.2.3-.3.5l-.2.3c-.1.1-.2.2-.1.4.1.2.6 1 1.3 1.6.9.8 1.6 1 1.8 1.1.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.2.3-.2.5-.1.2.1 1.4.7 1.6.8.2.1.4.2.4.3.1.3 0 .8-.2 1.1z"/></svg>',
+        'messenger' => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.8 3 3 6.6 3 11.2c0 2.6 1.3 4.9 3.3 6.4V21l3-1.6c.9.2 1.8.4 2.7.4 5.2 0 9-3.6 9-8.2S17.2 3 12 3zm1 11.1-2.3-2.4-4.4 2.4 4.8-5.1 2.3 2.4 4.4-2.4-4.8 5.1z"/></svg>'
+    );
+    $channels = array();
+    $whatsapp = site_whatsapp_href(isset($settings['whatsapp_number']) ? $settings['whatsapp_number'] : '');
+    if ($whatsapp !== '') {
+        $channels[] = array('key' => 'whatsapp', 'label' => 'WhatsApp', 'note' => 'No account needed', 'href' => $whatsapp, 'icon' => $icons['whatsapp']);
+    }
+    $viber = site_viber_href(isset($settings['viber_number']) ? $settings['viber_number'] : '');
+    if ($viber !== '') {
+        $channels[] = array('key' => 'viber', 'label' => 'Viber', 'note' => 'Stays open', 'href' => $viber, 'icon' => $icons['viber']);
+    }
+    $messenger = site_public_url(isset($settings['messenger_url']) ? $settings['messenger_url'] : '');
+    if ($messenger !== '') {
+        $channels[] = array('key' => 'messenger', 'label' => 'Messenger', 'note' => 'No account needed', 'href' => $messenger, 'icon' => $icons['messenger']);
+    }
+    return $channels;
+}
+
+function site_guest_chats($settings)
+{
+    $chats = array();
+    foreach (site_chat_channels($settings) as $channel) {
+        if ($channel['key'] === 'whatsapp' || $channel['key'] === 'messenger') {
+            $chats[] = $channel;
+        }
+    }
+    return $chats;
 }
 
 function site_public_file($path, $pattern)
@@ -1223,25 +1707,56 @@ function billing_ensure_domain_requests($conn)
             status TEXT DEFAULT 'requested',
             admin_note TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            holder_address TEXT DEFAULT '',
+            price TEXT DEFAULT '0.00',
+            service_id INTEGER DEFAULT 0,
             activated_at TEXT DEFAULT NULL
         )");
-        return;
+    } else {
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS domain_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            client_id INT NOT NULL,
+            domain_name VARCHAR(190) NOT NULL,
+            tld VARCHAR(20) NOT NULL,
+            holder_kind VARCHAR(20) DEFAULT 'individual',
+            holder_name VARCHAR(200) DEFAULT '',
+            holder_address VARCHAR(200) DEFAULT '',
+            document_path VARCHAR(255) DEFAULT '',
+            price DECIMAL(12,2) DEFAULT 0,
+            service_id INT DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'requested',
+            admin_note TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            activated_at DATETIME DEFAULT NULL,
+            INDEX idx_domain_client (client_id),
+            INDEX idx_domain_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
-    billing_exec($conn, "CREATE TABLE IF NOT EXISTS domain_requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        client_id INT NOT NULL,
-        domain_name VARCHAR(190) NOT NULL,
-        tld VARCHAR(20) NOT NULL,
-        holder_kind VARCHAR(20) DEFAULT 'individual',
-        holder_name VARCHAR(200) DEFAULT '',
-        document_path VARCHAR(255) DEFAULT '',
-        status VARCHAR(20) DEFAULT 'requested',
-        admin_note TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        activated_at DATETIME DEFAULT NULL,
-        INDEX idx_domain_client (client_id),
-        INDEX idx_domain_status (status)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_ensure_domain_columns($conn);
+}
+
+function billing_ensure_domain_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'domain_requests'));
+    if (DB_DRIVER === 'sqlite') {
+        $columns = array(
+            'holder_address' => "TEXT DEFAULT ''",
+            'price' => "TEXT DEFAULT '0.00'",
+            'service_id' => "INTEGER DEFAULT 0"
+        );
+    } else {
+        $columns = array(
+            'holder_address' => "VARCHAR(200) DEFAULT ''",
+            'price' => "DECIMAL(12,2) DEFAULT 0",
+            'service_id' => "INT DEFAULT 0"
+        );
+    }
+    foreach ($columns as $name => $definition) {
+        if (isset($present[$name])) {
+            continue;
+        }
+        billing_exec($conn, 'ALTER TABLE domain_requests ADD COLUMN ' . $name . ' ' . $definition);
+    }
 }
 
 function billing_ensure_kyc_table($conn)
@@ -1550,6 +2065,14 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
     }
     $stmt->execute();
     $stmt->close();
+    $who = $kind === 'individual' ? $fullName : $orgName;
+    billing_notify($conn, 'Identity waiting for approval', array(
+        'A client submitted identity details.',
+        'Account: ' . ($kind === 'individual' ? 'Individual' : 'Organization'),
+        'Name: ' . $who,
+        'Client: ' . billing_notify_client_label($conn, $clientId),
+        'Open Admin → Identity.'
+    ));
     return '';
 }
 
@@ -1583,6 +2106,21 @@ function billing_kyc_decide($conn, $clientId, $decision, $note)
     $stmt->bind_param('sssi', $status, $note, $reviewed, $clientId);
     $stmt->execute();
     $stmt->close();
+    $email = billing_client_email($conn, $clientId);
+    if ($email !== '') {
+        if ($decision === 'approve') {
+            billing_mail_person($conn, $email, 'Identity approved', array(
+                'Your identity is approved.',
+                'SMS and voice sending can use the portal login in the client panel.'
+            ));
+        } else {
+            billing_mail_person($conn, $email, 'Identity needs a change', array(
+                'The identity submission was sent back.',
+                'Note: ' . $note,
+                'Update it in the client panel and submit again.'
+            ));
+        }
+    }
     return '';
 }
 
@@ -1706,21 +2244,6 @@ function billing_save_portal_login($conn, $clientId, $username, $password)
     return '';
 }
 
-function billing_spend_units($conn, $clientId, $kind, $quantity)
-{
-    $clientId = (int) $clientId;
-    $quantity = (int) $quantity;
-    if ($quantity <= 0 || ($kind !== 'sms' && $kind !== 'voice_calls' && $kind !== 'voice_minutes')) {
-        return false;
-    }
-    $stmt = $conn->prepare('UPDATE client_units SET balance = balance - ? WHERE client_id = ? AND unit_kind = ? AND balance >= ?');
-    $stmt->bind_param('iisi', $quantity, $clientId, $kind, $quantity);
-    $stmt->execute();
-    $ok = billing_affected($conn) === 1;
-    $stmt->close();
-    return $ok;
-}
-
 function billing_training_topics()
 {
     return array(
@@ -1729,29 +2252,6 @@ function billing_training_topics()
         'attacks' => 'Cyber attacks: fake messages, fraud calls, and payment traps',
         'response' => 'What to do when an account or payment looks compromised'
     );
-}
-
-function billing_buy_steps()
-{
-    return array(
-        'Create a client account.',
-        'Add wallet funds using the payment details on the wallet page. The first top-up is confirmed by the team once. After that, the wallet can pay immediately.',
-        'Fill the form for this service. The bill is that list price plus 13% VAT, paid from the wallet. Domain, hosting, email, and managed server renew that same bill on the due date.'
-    );
-}
-
-function billing_checkout_asks($slug)
-{
-    $asks = array(
-        'bulk-sms' => array('Who it is for', 'Why it is being sent', 'How many SMS, inside one row of the rate table', 'Sender name, 3 to 11 letters or numbers', 'The exact message', 'Send date, if you already know it', 'Optional 10-digit number list, only when the count matches the quantity', 'The declaration that the message is lawful'),
-        'bulk-voice' => array('Who it is for', 'Why it is being sent', 'How many calls, inside one row of the rate table', 'Nepali or English', 'The exact script', 'Send date, if you already know it', 'Optional 10-digit number list, only when the count matches the quantity', 'The declaration that the call is lawful'),
-        'domain-registration' => array('The exact domain', 'Organization or person name'),
-        'hosting-server' => array('Domain', 'Organization', 'Whether it hosts a new site, an existing site, or site plus email'),
-        'professional-email' => array('Your domain', 'Organization', 'One mailbox name per line, matching the package'),
-        'custom-websites' => array('Organization', 'What the site must do', 'About text, public phone, and public email', 'Preferred domain and deadline', 'Business address'),
-        'cyber-security' => array('Organization', 'Headcount within the package limit', 'Venue address and district', 'Preferred date', 'Which topics to spend more time on')
-    );
-    return isset($asks[$slug]) ? $asks[$slug] : array();
 }
 
 function billing_use_declaration()
@@ -1780,6 +2280,10 @@ function billing_form_guard_check($key, $post)
     if ($honeypot !== '') {
         return 'The form could not be submitted. Reload the page and try again.';
     }
+    $mathError = auth_math_verify($key, isset($post['human_check']) ? $post['human_check'] : '');
+    if ($mathError !== '') {
+        return $mathError;
+    }
     $token = isset($post['form_guard']) ? (string) $post['form_guard'] : '';
     $stored = (isset($_SESSION['form_guard'][$key]) && is_array($_SESSION['form_guard'][$key])) ? $_SESSION['form_guard'][$key] : null;
     if (!is_array($stored) || !isset($stored['token'], $stored['at']) || !hash_equals((string) $stored['token'], $token)) {
@@ -1800,6 +2304,7 @@ function billing_form_guard_clear($key)
     if (isset($_SESSION['form_guard'][$key])) {
         unset($_SESSION['form_guard'][$key]);
     }
+    auth_math_clear($key);
 }
 
 function billing_seed_plans($conn)
@@ -2183,15 +2688,6 @@ function billing_public_cards($conn)
     return $cards;
 }
 
-function billing_buy_href($slug)
-{
-    $target = 'shop.php?service=' . rawurlencode($slug);
-    if (!empty($_SESSION['client_id'])) {
-        return 'client/' . $target;
-    }
-    return 'client/login.php?next=' . rawurlencode($target);
-}
-
 function billing_buy_href_plan($code)
 {
     $target = 'checkout.php?plan=' . rawurlencode($code);
@@ -2204,7 +2700,7 @@ function billing_buy_href_plan($code)
 function client_safe_next($value)
 {
     $value = (string) $value;
-    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+)?$/', $value)) {
+    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+(?:&for=domain)?)?$/', $value)) {
         return 'index.php';
     }
     return $value;
@@ -2367,37 +2863,6 @@ function billing_unit_balances($conn, $clientId)
 function billing_valid_domain($value)
 {
     return (bool) preg_match('/^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i', $value);
-}
-
-function billing_clean_detail($plan, $raw)
-{
-    $raw = trim((string) $raw);
-    $needs = $plan['needs_detail'];
-    if ($needs === '') {
-        return array('', '');
-    }
-    if ($needs === 'domain') {
-        $raw = strtolower($raw);
-        if (!billing_valid_domain($raw)) {
-            return array(null, 'Enter a valid domain name, such as yourbrand.com.');
-        }
-        return array($raw, '');
-    }
-    if (strlen($raw) < 2 || strlen($raw) > 80) {
-        return array(null, 'Enter a short name for this service (2–80 characters).');
-    }
-    return array($raw, '');
-}
-
-function billing_detail_prompt($needs)
-{
-    if ($needs === 'domain') {
-        return 'Domain name';
-    }
-    if ($needs === 'label') {
-        return 'Name for this service';
-    }
-    return '';
 }
 
 function billing_record_entry($conn, $clientId, $amount, $direction, $kind, $status, $method, $note, $serviceId)
@@ -2926,26 +3391,6 @@ function billing_save_slabs($conn, $posted, $starts = array())
     return '';
 }
 
-function billing_update_slab($conn, $id, $minQty, $maxQty, $unitPrice)
-{
-    $id = (int) $id;
-    $minQty = (int) $minQty;
-    $maxQty = (int) $maxQty;
-    $raw = trim((string) $unitPrice);
-    if ($id <= 0 || $minQty < 1 || $maxQty < $minQty || !preg_match('/^\d{1,5}(\.\d{1,2})?$/', $raw)) {
-        return false;
-    }
-    $price = billing_money($raw);
-    if ((float) $price <= 0) {
-        return false;
-    }
-    $stmt = $conn->prepare('UPDATE rate_slabs SET min_qty = ?, max_qty = ?, unit_price = ? WHERE id = ?');
-    $stmt->bind_param('iisi', $minQty, $maxQty, $price, $id);
-    $ok = $stmt->execute();
-    $stmt->close();
-    return (bool) $ok;
-}
-
 function billing_purchase($conn, $clientId, $plan, $post)
 {
     if (!is_array($plan) || empty($plan['code'])) {
@@ -2999,6 +3444,15 @@ function billing_purchase($conn, $clientId, $plan, $post)
 
     billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', $name, $serviceId);
     billing_add_units($conn, $clientId, $unitKind, $unitQuantity);
+    billing_notify($conn, 'New order: ' . $name, array(
+        'A client bought or booked a service.',
+        'Service: ' . $name,
+        'Status: ' . ($status === 'booked' ? 'Booked, waiting for the team' : 'Paid'),
+        'Amount: NPR ' . $price,
+        'Detail: ' . billing_notify_clip($detail, 200),
+        'Client: ' . billing_notify_client_label($conn, $clientId),
+        'Open the admin panel.'
+    ));
     if ($plan['needs_detail'] === 'sms' || $plan['needs_detail'] === 'voice') {
         billing_form_guard_clear('order-' . $plan['code']);
     }
@@ -3063,6 +3517,14 @@ function billing_request_topup($conn, $clientId, $amount, $method, $reference)
         return 'Enter the payment reference (4–80 characters).';
     }
     billing_record_entry($conn, (int) $clientId, $amount, 'credit', 'topup', 'pending', $method, $reference, 0);
+    billing_notify($conn, 'Wallet top-up waiting', array(
+        'A wallet top-up is waiting for confirmation.',
+        'Amount: NPR ' . number_format($amount),
+        'Method: ' . $method,
+        'Reference: ' . billing_notify_clip($reference, 80),
+        'Client: ' . billing_notify_client_label($conn, $clientId),
+        'Open Admin → Billing and confirm it. Later renewals do not need this step.'
+    ));
     return '';
 }
 
@@ -3206,3 +3668,5 @@ function billing_process_renewals($conn, $clientId = null)
 
     return $stats;
 }
+
+require_once __DIR__ . '/public-ai.php';

@@ -15,8 +15,8 @@ return array(
     'admin_email' => 'admin@aakashtechnologies.com',
     'admin_password' => '',
 
-    'site_email' => 'info@aakashtechnologies.com',
-    'site_phone' => '+977 98XXXXXXXX',
+    'site_email' => 'info@aakashtechnologies.com.np',
+    'site_phone' => '',
     'site_location' => 'Kathmandu, Nepal',
 
     'esewa_id' => '',

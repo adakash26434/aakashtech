@@ -64,6 +64,7 @@ if (DB_DRIVER === 'sqlite') {
 }
 
 require_once __DIR__ . '/includes/billing.php';
+require_once __DIR__ . '/includes/totp.php';
 try {
     auth_ensure_client_table($conn);
 } catch (Throwable $exception) {
@@ -85,6 +86,11 @@ try {
     error_log('Admin account table could not be created.');
 }
 try {
+    totp_ensure($conn);
+} catch (Throwable $exception) {
+    error_log('Authenticator storage could not be prepared.');
+}
+try {
     cpanel_apply_admin($conn, cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''), isset($cpanel['admin_password']) ? (string) $cpanel['admin_password'] : (getenv('ADMIN_PASSWORD') !== false ? (string) getenv('ADMIN_PASSWORD') : ''));
 } catch (Throwable $exception) {
     error_log('Admin account could not be updated from cpanel-config.php.');
@@ -92,8 +98,8 @@ try {
 
 // ====== SITE CONFIGURATION ======
 define('SITE_NAME', cpanel_setting($cpanel, 'site_name', 'SITE_NAME', 'Aakash Technologies'));
-define('SITE_EMAIL', cpanel_setting($cpanel, 'site_email', 'SITE_EMAIL', 'info@aakashtechnologies.com'));
-define('SITE_PHONE', cpanel_setting($cpanel, 'site_phone', 'SITE_PHONE', '+977 98XXXXXXXX'));
+define('SITE_EMAIL', cpanel_setting($cpanel, 'site_email', 'SITE_EMAIL', 'info@aakashtechnologies.com.np'));
+define('SITE_PHONE', cpanel_setting($cpanel, 'site_phone', 'SITE_PHONE', ''));
 define('SITE_LOCATION', cpanel_setting($cpanel, 'site_location', 'SITE_LOCATION', 'Kathmandu, Nepal'));
 define('ESEWA_ID', cpanel_setting($cpanel, 'esewa_id', 'ESEWA_ID', ''));
 define('KHALTI_ID', cpanel_setting($cpanel, 'khalti_id', 'KHALTI_ID', ''));
@@ -166,6 +172,7 @@ function require_admin() {
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
+    totp_require_enrolled('admin');
 }
 
 function require_client() {
@@ -184,6 +191,7 @@ function require_client() {
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
+    totp_require_enrolled('client');
 }
 
 function admin_logout() {

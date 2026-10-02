@@ -93,7 +93,6 @@ try {
 }
 $siteName = $publicSite['site_name'];
 $siteEmail = $publicSite['site_email'];
-$sitePhone = $publicSite['site_phone'];
 $siteWhatsapp = $publicSite['whatsapp_number'];
 $siteSocials = site_social_links($publicSite);
 $siteLocation = $publicSite['site_location'];
@@ -141,15 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     }
 
     $submittedToken = site_posted_value('csrf_token');
+    $mathError = auth_math_verify('contact', site_posted_value('human_check'));
     if (!hash_equals($_SESSION['contact_csrf'], $submittedToken)) {
         $error = 'Your form session expired. Please refresh the page and try again.';
+    } elseif ($mathError !== '') {
+        $error = $mathError;
     } elseif (site_posted_value('website_url') !== '') {
         $success = 'Thanks for reaching out. We will be in touch soon.';
         $formValues = array_fill_keys(array_keys($formValues), '');
     } elseif (
         $formValues['name'] === '' ||
         $formValues['email'] === '' ||
-        $formValues['phone'] === '' ||
         $formValues['message'] === ''
     ) {
         $error = 'Please complete the required fields.';
@@ -162,8 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         $error = 'One of your answers is too long. Please shorten it and try again.';
     } elseif (!filter_var($formValues['email'], FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
-    } elseif (auth_mobile_number($formValues['phone']) === '') {
-        $error = 'Enter a 10-digit mobile number.';
     } elseif ($formValues['service'] !== '' && !in_array($formValues['service'], $contactServices, true)) {
         $error = 'Please select one of the listed services.';
     } else {
@@ -172,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             $stmt = $conn->prepare(
                 'INSERT INTO inquiries (name, email, phone, service, message, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
             );
-            $contactPhone = auth_mobile_number($formValues['phone']);
+            $contactPhone = '';
             $stmt->bind_param(
                 'sssss',
                 $formValues['name'],
@@ -186,6 +185,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 $error = 'Too many messages from this network. Please wait and try again.';
             } elseif ($stmt->execute()) {
                 auth_note_attempt($conn, 'contact');
+                auth_math_clear('contact');
+                billing_notify($conn, 'New enquiry' . ($formValues['service'] !== '' ? ': ' . $formValues['service'] : ''), array(
+                    'A visitor sent a message from the website.',
+                    'Name: ' . $formValues['name'],
+                    'Email: ' . $formValues['email'],
+                    'Service: ' . ($formValues['service'] !== '' ? $formValues['service'] : 'Not chosen'),
+                    'Message: ' . billing_notify_clip($formValues['message'], 800),
+                    'Open Admin → Inquiries.'
+                ));
                 $success = 'Thanks for reaching out. We will be in touch soon.';
                 $formValues = array_fill_keys(array_keys($formValues), '');
                 $_SESSION['contact_csrf'] = bin2hex(random_bytes(32));
@@ -346,6 +354,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             </div>
         </div>
 
+        <nav class="wrap job-band" aria-label="Start with what you need">
+            <a href="service.php?slug=bulk-sms">Send a notice</a>
+            <a href="domain.php">Check a name</a>
+            <a href="service.php?slug=hosting-server">Host a site</a>
+            <a href="service.php?slug=professional-email">Open domain email</a>
+            <a href="service.php?slug=custom-websites">Book a website</a>
+            <a href="service.php?slug=cyber-security">Book training</a>
+        </nav>
+
         <div class="wrap audience-band" aria-label="Who these services are for">
             <span>Built for</span>
             <strong>Cooperatives</strong>
@@ -360,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="section-heading section-heading--center reveal">
                     <span class="section-kicker">What we do</span>
                     <h2 class="font-heading">Read the rate. Buy it, or book it.</h2>
-                    <p>Open a service and see the rate before you create an account. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers the domain, hosting, Zoho email, the website, and field training.</p>
+                    <p>Open a service and see the rate before you create an account. Check a domain name before you request it. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers hosting, Zoho email, the website, and field training.</p>
                 </div>
 
                 <div class="service-grid">
@@ -376,7 +393,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             </div>
                             <?php site_render_service_price(array($card['slug'] => $card['price']), $card['slug'], true); ?>
                             <div class="service-card-actions">
-                                <a class="button button--small button--primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>">See rates</a>
+                                <?php if ($card['slug'] === 'domain-registration'): ?>
+                                    <a class="button button--small button--primary" href="domain.php">Check a name</a>
+                                <?php else: ?>
+                                    <a class="button button--small button--primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>"><?= site_escape($card['action']) ?></a>
+                                <?php endif; ?>
                             </div>
                         </article>
                     <?php endforeach; ?>
@@ -431,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     <article class="process-step reveal">
                         <span class="step-number">01 / Choose</span>
                         <h3>Pick the service</h3>
-                        <p>Open a service, read the rate, and enter the details that page asks for. Websites and training are booked the same way.</p>
+                        <p>Open a service and read the rate. A domain is checked on the Domain registration page first. Websites and training are booked from the same catalog.</p>
                     </article>
                     <article class="process-step reveal">
                         <span class="step-number">02 / Wallet</span>
@@ -441,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     <article class="process-step reveal">
                         <span class="step-number">03 / Auto-renew</span>
                         <h3>Stay active</h3>
-                        <p>Monthly and yearly plans charge the wallet on the due date and extend themselves.</p>
+                        <p>Monthly and yearly plans charge the wallet on the due date. A domain year starts when the team marks the registration active. SMS and voice sending opens after identity is approved.</p>
                     </article>
                 </div>
             </div>
@@ -452,31 +473,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="contact-copy reveal">
                     <span class="section-kicker">Get in touch</span>
                     <h2 class="font-heading">Rates and orders are already online.</h2>
-                    <p>Buy or book from the service pages. For a query, email us or message on WhatsApp. Use the form when you want the request kept in writing.</p>
-
                     <?php
                     $mailHref = site_mail_href($siteEmail, $siteName);
-                    $whatsappShown = $siteWhatsapp !== '' ? $siteWhatsapp : $sitePhone;
-                    $whatsappHref = site_whatsapp_href($whatsappShown);
+                    $chatChannels = site_chat_channels($publicSite);
+                    $guestChats = site_guest_chats($publicSite);
                     ?>
+                    <p><?php if ($guestChats): ?>A visitor does not need a client account. Tap WhatsApp or Messenger and the message opens there.<?php else: ?>A visitor can send a question with the form. No client account is required.<?php endif; ?> A signed-in client can also open a support ticket.</p>
+                    <?php if ($guestChats): ?>
+                        <?php $guestClass = 'contact-chats'; include __DIR__ . '/includes/site-guest-chat.php'; ?>
+                    <?php endif; ?>
                     <?php if ($mailHref !== ''): ?>
                     <a class="contact-method" href="<?= site_escape($mailHref) ?>">
                         <span class="contact-method-icon"><i data-lucide="mail" aria-hidden="true"></i></span>
                         <div><small>Email a query</small><strong><?= site_escape($siteEmail) ?></strong></div>
                     </a>
                     <?php endif; ?>
-                    <?php if ($whatsappHref !== ''): ?>
-                    <a class="contact-method" href="<?= site_escape($whatsappHref) ?>" target="_blank" rel="noopener noreferrer">
-                        <span class="contact-method-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11 11 0 0 0 2.1 17.2L1 23l5.9-1.1A11 11 0 0 0 20.5 3.5zM12 20.3a8.3 8.3 0 0 1-4.2-1.1l-.3-.2-3.5.7.7-3.4-.2-.3A8.3 8.3 0 1 1 12 20.3zm4.6-6.2c-.3-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.6.1a6.8 6.8 0 0 1-2-1.2 7.5 7.5 0 0 1-1.4-1.7c-.1-.3 0-.4.1-.5l.4-.5.2-.3a.5.5 0 0 0 0-.5c-.1-.1-.6-1.4-.8-1.9s-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.5 4 4.2 4.2 0 0 0 3 .4 2.5 2.5 0 0 0 1.6-1.2 2 2 0 0 0 .1-1.2c-.1-.1-.3-.2-.6-.3z"/></svg></span>
-                        <div><small>WhatsApp a query</small><strong><?= site_escape($whatsappShown) ?></strong></div>
+                    <?php foreach ($chatChannels as $channel): ?>
+                    <?php if ($channel['key'] === 'whatsapp' || $channel['key'] === 'messenger') { continue; } ?>
+                    <a class="contact-method" href="<?= site_escape($channel['href']) ?>" target="_blank" rel="noopener noreferrer">
+                        <span class="contact-method-icon" aria-hidden="true"><?= $channel['icon'] ?></span>
+                        <div><small><?= site_escape($channel['note']) ?></small><strong><?= site_escape($channel['label']) ?></strong></div>
                     </a>
-                    <?php endif; ?>
-                    <?php if ($sitePhone !== ''): ?>
-                    <a class="contact-method" href="tel:<?= site_escape(preg_replace('/\s+/', '', $sitePhone)) ?>">
-                        <span class="contact-method-icon"><i data-lucide="phone" aria-hidden="true"></i></span>
-                        <div><small>Call us</small><strong><?= site_escape($sitePhone) ?></strong></div>
+                    <?php endforeach; ?>
+                    <a class="contact-method" href="client/support.php">
+                        <span class="contact-method-icon"><i data-lucide="ticket" aria-hidden="true"></i></span>
+                        <div><small>Already a client</small><strong>Support ticket</strong></div>
                     </a>
-                    <?php endif; ?>
                     <?php if ($siteLocation !== ''): ?>
                     <div class="contact-method">
                         <span class="contact-method-icon"><i data-lucide="map-pin" aria-hidden="true"></i></span>
@@ -517,11 +539,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                                        placeholder="Your name" value="<?= site_escape($formValues['name']) ?>">
                             </div>
                             <div class="form-field">
-                                <label for="phone">Phone *</label>
-                                <input id="phone" type="tel" name="phone" maxlength="16" required inputmode="tel" autocomplete="tel"
-                                       placeholder="98XXXXXXXX" value="<?= site_escape($formValues['phone']) ?>">
-                            </div>
-                            <div class="form-field form-field--full">
                                 <label for="email">Email *</label>
                                 <input id="email" type="email" name="email" maxlength="254" required autocomplete="email"
                                        placeholder="you@company.com" value="<?= site_escape($formValues['email']) ?>">
@@ -544,11 +561,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             </div>
                         </div>
 
+                        <div class="form-field">
+                            <label for="human_check">What is <?= site_escape(auth_math_prompt('contact')) ?>? *</label>
+                            <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
+                        </div>
+
                         <button class="button button--primary form-submit" type="submit" name="submit_contact" value="1">
                             Send your message
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </button>
-                        <p class="form-note">Your details are used only to respond to this enquiry.</p>
+                        <p class="form-note">Your name and email are used only to reply to this enquiry. A mobile number is not required.</p>
                     </form>
                 </div>
             </div>

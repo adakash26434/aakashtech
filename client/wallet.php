@@ -6,6 +6,10 @@ $cid = (int) get_client_id();
 $msg = '';
 $err = '';
 $amountValue = isset($_GET['amount']) ? (string) (int) $_GET['amount'] : '';
+$forDomain = isset($_GET['for']) && $_GET['for'] === 'domain';
+if ($forDomain) {
+    $_SESSION['wallet_for'] = 'domain';
+}
 $methodValue = 'esewa';
 $referenceValue = '';
 
@@ -17,6 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_topup'])) {
     $err = billing_request_topup($conn, $cid, $amountValue, $methodValue, $referenceValue);
     if ($err === '') {
         $msg = 'Top-up submitted. It is added to your wallet after a quick confirmation, and renewals continue from there without another request.';
+        if (isset($_SESSION['wallet_for']) && $_SESSION['wallet_for'] === 'domain') {
+            $msg = 'Top-up submitted. After it is confirmed, open My domains and pay the yearly bill.';
+            unset($_SESSION['wallet_for']);
+        }
         $amountValue = '';
         $referenceValue = '';
     }
@@ -51,6 +59,11 @@ $history->close();
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Wallet</h1>
     <p class="text-slate-500 text-sm">Funds here pay for new services and automatic renewals.</p>
 </div>
+<?php if ($forDomain && $amountValue !== '' && $amountValue !== '0'): ?>
+    <div class="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
+        Add NPR <?= e(number_format((int) $amountValue)) ?> for the domain year. After this top-up is confirmed, open <a class="text-brand-300" href="domains.php">My domains</a> and pay the bill.
+    </div>
+<?php endif; ?>
 
 <?php if ($msg !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>

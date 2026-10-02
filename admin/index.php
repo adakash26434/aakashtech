@@ -10,6 +10,8 @@ $open_tickets = 0;
 $total_campaigns = 0;
 $pending_topups = 0;
 $booked_orders = 0;
+$paid_domains = 0;
+$pending_kyc = 0;
 $recent_inquiries = false;
 $recent_clients = false;
 try {
@@ -21,6 +23,8 @@ try {
     $total_campaigns = (int) $conn->query("SELECT COUNT(*) as c FROM sms_campaigns")->fetch_assoc()['c'];
     $pending_topups = (int) $conn->query("SELECT COUNT(*) as c FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'")->fetch_assoc()['c'];
     $booked_orders = (int) $conn->query("SELECT COUNT(*) as c FROM client_services WHERE status = 'booked'")->fetch_assoc()['c'];
+    $paid_domains = (int) $conn->query("SELECT COUNT(*) as c FROM domain_requests WHERE status = 'paid'")->fetch_assoc()['c'];
+    $pending_kyc = (int) $conn->query("SELECT COUNT(*) as c FROM client_kyc WHERE status = 'pending'")->fetch_assoc()['c'];
     $recent_inquiries = $conn->query("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 5");
     $recent_clients = $conn->query("SELECT id, name, email, company, status, created_at FROM client_users ORDER BY created_at DESC LIMIT 5");
 } catch (Throwable $exception) {
@@ -42,6 +46,16 @@ try {
 <?php if ((int) $booked_orders > 0): ?>
     <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
         <?= (int) $booked_orders ?> website or training booking<?= (int) $booked_orders === 1 ? '' : 's' ?> waiting. The brief is on the billing page.
+    </a>
+<?php endif; ?>
+<?php if ((int) $paid_domains > 0): ?>
+    <a href="domains.php" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
+        <?= (int) $paid_domains ?> paid domain<?= (int) $paid_domains === 1 ? '' : 's' ?> waiting. Register the name, then mark it active.
+    </a>
+<?php endif; ?>
+<?php if ((int) $pending_kyc > 0): ?>
+    <a href="kyc.php" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
+        <?= (int) $pending_kyc ?> identit<?= (int) $pending_kyc === 1 ? 'y' : 'ies' ?> waiting. SMS sending stays closed until you approve.
     </a>
 <?php endif; ?>
 
