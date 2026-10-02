@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- The seeded account cannot sign in until its password is set; see README Step 4.
-INSERT INTO admin_users (name, email, password, role) VALUES
+INSERT IGNORE INTO admin_users (name, email, password, role) VALUES
 ('Super Admin', 'admin@aakashtechnologies.com', 'RESET_ADMIN_PASSWORD_BEFORE_USE', 'super_admin');
 
 -- ====== Client Users ======
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS services (
     INDEX idx_sort (sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO services (title, slug, description, icon, features, sort_order) VALUES
+INSERT IGNORE INTO services (title, slug, description, icon, features, sort_order) VALUES
 ('Bulk SMS Service', 'bulk-sms', 'Reach customers with campaigns, alerts, and scheduled messages.', 'message-square-text',
  'Campaigns,Scheduling,Reporting', 1),
 ('Bulk Voice Call', 'bulk-voice', 'Send recorded voice calls for reminders, offers, and notices.', 'phone-call',
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO site_settings (setting_key, setting_value) VALUES
+INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('site_name', 'Aakash Technologies'),
 ('site_email', 'info@aakashtechnologies.com'),
 ('site_phone', '+977 98XXXXXXXX'),
@@ -181,8 +181,86 @@ INSERT INTO site_settings (setting_key, setting_value) VALUES
 ('footer_tagline', 'Practical technology for businesses ready to grow.'),
 ('logo_path', '');
 
-INSERT INTO site_settings (setting_key, setting_value) VALUES
+INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('service_pricing_bulk-sms', '{"label":"Indicative rate","amount":"NPR 0.65–0.95 per SMS","details":"Lower per-message rates at higher volume."}'),
 ('service_pricing_domain-hosting', '{"label":"Typical yearly costs","amount":"","details":".com domain — NPR 2,400/year\\nHosting / server — from NPR 3,500/year\\nStandard SSL — Often included\\nPaid DV SSL — from NPR 5,000/year"}'),
 ('service_pricing_website-design', '{"label":"Project pricing","amount":"Custom quote","details":"Based on pages, features and scope."}'),
 ('service_pricing_cyber-security', '{"label":"One-time team session","amount":"NPR 30,000–50,000","details":"Final quote depends on team size and session scope."}');
+
+-- ====== Login attempts ======
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    scope       VARCHAR(20) NOT NULL,
+    ip          VARCHAR(45) NOT NULL,
+    attempted_at DATETIME NOT NULL,
+    INDEX idx_attempt_lookup (scope, ip, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== Service plans (checkout catalog) ======
+CREATE TABLE IF NOT EXISTS service_plans (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(80) NOT NULL UNIQUE,
+    service_slug VARCHAR(80) NOT NULL,
+    name        VARCHAR(255) NOT NULL,
+    summary     TEXT NOT NULL,
+    billing_cycle VARCHAR(20) NOT NULL,
+    price       DECIMAL(12,2) NOT NULL,
+    unit_kind   VARCHAR(40) DEFAULT '',
+    unit_quantity INT DEFAULT 0,
+    auto_renew_default TINYINT(1) DEFAULT 0,
+    needs_detail VARCHAR(20) DEFAULT '',
+    is_active   TINYINT(1) DEFAULT 1,
+    sort_order  INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== Wallets ======
+CREATE TABLE IF NOT EXISTS client_wallets (
+    client_id   INT PRIMARY KEY,
+    balance     DECIMAL(12,2) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS wallet_entries (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    amount      DECIMAL(12,2) NOT NULL,
+    direction   VARCHAR(10) NOT NULL,
+    kind        VARCHAR(20) NOT NULL,
+    status      VARCHAR(20) NOT NULL,
+    method      VARCHAR(40) DEFAULT '',
+    reference_note VARCHAR(255) DEFAULT '',
+    related_service_id INT DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wallet_client (client_id),
+    INDEX idx_wallet_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS client_units (
+    client_id   INT NOT NULL,
+    unit_kind   VARCHAR(40) NOT NULL,
+    balance     INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (client_id, unit_kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== Renewals ======
+CREATE TABLE IF NOT EXISTS renewal_events (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_service_id INT NOT NULL,
+    client_id   INT NOT NULL,
+    amount      DECIMAL(12,2) NOT NULL,
+    result      VARCHAR(30) NOT NULL,
+    note        VARCHAR(255) DEFAULT '',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_renewal_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== SMS and voice volume rates ======
+CREATE TABLE IF NOT EXISTS rate_slabs (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    service_slug VARCHAR(80) NOT NULL,
+    min_qty     INT NOT NULL,
+    max_qty     INT NOT NULL,
+    unit_price  DECIMAL(12,2) NOT NULL,
+    sort_order  INT DEFAULT 0,
+    is_start    TINYINT(1) NOT NULL DEFAULT 0,
+    INDEX idx_slab_service (service_slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

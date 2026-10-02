@@ -403,6 +403,17 @@ function billing_create_tables($conn)
             setting_value TEXT DEFAULT NULL,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )');
+        billing_exec($conn, 'CREATE TABLE IF NOT EXISTS services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            description TEXT NOT NULL,
+            icon TEXT DEFAULT NULL,
+            features TEXT DEFAULT NULL,
+            sort_order INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )');
         return;
     }
 
@@ -470,6 +481,19 @@ function billing_create_tables($conn)
         setting_key VARCHAR(100) NOT NULL UNIQUE,
         setting_value TEXT DEFAULT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    billing_exec($conn, 'CREATE TABLE IF NOT EXISTS services (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT NOT NULL,
+        icon VARCHAR(100) DEFAULT NULL,
+        features TEXT DEFAULT NULL,
+        sort_order INT DEFAULT 0,
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_active (is_active),
+        INDEX idx_sort (sort_order)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 

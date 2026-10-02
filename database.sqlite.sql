@@ -125,6 +125,74 @@ CREATE INDEX IF NOT EXISTS idx_campaign_client ON sms_campaigns(client_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_client ON support_tickets(client_id);
 CREATE INDEX IF NOT EXISTS idx_service_active ON services(is_active);
 
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope TEXT NOT NULL,
+    ip TEXT NOT NULL,
+    attempted_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    service_slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    billing_cycle TEXT NOT NULL,
+    price NUMERIC NOT NULL,
+    unit_kind TEXT DEFAULT '',
+    unit_quantity INTEGER DEFAULT 0,
+    auto_renew_default INTEGER DEFAULT 0,
+    needs_detail TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS client_wallets (
+    client_id INTEGER PRIMARY KEY,
+    balance NUMERIC NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS wallet_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    amount NUMERIC NOT NULL,
+    direction TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL,
+    method TEXT DEFAULT '',
+    reference_note TEXT DEFAULT '',
+    related_service_id INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS client_units (
+    client_id INTEGER NOT NULL,
+    unit_kind TEXT NOT NULL,
+    balance INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (client_id, unit_kind)
+);
+
+CREATE TABLE IF NOT EXISTS renewal_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_service_id INTEGER NOT NULL,
+    client_id INTEGER NOT NULL,
+    amount NUMERIC NOT NULL,
+    result TEXT NOT NULL,
+    note TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rate_slabs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_slug TEXT NOT NULL,
+    min_qty INTEGER NOT NULL,
+    max_qty INTEGER NOT NULL,
+    unit_price NUMERIC NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    is_start INTEGER DEFAULT 0
+);
+
 INSERT OR IGNORE INTO admin_users (name, email, password, role) VALUES
 ('Super Admin', 'admin@aakashtechnologies.com', 'RESET_ADMIN_PASSWORD_BEFORE_USE', 'super_admin');
 
