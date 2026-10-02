@@ -161,14 +161,14 @@ try {
         <div class="text-center mb-8">
             <a href="../index.php" class="inline-flex items-center justify-center gap-3 mb-6">
                 <?php if ($identity['logo'] !== ''): ?>
-                    <img src="<?= e($identity['logo']) ?>" alt="" class="w-12 h-12 rounded-xl object-contain bg-white p-1">
+                    <img src="<?= e($identity['logo']) ?>" alt="<?= e($identity['name']) ?>" class="portal-brand-logo portal-brand-logo--login">
                 <?php else: ?>
                     <div class="relative w-12 h-12 flex items-center justify-center">
                         <div class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl rotate-45"></div>
                         <span class="portal-logo-letter relative font-heading font-bold text-white text-xl z-10"><?= e($identity['letter']) ?></span>
                     </div>
+                    <span class="font-heading font-bold text-white text-xl"><?= e($identity['name']) ?></span>
                 <?php endif; ?>
-                <span class="font-heading font-bold text-white text-xl"><?= e($identity['name']) ?></span>
             </a>
             <h1 class="font-heading font-bold text-white text-2xl">Client Portal</h1>
             <p class="text-slate-500 text-sm mt-1"><?= $showRegister ? 'Create your account' : 'Sign in to your account' ?></p>

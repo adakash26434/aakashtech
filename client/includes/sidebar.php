@@ -17,17 +17,17 @@ $navItems = [
     <?php $identity = site_portal_identity($conn); ?>
     <div class="h-20 flex items-center gap-3 px-5 border-b border-dark-800">
         <?php if ($identity['logo'] !== ''): ?>
-            <img src="<?= e($identity['logo']) ?>" alt="" class="w-10 h-10 rounded-xl object-contain bg-white p-1">
+            <img src="<?= e($identity['logo']) ?>" alt="<?= e($identity['name']) ?>" class="portal-brand-logo">
         <?php else: ?>
             <div class="relative w-10 h-10 flex items-center justify-center">
                 <div class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl rotate-45"></div>
                 <span class="portal-logo-letter relative font-heading font-bold text-white text-base z-10"><?= e($identity['letter']) ?></span>
             </div>
+            <div class="min-w-0 flex flex-col leading-tight">
+                <span class="font-heading font-bold text-white text-sm truncate"><?= e($identity['name']) ?></span>
+                <span class="text-xs text-slate-500">Client portal</span>
+            </div>
         <?php endif; ?>
-        <div class="min-w-0 flex flex-col leading-tight">
-            <span class="font-heading font-bold text-white text-sm truncate"><?= e($identity['name']) ?></span>
-            <span class="text-xs text-slate-500">Client portal</span>
-        </div>
     </div>
 
     <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">

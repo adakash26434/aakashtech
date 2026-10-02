@@ -23,13 +23,13 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
             <div class="footer-brand">
                 <a class="brand brand--footer" href="<?= $navBase === '' ? '#home' : 'index.php' ?>" aria-label="<?= site_escape($siteName) ?> home">
                     <?php if ($brandLogo !== ''): ?>
-                        <img class="brand-logo" src="<?= site_escape($brandLogo) ?>" alt="">
+                        <img class="brand-logo" src="<?= site_escape($brandLogo) ?>" alt="<?= site_escape($siteName) ?>">
                     <?php else: ?>
                         <span class="brand-mark" aria-hidden="true"><?= site_escape($brandLetter) ?></span>
+                        <span class="brand-copy">
+                            <span class="brand-name"><?= site_escape($siteName) ?></span>
+                        </span>
                     <?php endif; ?>
-                    <span class="brand-copy">
-                        <span class="brand-name"><?= site_escape($siteName) ?></span>
-                    </span>
                 </a>
                 <?php if ($siteTagline !== ''): ?><p><?= site_escape($siteTagline) ?></p><?php endif; ?>
                 <?php if ($siteLocation !== ''): ?>

@@ -15,13 +15,13 @@ if ($brandLetter === '') { $brandLetter = 'A'; }
     <div class="site-nav wrap">
         <a class="brand" href="<?= $navBase === '' ? '#home' : 'index.php' ?>" aria-label="<?= site_escape($siteName) ?> home">
             <?php if ($brandLogo !== ''): ?>
-                <img class="brand-logo" src="<?= site_escape($brandLogo) ?>" alt="">
+                <img class="brand-logo" src="<?= site_escape($brandLogo) ?>" alt="<?= site_escape($siteName) ?>">
             <?php else: ?>
                 <span class="brand-mark" aria-hidden="true"><?= site_escape($brandLetter) ?></span>
+                <span class="brand-copy">
+                    <span class="brand-name"><?= site_escape($siteName) ?></span>
+                </span>
             <?php endif; ?>
-            <span class="brand-copy">
-                <span class="brand-name"><?= site_escape($siteName) ?></span>
-            </span>
         </a>
 
         <nav class="desktop-nav" aria-label="Main navigation">

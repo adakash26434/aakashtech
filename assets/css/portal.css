@@ -200,6 +200,20 @@ body.portal-shell.bg-dark-950,
     background-color: #f7faf8;
 }
 
+.portal-brand-logo {
+    display: block;
+    height: 44px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+}
+
+.portal-brand-logo--login {
+    height: 64px;
+    margin-inline: auto;
+}
+
 .portal-shell.portal-auth {
     isolation: isolate;
 }

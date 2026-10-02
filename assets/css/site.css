@@ -110,11 +110,12 @@ body.site-public textarea {
 }
 
 .brand-logo {
-    width: 40px;
-    height: 40px;
+    display: block;
+    height: 52px;
+    width: auto;
+    max-width: 220px;
     object-fit: contain;
-    border-radius: 12px;
-    background: #fff;
+    object-position: left center;
 }
 
 .brand-mark {
@@ -1541,6 +1542,14 @@ a.contact-method:hover strong {
     background: #a4ddc8;
 }
 
+.brand--footer .brand-logo {
+    height: 48px;
+    max-width: 210px;
+    padding: 6px 8px;
+    background: #fff;
+    border-radius: 12px;
+}
+
 .brand--footer .brand-name {
     color: #f4faf7;
 }
@@ -1787,6 +1796,11 @@ a.contact-method:hover strong {
         gap: 16px;
     }
 
+    .brand-logo {
+        height: 44px;
+        max-width: 170px;
+    }
+
     .hero-layout,
     .about-layout,
     .contact-layout {
@@ -1819,6 +1833,12 @@ a.contact-method:hover strong {
 
     .site-nav {
         min-height: 68px;
+    }
+
+    .brand-logo,
+    .brand--footer .brand-logo {
+        height: 42px;
+        max-width: 168px;
     }
 
     .desktop-nav,
