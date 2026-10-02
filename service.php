@@ -158,7 +158,7 @@ $navBase = 'index.php';
                             <thead><tr><th>Quantity</th><th>Each</th></tr></thead>
                             <tbody>
                                 <?php foreach ($slabs as $slab): ?>
-                                    <tr<?= !empty($slab['is_start']) ? ' class="slab-row--start"' : '' ?>>
+                                    <tr data-min="<?= (int) $slab['min_qty'] ?>" data-max="<?= (int) $slab['max_qty'] ?>"<?= !empty($slab['is_start']) ? ' class="slab-row--start"' : '' ?>>
                                         <td><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></td>
                                         <td><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true) ?><?php if (!empty($slab['is_start'])): ?> <span class="slab-start">Starts from</span><?php endif; ?></td>
                                     </tr>
@@ -171,8 +171,20 @@ $navBase = 'index.php';
                         $sampleUnit = billing_selling_price($sample['unit_price'], isset($sample['offer_price']) ? $sample['offer_price'] : 0);
                         $sampleBill = billing_vat_bill(round($sampleUnit * $sampleQty, 2));
                         $sampleName = $slug === 'bulk-voice' ? 'calls' : 'SMS';
+                        $rateRows = array();
+                        foreach ($slabs as $slab) {
+                            $rateRows[] = array(
+                                'min' => (int) $slab['min_qty'],
+                                'max' => (int) $slab['max_qty'],
+                                'unit' => (float) billing_selling_price($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0)
+                            );
+                        }
                         ?>
-                        <p class="bill-example">Example for <?= number_format($sampleQty) ?> <?= service_escape($sampleName) ?>: <?= service_escape(billing_money_label($sampleBill['net'])) ?> plus VAT <?= service_escape(billing_money_label($sampleBill['vat'])) ?>. The bill is <?= service_escape(billing_money_label($sampleBill['total'])) ?>.</p>
+                        <div class="bill-calc" data-rates="<?= service_escape(json_encode($rateRows)) ?>" data-unit-name="<?= service_escape($sampleName) ?>">
+                            <label for="bill-qty">See the bill for a quantity</label>
+                            <input id="bill-qty" type="number" inputmode="numeric" min="1" step="1" value="<?= $sampleQty ?>">
+                            <p class="bill-example" data-bill-result>Example for <?= number_format($sampleQty) ?> <?= service_escape($sampleName) ?>: <?= service_escape(billing_money_label($sampleBill['net'])) ?> plus VAT <?= service_escape(billing_money_label($sampleBill['vat'])) ?>. The bill is <?= service_escape(billing_money_label($sampleBill['total'])) ?>.</p>
+                        </div>
                     <?php else: ?>
                         <h2 class="font-heading">Choose a package</h2>
                         <p>The amount below is the list price. The bill adds 13% VAT. Yearly and monthly plans renew that bill on the due date. A one-time booking is paid once.</p>

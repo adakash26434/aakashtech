@@ -42,6 +42,67 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    document.querySelectorAll(".bill-calc").forEach(function (box) {
+        var input = box.querySelector("input");
+        var result = box.querySelector("[data-bill-result]");
+        var table = box.parentElement ? box.parentElement.querySelector(".slab-table") : null;
+        var rates = [];
+        var unitName = box.getAttribute("data-unit-name") || "items";
+        if (!input || !result) return;
+        try {
+            rates = JSON.parse(box.getAttribute("data-rates") || "[]");
+        } catch (error) {
+            rates = [];
+        }
+
+        var money = function (amount) {
+            var rounded = Math.round(amount * 100) / 100;
+            var whole = Math.abs(rounded - Math.round(rounded)) < 0.001;
+            var text = whole
+                ? String(Math.round(rounded))
+                : rounded.toFixed(2);
+            var parts = text.split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return "NPR " + parts.join(".");
+        };
+
+        var render = function () {
+            var qty = parseInt(input.value, 10);
+            var match = null;
+            var index;
+            if (table) {
+                table.querySelectorAll("tr[data-min]").forEach(function (row) {
+                    row.classList.remove("slab-row--live");
+                });
+            }
+            if (!qty || qty < 1) {
+                result.textContent = "Type a quantity from the table to see the bill.";
+                return;
+            }
+            for (index = 0; index < rates.length; index += 1) {
+                if (qty >= rates[index].min && qty <= rates[index].max) {
+                    match = rates[index];
+                    break;
+                }
+            }
+            if (!match) {
+                result.textContent = "That quantity is outside the table, so it cannot be ordered.";
+                return;
+            }
+            if (table) {
+                var liveRow = table.querySelector('tr[data-min="' + match.min + '"][data-max="' + match.max + '"]');
+                if (liveRow) liveRow.classList.add("slab-row--live");
+            }
+            var net = Math.round(match.unit * qty * 100) / 100;
+            var vat = Math.round(net * 13) / 100;
+            var total = Math.round((net + vat) * 100) / 100;
+            result.textContent = qty.toLocaleString("en-US") + " " + unitName + " at " + money(match.unit) + " each: " + money(net) + " plus VAT " + money(vat) + ". The bill is " + money(total) + ".";
+        };
+
+        input.addEventListener("input", render);
+        render();
+    });
+
     document.querySelectorAll("[data-service]").forEach(function (link) {
         link.addEventListener("click", function () {
             var serviceSelect = document.getElementById("service");

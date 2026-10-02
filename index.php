@@ -100,6 +100,22 @@ $siteLocation = $publicSite['site_location'];
 $siteTagline = $publicSite['footer_tagline'];
 $siteFooter = $publicSite['footer_text'];
 $siteLogo = $publicSite['logo_path'];
+$paySentence = 'Add wallet funds by the payment method published for this site. After that payment is confirmed, checkout is immediate.';
+if (isset($conn)) {
+    $payLabels = array();
+    foreach (billing_payment_methods($conn) as $payMethod) {
+        $payLabels[] = $payMethod['label'];
+    }
+    $payCount = count($payLabels);
+    if ($payCount === 1) {
+        $paySentence = 'Pay by ' . $payLabels[0] . '. After that payment is confirmed, checkout is immediate.';
+    } elseif ($payCount === 2) {
+        $paySentence = 'Pay by ' . $payLabels[0] . ' or ' . $payLabels[1] . '. After that payment is confirmed, checkout is immediate.';
+    } elseif ($payCount > 2) {
+        $payLast = array_pop($payLabels);
+        $paySentence = 'Pay by ' . implode(', ', $payLabels) . ', or ' . $payLast . '. After that payment is confirmed, checkout is immediate.';
+    }
+}
 $contactServices = array();
 foreach (billing_service_definitions() as $serviceDefinition) {
     $contactServices[] = $serviceDefinition['contact'];
@@ -419,7 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                     <article class="process-step reveal">
                         <span class="step-number">02 / Pay once</span>
                         <h3>Add wallet funds</h3>
-                        <p>Pay by eSewa, Khalti, or bank. After that payment is confirmed, checkout is immediate.</p>
+                        <p><?= site_escape($paySentence) ?></p>
                     </article>
                     <article class="process-step reveal">
                         <span class="step-number">03 / Auto-renew</span>
