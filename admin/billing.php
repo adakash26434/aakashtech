@@ -20,6 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $slabError = billing_save_slabs($conn, $_POST['slab'], isset($_POST['start']) ? $_POST['start'] : array());
         $msg = $slabError === '' ? 'SMS and voice rates updated. The selected row is the Starts from price on the homepage.' : '';
         $err = $slabError;
+    } elseif (isset($_POST['refund_domain'])) {
+        $refundError = billing_refund_domain($conn, (int) $_POST['service_id']);
+        $msg = $refundError === '' ? 'The domain amount is back in the client wallet, and that order will not renew.' : '';
+        $err = $refundError;
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
         foreach ($_POST['price'] as $code => $value) {
@@ -188,7 +192,16 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm text-slate-400"><?= !empty($row['next_renewal']) ? e($row['next_renewal']) : '—' ?> <?= (int) $row['auto_renew'] === 1 ? '· auto' : '' ?></td>
-                            <td class="px-4 py-3 text-sm text-slate-300"><?= e(ucfirst(str_replace('_', ' ', $row['status']))) ?></td>
+                            <td class="px-4 py-3 text-sm text-slate-300">
+                                <?= e(ucfirst(str_replace('_', ' ', $row['status']))) ?>
+                                <?php if (($row['plan_code'] === 'domain-com' || $row['plan_code'] === 'domain-np') && $row['status'] === 'active'): ?>
+                                    <form method="POST" class="mt-2">
+                                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                        <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
+                                        <button type="submit" name="refund_domain" value="1" class="text-yellow-300 text-xs">Return to wallet</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>

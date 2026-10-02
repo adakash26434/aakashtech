@@ -39,11 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_campaign'])) {
     } elseif (empty($parsed['ok'])) {
         $err = $parsed['error'];
     } elseif ($count < 1) {
-        $err = 'Paste at least one phone number, one per line.';
-    } elseif ($count > $balances[$unitKind]) {
-        $err = 'That list needs ' . number_format($count) . ' credits and you have ' . number_format($balances[$unitKind]) . '.';
-    } elseif (!billing_spend_units($conn, $cid, $unitKind, $count)) {
-        $err = 'The credit balance changed before this could be saved. Check the balance and try again.';
+        $err = 'Paste at least one 10-digit mobile number, one per line.';
     } else {
         $status = $scheduledValue ? 'scheduled' : 'draft';
         $list = implode("\n", $numbers);
@@ -53,13 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_campaign'])) {
         $stmt->bind_param('isssisssssss', $cid, $name, $message, $sender, $count, $status, $scheduledValue, $channel, $audience, $purpose, $list, $declaration);
         if ($stmt->execute()) {
             billing_form_guard_clear($guardKey);
-            $msg = $channel === 'voice'
-                ? 'Voice job saved. ' . number_format($count) . ' call credits were reserved.'
-                : 'SMS job saved. ' . number_format($count) . ' SMS credits were reserved.';
-            $balances = billing_unit_balances($conn, $cid);
+            $msg = 'Saved. This copy does not use your credits. Send from the SMS portal with the credits you already bought.';
         } else {
-            billing_add_units($conn, $cid, $unitKind, $count);
-            $err = 'The job could not be saved, so the credits were returned.';
+            $err = 'The message could not be saved.';
         }
         $stmt->close();
     }
@@ -70,7 +62,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
 <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">Messages</h1>
-        <p class="text-slate-500 text-sm">Live SMS is sent from the <a href="sms-portal.php" class="text-brand-400">SMS portal</a> after you buy credit. This page keeps a job only when you also reserve credits here.</p>
+        <p class="text-slate-500 text-sm">Buy the credit in the shop. Send it from the <a href="sms-portal.php" class="text-brand-400">SMS portal</a>. A copy saved here does not reduce that credit.</p>
     </div>
     <div class="flex gap-6 text-sm">
         <span class="text-slate-400">SMS credits: <strong class="text-white"><?= number_format($balances['sms']) ?></strong></span>
@@ -132,7 +124,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
             $declarationAccepted = isset($_POST['channel'], $_POST['legal_accept']) && $_POST['channel'] === 'sms' && $_POST['legal_accept'] === '1';
             require __DIR__ . '/../includes/use-declaration.php';
             ?>
-            <button type="submit" name="create_campaign" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Reserve SMS credits</button>
+            <button type="submit" name="create_campaign" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save SMS copy</button>
         </form>
     </div>
     <div class="dash-panel">
@@ -177,7 +169,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
             $declarationAccepted = isset($_POST['channel'], $_POST['legal_accept']) && $_POST['channel'] === 'voice' && $_POST['legal_accept'] === '1';
             require __DIR__ . '/../includes/use-declaration.php';
             ?>
-            <button type="submit" name="create_campaign" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Reserve voice credits</button>
+            <button type="submit" name="create_campaign" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save voice copy</button>
         </form>
     </div>
 </div>
@@ -212,7 +204,7 @@ $campaigns = $conn->query('SELECT * FROM sms_campaigns WHERE client_id = ' . $ci
             <?php endwhile; ?>
         </div>
     <?php else: ?>
-        <p class="p-12 text-center text-slate-500 text-sm">No messages yet. Buy SMS or voice credits, then reserve them here.</p>
+        <p class="p-12 text-center text-slate-500 text-sm">No saved copies yet. Credits stay in the account until you send from the SMS portal.</p>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

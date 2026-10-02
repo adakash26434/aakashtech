@@ -691,6 +691,12 @@ function billing_ensure($conn)
     if ($version < 2) {
         billing_set_setting($conn, 'billing_schema_version', '2');
     }
+    if ($version < 3 && DB_DRIVER !== 'sqlite') {
+        billing_exec($conn, "ALTER TABLE client_services MODIFY status ENUM('active','expired','suspended','pending','past_due','booked','refunded') DEFAULT 'active'");
+    }
+    if ($version < 3) {
+        billing_set_setting($conn, 'billing_schema_version', '3');
+    }
     billing_add_campaign_columns($conn);
     billing_add_portal_columns($conn);
     billing_seed_plans($conn);
@@ -1785,9 +1791,9 @@ function billing_parse_numbers($raw)
         if ($line === '') {
             continue;
         }
-        $digits = preg_replace('/[\s\-()]/', '', $line);
-        if (!is_string($digits) || !preg_match('/^\+?[0-9]{7,15}$/', $digits)) {
-            return array('ok' => false, 'error' => 'Each line should be one phone number.', 'numbers' => array());
+        $digits = function_exists('auth_mobile_number') ? auth_mobile_number($line) : '';
+        if ($digits === '') {
+            return array('ok' => false, 'error' => 'Each line should be one 10-digit mobile number.', 'numbers' => array());
         }
         $numbers[$digits] = $digits;
     }
@@ -1844,6 +1850,17 @@ function billing_prepare_order($conn, $plan, $post)
             return array('ok' => false, 'error' => 'The send date cannot be in the past.');
         }
         $numbers = billing_plain_block(billing_posted($post, 'numbers'), 20000);
+        $parsedNumbers = array();
+        if ($numbers !== '') {
+            $parsed = billing_parse_numbers($numbers);
+            if (empty($parsed['ok'])) {
+                return array('ok' => false, 'error' => $parsed['error']);
+            }
+            if (count($parsed['numbers']) !== $quantity) {
+                return array('ok' => false, 'error' => 'The list has ' . number_format(count($parsed['numbers'])) . ' numbers and this order is for ' . number_format($quantity) . '. Leave the list empty to add numbers in the SMS portal, or make the counts match.');
+            }
+            $parsedNumbers = $parsed['numbers'];
+        }
         $price = round((float) $slab['unit_price'] * $quantity, 2);
         $brief['Audience'] = $audiences[$audience];
         $brief['Purpose'] = $purposes[$purpose];
@@ -1868,8 +1885,8 @@ function billing_prepare_order($conn, $plan, $post)
         if ($schedule !== '') {
             $brief['Send date'] = $schedule;
         }
-        if ($numbers !== '') {
-            $brief['Number list'] = $numbers;
+        if ($parsedNumbers) {
+            $brief['Number list'] = implode("\n", $parsedNumbers);
         }
         $brief['Declaration'] = billing_use_declaration();
         $brief['Declaration accepted'] = date('Y-m-d H:i');
@@ -2170,6 +2187,46 @@ function billing_purchase($conn, $clientId, $plan, $post)
         billing_form_guard_clear('order-' . $plan['code']);
     }
     return array('ok' => true, 'service_id' => $serviceId, 'status' => $status, 'price' => (float) $price);
+}
+
+function billing_refund_domain($conn, $serviceId)
+{
+    $serviceId = (int) $serviceId;
+    if ($serviceId < 1) {
+        return 'Choose a domain order.';
+    }
+    $stmt = $conn->prepare('SELECT id, client_id, price, status, plan_code, detail_label FROM client_services WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return 'That domain order could not be read.';
+    }
+    $stmt->bind_param('i', $serviceId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row || ($row['plan_code'] !== 'domain-com' && $row['plan_code'] !== 'domain-np')) {
+        return 'Only a domain order can be returned to the wallet.';
+    }
+    if ($row['status'] !== 'active') {
+        return 'That domain order is no longer active.';
+    }
+    $price = billing_money($row['price']);
+    if ((float) $price <= 0) {
+        return 'That order has no amount to return.';
+    }
+    $clientId = (int) $row['client_id'];
+    billing_wallet_credit($conn, $clientId, $price);
+    $note = 'Domain not available' . ($row['detail_label'] !== '' ? ': ' . $row['detail_label'] : '');
+    billing_record_entry($conn, $clientId, $price, 'credit', 'refund', 'completed', 'wallet', $note, $serviceId);
+    $status = 'refunded';
+    $update = $conn->prepare("UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND status = 'active'");
+    $update->bind_param('si', $status, $serviceId);
+    $update->execute();
+    $saved = billing_affected($conn) === 1;
+    $update->close();
+    if (!$saved) {
+        return 'The wallet was credited, but the order status could not be changed. Check this order before trying again.';
+    }
+    return '';
 }
 
 function billing_request_topup($conn, $clientId, $amount, $method, $reference)

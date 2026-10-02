@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS client_services (
     client_id   INT NOT NULL,
     service_name VARCHAR(255) NOT NULL,
     description TEXT DEFAULT NULL,
-    status      ENUM('active', 'expired', 'suspended', 'pending', 'past_due', 'booked') DEFAULT 'active',
+    status      ENUM('active', 'expired', 'suspended', 'pending', 'past_due', 'booked', 'refunded') DEFAULT 'active',
     start_date  DATE DEFAULT NULL,
     end_date    DATE DEFAULT NULL,
     price       DECIMAL(10,2) DEFAULT 0,
