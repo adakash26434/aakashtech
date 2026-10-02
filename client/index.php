@@ -39,6 +39,11 @@ try {
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Welcome, <?= e(get_client_name()) ?>!</h1>
     <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($walletBalance)) ?> · <?= number_format($unitBalances['sms']) ?> SMS · <?= number_format((int) $unitBalances['voice_calls'] + (int) $unitBalances['voice_minutes']) ?> voice calls</p>
 </div>
+<?php if (!billing_kyc_approved($conn, $cid)): ?>
+    <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
+        SMS sending stays closed until your identity is approved. <a href="kyc.php" class="text-brand-300">Submit identity</a>
+    </div>
+<?php endif; ?>
 
 <!-- Stats -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

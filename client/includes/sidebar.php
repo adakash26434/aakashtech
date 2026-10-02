@@ -6,6 +6,7 @@ $navItems = [
     'shop.php'      => ['Buy Services', 'shopping-bag'],
     'services.php'  => ['My Services', 'server'],
     'wallet.php'    => ['Wallet', 'wallet'],
+    'kyc.php'       => ['Identity', 'badge-check'],
     'sms-portal.php' => ['SMS portal', 'external-link'],
     'campaigns.php' => ['Messages', 'message-square-text'],
     'support.php'   => ['Support', 'life-buoy'],

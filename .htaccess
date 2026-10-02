@@ -37,6 +37,7 @@ DirectoryIndex index.php
 </Files>
 
 RewriteRule ^includes/ - [F,L]
+RewriteRule ^uploads/kyc/ - [F,L]
 
 # Protect .htaccess itself
 <Files ".htaccess">

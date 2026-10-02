@@ -16,7 +16,9 @@ $portalLogin = billing_portal_login($conn, $cid);
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div>
 <?php endif; ?>
 
-<?php if ($messagingActive): ?>
+<?php if (!billing_kyc_approved($conn, $cid)): ?>
+    <?php require __DIR__ . '/includes/sms-portal-card.php'; ?>
+<?php elseif ($messagingActive): ?>
     <?php require __DIR__ . '/includes/sms-portal-card.php'; ?>
 <?php else: ?>
     <div class="dash-panel">

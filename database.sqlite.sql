@@ -195,6 +195,31 @@ CREATE TABLE IF NOT EXISTS rate_slabs (
     offer_price NUMERIC DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS client_kyc (
+    client_id INTEGER PRIMARY KEY,
+    account_kind TEXT DEFAULT '',
+    status TEXT DEFAULT '',
+    purpose TEXT DEFAULT '',
+    full_name TEXT DEFAULT '',
+    id_kind TEXT DEFAULT '',
+    id_number TEXT DEFAULT '',
+    address TEXT DEFAULT '',
+    org_name TEXT DEFAULT '',
+    registration_number TEXT DEFAULT '',
+    tax_number TEXT DEFAULT '',
+    contact_name TEXT DEFAULT '',
+    contact_id_kind TEXT DEFAULT '',
+    contact_id_number TEXT DEFAULT '',
+    doc_identity TEXT DEFAULT '',
+    doc_registration TEXT DEFAULT '',
+    doc_tax TEXT DEFAULT '',
+    doc_authority TEXT DEFAULT '',
+    admin_note TEXT DEFAULT '',
+    submitted_at TEXT DEFAULT NULL,
+    reviewed_at TEXT DEFAULT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 INSERT OR IGNORE INTO admin_users (name, email, password, role) VALUES
 ('Super Admin', 'admin@aakashtechnologies.com', 'RESET_ADMIN_PASSWORD_BEFORE_USE', 'super_admin');
 

@@ -270,3 +270,29 @@ CREATE TABLE IF NOT EXISTS rate_slabs (
     offer_price DECIMAL(12,2) NOT NULL DEFAULT 0,
     INDEX idx_slab_service (service_slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== Sender identity. Required before the SMS portal login is shown. ======
+CREATE TABLE IF NOT EXISTS client_kyc (
+    client_id   INT NOT NULL PRIMARY KEY,
+    account_kind VARCHAR(20) DEFAULT '',
+    status      VARCHAR(20) DEFAULT '',
+    purpose     TEXT,
+    full_name   VARCHAR(160) DEFAULT '',
+    id_kind     VARCHAR(40) DEFAULT '',
+    id_number   VARCHAR(80) DEFAULT '',
+    address     TEXT,
+    org_name    VARCHAR(200) DEFAULT '',
+    registration_number VARCHAR(80) DEFAULT '',
+    tax_number  VARCHAR(80) DEFAULT '',
+    contact_name VARCHAR(160) DEFAULT '',
+    contact_id_kind VARCHAR(40) DEFAULT '',
+    contact_id_number VARCHAR(80) DEFAULT '',
+    doc_identity VARCHAR(255) DEFAULT '',
+    doc_registration VARCHAR(255) DEFAULT '',
+    doc_tax     VARCHAR(255) DEFAULT '',
+    doc_authority VARCHAR(255) DEFAULT '',
+    admin_note  TEXT,
+    submitted_at DATETIME DEFAULT NULL,
+    reviewed_at DATETIME DEFAULT NULL,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
