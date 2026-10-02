@@ -214,6 +214,7 @@ INSERT OR IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('notice_body', ''),
 ('notice_link', ''),
 ('notice_link_label', ''),
+('notice_image', ''),
 ('facebook_url', ''),
 ('instagram_url', ''),
 ('youtube_url', ''),

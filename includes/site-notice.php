@@ -8,19 +8,28 @@ $noticeLabel = isset($noticeSettings['notice_link_label']) ? trim($noticeSetting
 if ($noticeLabel === '') {
     $noticeLabel = 'Open';
 }
-$noticeKey = substr(hash('sha256', $noticeTitle . "\0" . $noticeBody . "\0" . $noticeLink), 0, 12);
+$noticeImage = site_notice_file(isset($noticeSettings['notice_image']) ? $noticeSettings['notice_image'] : '');
+$noticeKey = substr(hash('sha256', $noticeTitle . "\0" . $noticeBody . "\0" . $noticeLink . "\0" . $noticeImage), 0, 12);
+$noticeAlt = $noticeTitle !== '' ? $noticeTitle : 'Notice';
 ?>
-<?php if ($noticeOn && $noticeBody !== ''): ?>
+<?php if ($noticeOn && ($noticeBody !== '' || $noticeImage !== '')): ?>
 <div class="site-notice" id="site-notice" data-notice-key="<?= site_escape($noticeKey) ?>" hidden>
-    <div class="site-notice-card" role="dialog" aria-modal="true" aria-labelledby="site-notice-title">
+    <div class="site-notice-card<?= $noticeImage !== '' ? ' site-notice-card--image' : '' ?>" role="dialog" aria-modal="true" aria-labelledby="site-notice-title">
+        <?php if ($noticeImage !== ''): ?>
+            <img class="site-notice-image" src="<?= site_escape($noticeImage) ?>" alt="<?= site_escape($noticeAlt) ?>">
+        <?php endif; ?>
+        <div class="site-notice-copy">
         <p class="site-notice-kicker">Notice</p>
         <h2 id="site-notice-title" class="font-heading"><?= site_escape($noticeTitle !== '' ? $noticeTitle : 'Notice') ?></h2>
-        <p><?= nl2br(site_escape($noticeBody), false) ?></p>
+        <?php if ($noticeBody !== ''): ?>
+            <p><?= nl2br(site_escape($noticeBody), false) ?></p>
+        <?php endif; ?>
         <div class="site-notice-actions">
             <?php if ($noticeLink !== ''): ?>
                 <a class="button button--primary" href="<?= site_escape($noticeLink) ?>" target="_blank" rel="noopener noreferrer"><?= site_escape($noticeLabel) ?></a>
             <?php endif; ?>
             <button type="button" class="button button--outline" data-notice-close>Close</button>
+        </div>
         </div>
     </div>
 </div>

@@ -727,6 +727,7 @@ function site_public_defaults()
         'notice_body' => '',
         'notice_link' => '',
         'notice_link_label' => '',
+        'notice_image' => '',
         'facebook_url' => '',
         'instagram_url' => '',
         'youtube_url' => '',
@@ -842,14 +843,24 @@ function site_whatsapp_href($number)
     return 'https://wa.me/' . $digits . '?text=' . rawurlencode('Hello, I have a query.');
 }
 
-function site_logo_file($path)
+function site_public_file($path, $pattern)
 {
     $path = str_replace('\\', '/', (string) $path);
-    if (!preg_match('/^uploads\/site-logo\.(png|jpe?g|webp|gif)$/', $path)) {
+    if (!preg_match($pattern, $path)) {
         return '';
     }
     $full = dirname(__DIR__) . '/' . $path;
     return is_file($full) ? $path : '';
+}
+
+function site_logo_file($path)
+{
+    return site_public_file($path, '/^uploads\/site-logo\.(png|jpe?g|webp|gif)$/');
+}
+
+function site_notice_file($path)
+{
+    return site_public_file($path, '/^uploads\/site-notice\.(png|jpe?g|webp|gif)$/');
 }
 
 function site_logo_web_path($path)
@@ -1008,6 +1019,52 @@ function site_store_logo($file)
     }
     if (!move_uploaded_file($file['tmp_name'], $target)) {
         return array('ok' => false, 'error' => 'The logo could not be saved.');
+    }
+    return array('ok' => true, 'path' => $relative);
+}
+
+function site_store_notice_image($file)
+{
+    if (!is_array($file) || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return array('ok' => true, 'path' => null);
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        return array('ok' => false, 'error' => 'The notice image could not be uploaded.');
+    }
+    if ((int) $file['size'] > 2097152) {
+        return array('ok' => false, 'error' => 'Use a notice image smaller than 2 MB.');
+    }
+    $mime = '';
+    if (class_exists('finfo')) {
+        $info = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $info->file($file['tmp_name']);
+    }
+    $types = array('image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/gif' => 'gif');
+    $image = @getimagesize($file['tmp_name']);
+    $imageTypes = array(IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg', IMAGETYPE_GIF => 'gif');
+    if (defined('IMAGETYPE_WEBP')) {
+        $imageTypes[IMAGETYPE_WEBP] = 'webp';
+    }
+    if (!isset($types[$mime]) || !$image || !isset($imageTypes[$image[2]]) || $types[$mime] !== $imageTypes[$image[2]]) {
+        return array('ok' => false, 'error' => 'The notice image must be a PNG, JPG, WEBP, or GIF.');
+    }
+    if ((int) $image[0] < 1 || (int) $image[1] < 1 || (int) $image[0] > 4000 || (int) $image[1] > 4000) {
+        return array('ok' => false, 'error' => 'Use a notice image no larger than 4000 pixels on a side.');
+    }
+    $types[$mime] = $imageTypes[$image[2]];
+    $dir = dirname(__DIR__) . '/uploads';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return array('ok' => false, 'error' => 'The uploads folder could not be created.');
+    }
+    $relative = 'uploads/site-notice.' . $types[$mime];
+    $target = dirname(__DIR__) . '/' . $relative;
+    foreach (glob($dir . '/site-notice.*') as $old) {
+        if (is_file($old)) {
+            unlink($old);
+        }
+    }
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        return array('ok' => false, 'error' => 'The notice image could not be saved.');
     }
     return array('ok' => true, 'path' => $relative);
 }

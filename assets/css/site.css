@@ -1688,6 +1688,28 @@ a.contact-method:hover strong {
     box-shadow: 0 24px 60px rgba(16, 43, 53, 0.22);
 }
 
+.site-notice-card--image {
+    width: min(520px, 100%);
+    padding: 0 0 24px;
+    overflow: hidden;
+}
+
+.site-notice-image {
+    display: block;
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    background: var(--site-wash);
+}
+
+.site-notice-copy {
+    min-width: 0;
+}
+
+.site-notice-card--image .site-notice-copy {
+    padding: 22px 26px 0;
+}
+
 .site-notice-kicker {
     margin: 0 0 8px;
     color: var(--site-teal-dark);

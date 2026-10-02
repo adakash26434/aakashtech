@@ -65,11 +65,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
             } elseif ($logo['path'] !== null) {
                 $values['logo_path'] = $logo['path'];
             }
-            foreach ($values as $key => $value) {
-                billing_set_setting($conn, $key, $value);
+            $noticeImage = site_store_notice_image(isset($_FILES['notice_image']) ? $_FILES['notice_image'] : array());
+            if (!$noticeImage['ok']) {
+                $err = $noticeImage['error'];
+            } else {
+                if (!empty($_POST['remove_notice_image']) && $noticeImage['path'] === null) {
+                    $dir = dirname(__DIR__) . '/uploads';
+                    foreach (glob($dir . '/site-notice.*') as $old) {
+                        if (is_file($old)) {
+                            unlink($old);
+                        }
+                    }
+                    $values['notice_image'] = '';
+                } elseif ($noticeImage['path'] !== null) {
+                    $values['notice_image'] = $noticeImage['path'];
+                }
+                foreach ($values as $key => $value) {
+                    billing_set_setting($conn, $key, $value);
+                }
+                billing_set_setting($conn, 'public_details_managed', '1');
+                $msg = 'Public site details saved.';
             }
-            billing_set_setting($conn, 'public_details_managed', '1');
-            $msg = 'Public site details saved.';
         }
     }
 }
@@ -172,8 +188,18 @@ $settings = site_public_settings($conn);
                     <textarea name="notice_body" maxlength="500" rows="3" class="form-input" placeholder="The notice visitors should read"><?= e($settings['notice_body'] ?? '') ?></textarea>
                     <input type="url" name="notice_link" maxlength="200" class="form-input" placeholder="Optional https:// link" value="<?= e($settings['notice_link'] ?? '') ?>">
                     <input type="text" name="notice_link_label" maxlength="40" class="form-input" placeholder="Link label, such as Read more" value="<?= e($settings['notice_link_label'] ?? '') ?>">
+                    <?php $noticePreview = site_notice_file($settings['notice_image'] ?? ''); ?>
+                    <?php if ($noticePreview !== ''): ?>
+                        <img src="../<?= e($noticePreview) ?>" alt="Current notice image" class="w-full max-h-40 object-contain rounded-xl bg-white">
+                    <?php endif; ?>
+                    <input type="file" name="notice_image" accept="image/png,image/jpeg,image/webp,image/gif" class="form-input">
+                    <?php if ($noticePreview !== ''): ?>
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" name="remove_notice_image" value="1"> Remove the notice image
+                        </label>
+                    <?php endif; ?>
                 </div>
-                <p class="text-slate-500 text-xs mt-2">Turn it off when the notice is no longer needed. Closing it hides that same notice until the browser is opened again, or until you change the text.</p>
+                <p class="text-slate-500 text-xs mt-2">The image is optional. PNG, JPG, WEBP, or GIF, up to 2 MB. Turn the notice off when it is no longer needed. Closing it hides that same notice until the browser is opened again, or until you change the text or image.</p>
             </div>
             <div class="pt-2 border-t border-slate-800">
                 <h4 class="font-heading font-semibold text-white text-sm mb-3">Social contact</h4>
