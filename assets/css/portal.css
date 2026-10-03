@@ -102,6 +102,19 @@ body.portal-shell.bg-dark-950,
     color: #ffffff;
 }
 
+.portal-shell .form-input:disabled,
+.portal-shell .form-input[readonly] {
+    opacity: 1;
+    background: #f1f5f3;
+    color: #4d675f;
+    -webkit-text-fill-color: #4d675f;
+}
+
+.portal-shell .portal-avatar-letter {
+    box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
 .portal-shell .text-slate-300 {
     color: var(--portal-text);
 }
@@ -142,6 +155,12 @@ body.portal-shell.bg-dark-950,
 .portal-shell [class~="bg-slate-800"],
 .portal-shell [class~="bg-slate-700"] {
     background-color: #edf4f0;
+}
+
+.portal-shell [class~="bg-slate-800"].text-white,
+.portal-shell [class~="bg-slate-700"].text-white,
+.portal-shell [class~="bg-slate-900"].text-white {
+    color: #075e54;
 }
 
 .portal-shell [class~="hover:bg-slate-800/50"]:hover {
@@ -508,8 +527,8 @@ body.portal-shell.bg-dark-950,
 .portal-shell a[class~="bg-brand-500"],
 .portal-shell button[class~="from-brand-500"],
 .portal-shell a[class~="from-brand-500"] {
-    background-image: linear-gradient(135deg, #16b89f 0%, #0d9884 50%, #08786a 100%);
-    border: 1px solid #087365;
+    background-image: linear-gradient(135deg, #0a7d6e 0%, #08705f 50%, #065a50 100%);
+    border: 1px solid #065a50;
     color: #fff;
     box-shadow: 0 6px 16px rgba(11, 139, 122, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
     transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -519,7 +538,7 @@ body.portal-shell.bg-dark-950,
 .portal-shell a[class~="bg-brand-500"]:hover,
 .portal-shell button[class~="from-brand-500"]:hover,
 .portal-shell a[class~="from-brand-500"]:hover {
-    filter: brightness(1.06);
+    filter: saturate(1.15);
     transform: translateY(-1px);
     box-shadow: 0 10px 22px rgba(11, 139, 122, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -542,7 +561,11 @@ body.portal-shell.bg-dark-950,
 .portal-shell button[class~="bg-white"][class~="border-slate-300"],
 .portal-shell a[class~="bg-white"][class~="border-slate-300"],
 .portal-shell button[class~="bg-slate-800"],
-.portal-shell a[class~="bg-slate-800"] {
+.portal-shell a[class~="bg-slate-800"],
+.portal-shell button.text-white[class~="bg-slate-800"],
+.portal-shell a.text-white[class~="bg-slate-800"],
+.portal-shell button.text-white[class~="bg-slate-700"],
+.portal-shell a.text-white[class~="bg-slate-700"] {
     background: #eef8f5;
     border: 1px solid #b9e0d6;
     color: #075e54;
@@ -638,7 +661,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-tabs button.is-on {
-    background-image: linear-gradient(135deg, #16b89f, #08786a);
+    background-image: linear-gradient(135deg, #0a7d6e, #065a50);
     box-shadow: 0 6px 14px rgba(11, 139, 122, 0.22);
 }
 

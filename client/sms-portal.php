@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 $cid = (int) get_client_id();
-sms_run_queue($conn, 5);
+sms_run_queue($conn, 5, 15);
 $notice = flash('billing');
 $msg = '';
 $err = '';
@@ -158,7 +158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
         if (!empty($result['ok'])) {
             $msg = $result['message'];
             if (!empty($result['campaign_id'])) {
-                $msg .= ' See who received it in SMS logs.';
+                if (empty($result['background'])) {
+                    $msg .= ' See who received it in SMS logs.';
+                } else {
+                    sms_start_background($conn, (int) $result['campaign_id']);
+                }
                 $sentLog = (int) $result['campaign_id'];
             }
             $balances = billing_unit_balances($conn, $cid);
@@ -331,7 +335,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                     <div class="sms-step-head">
                         <span class="sms-step-no">1</span>
                         <label class="sms-step-title" for="sms-numbers">Who gets it</label>
-                        <span class="sms-count-chip" :class="estimate().count ? 'is-on' : ''" x-text="estimate().count ? (estimate().count + ' numbers') : 'Up to 500'"></span>
+                        <span class="sms-count-chip" :class="estimate().count ? 'is-on' : ''" x-text="estimate().count ? (estimate().count + ' numbers') : 'Up to 50,000'"></span>
                     </div>
                     <div class="sms-tools">
                         <button type="button" class="sms-upload-open" @click="uploadOpen = true; importOk = false; importNote = ''">&#8679; Upload Excel or CSV</button>
@@ -369,7 +373,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <p id="sms-upload-title" class="sms-upload-title">Upload numbers</p>
-                                    <p class="text-slate-500 text-xs mt-1">Excel .xlsx or .csv, up to 2 MB and 500 numbers.</p>
+                                    <p class="text-slate-500 text-xs mt-1">Excel .xlsx or .csv, up to 5 MB and 50,000 numbers.</p>
                                 </div>
                                 <button type="button" class="sms-upload-close" @click="uploadOpen = false" aria-label="Close">&times;</button>
                             </div>
@@ -629,7 +633,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
 .sms-head-link { padding: 5px 4px; color: #075e54; font-size: 13px; font-weight: 600; }
 .sms-step { min-width: 0; }
 .sms-step-head { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-bottom: 10px; }
-.sms-step-no { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #0b8b7a; color: #fff; font-size: 13px; font-weight: 700; }
+.sms-step-no { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #087365; color: #fff; font-size: 13px; font-weight: 700; }
 .sms-step-no.is-soft { background: #d7efe9; color: #075e54; }
 .sms-step-title { color: #183b31; font-size: 15px; font-weight: 700; }
 .sms-count-chip { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: #f1f6f3; color: #4d675f; font-size: 12px; font-weight: 600; }
@@ -692,6 +696,7 @@ function smsHasNames(numbers) {
     });
 }
 function smsComposer(seed) {
+    var memo = { key: null, value: null };
     return {
         text: seed.text || '',
         numbers: seed.numbers || '',
@@ -846,6 +851,14 @@ function smsComposer(seed) {
             if (found) this.numbers = found.numbers;
         },
         estimate: function () {
+            var key = String(this.text || '') + '\u0001' + String(this.numbers || '') + '\u0001' + this.balance;
+            if (memo.key !== key) {
+                memo.value = this.measure();
+                memo.key = key;
+            }
+            return memo.value;
+        },
+        measure: function () {
             var text = String(this.text || '');
             var chars = Array.from(text);
             var unicode = /[^\n\r\x20-\x7E]/.test(text);

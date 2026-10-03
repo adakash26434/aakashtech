@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
     channel         VARCHAR(20) DEFAULT 'sms',
     audience        VARCHAR(40) DEFAULT '',
     purpose         VARCHAR(40) DEFAULT '',
-    recipients_list TEXT,
+    recipients_list MEDIUMTEXT,
     declaration_text TEXT,
     language        VARCHAR(20) DEFAULT '',
     status          ENUM('draft', 'pending', 'scheduled', 'sending', 'sent', 'failed') DEFAULT 'draft',
@@ -425,7 +425,7 @@ CREATE TABLE IF NOT EXISTS sms_number_lists (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     client_id   INT NOT NULL,
     label       VARCHAR(80) NOT NULL,
-    numbers_text TEXT NOT NULL,
+    numbers_text MEDIUMTEXT NOT NULL,
     list_kind   VARCHAR(20) DEFAULT 'program',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_sms_list_client (client_id)

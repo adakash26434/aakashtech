@@ -139,7 +139,7 @@ function sms_ensure_tables($conn)
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id INT NOT NULL,
         label VARCHAR(80) NOT NULL,
-        numbers_text TEXT NOT NULL,
+        numbers_text MEDIUMTEXT NOT NULL,
         list_kind VARCHAR(20) DEFAULT 'program',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_sms_list_client (client_id)
@@ -155,6 +155,45 @@ function sms_ensure_tables($conn)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     sms_credit_columns($conn);
     sms_list_columns($conn);
+    sms_widen_list_columns($conn);
+}
+
+function sms_widen_list_columns($conn)
+{
+    if (DB_DRIVER === 'sqlite' || billing_setting($conn, 'sms_lists_widened') === '1') {
+        return;
+    }
+    $targets = array(
+        array('sms_campaigns', 'recipients_list', 'MEDIUMTEXT'),
+        array('sms_number_lists', 'numbers_text', 'MEDIUMTEXT NOT NULL')
+    );
+    $ok = true;
+    foreach ($targets as $target) {
+        try {
+            $stmt = $conn->prepare('SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+            if (!$stmt) {
+                $ok = false;
+                continue;
+            }
+            $stmt->bind_param('ss', $target[0], $target[1]);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            if (!$row) {
+                $ok = false;
+                continue;
+            }
+            $type = strtolower((string) $row['DATA_TYPE']);
+            if ($type !== 'mediumtext' && $type !== 'longtext') {
+                billing_exec($conn, 'ALTER TABLE ' . $target[0] . ' MODIFY ' . $target[1] . ' ' . $target[2]);
+            }
+        } catch (Throwable $exception) {
+            $ok = false;
+        }
+    }
+    if ($ok) {
+        billing_set_setting($conn, 'sms_lists_widened', '1');
+    }
 }
 
 function sms_credit_columns($conn)
@@ -583,8 +622,19 @@ function sms_personalize($text, $name)
     return is_string($text) ? trim($text) : '';
 }
 
-function sms_collect_contacts($raw)
+function sms_send_limit()
 {
+    return 50000;
+}
+
+function sms_instant_limit()
+{
+    return 1000;
+}
+
+function sms_collect_contacts($raw, $max = 0)
+{
+    $max = (int) $max > 0 ? (int) $max : sms_send_limit();
     $lines = preg_split('/\r\n|\r|\n/', (string) $raw);
     $contacts = array();
     if (!is_array($lines)) {
@@ -611,7 +661,7 @@ function sms_collect_contacts($raw)
             }
             $digits = auth_mobile_number($part);
             if (!preg_match('/^9[78]\d{8}$/', $digits)) {
-                return array('ok' => false, 'error' => 'Each number has to be a 10-digit Nepal mobile, Nepal Telecom or Ncell.', 'contacts' => array());
+                return array('ok' => false, 'error' => '“' . substr($part, 0, 20) . '” is not a 10-digit Nepal mobile. Fix or remove it, then send again.', 'contacts' => array());
             }
             $numbers[$digits] = $digits;
         }
@@ -626,15 +676,15 @@ function sms_collect_contacts($raw)
     if (count($contacts) < 1) {
         return array('ok' => false, 'error' => 'Add at least one mobile number.', 'contacts' => array());
     }
-    if (count($contacts) > 500) {
-        return array('ok' => false, 'error' => 'Send at most 500 numbers at a time.', 'contacts' => array());
+    if (count($contacts) > $max) {
+        return array('ok' => false, 'error' => 'Send at most ' . number_format($max) . ' numbers at a time. This list has ' . number_format(count($contacts)) . '.', 'contacts' => array());
     }
     return array('ok' => true, 'error' => '', 'contacts' => $contacts);
 }
 
-function sms_collect_numbers($raw)
+function sms_collect_numbers($raw, $max = 0)
 {
-    $parsed = sms_collect_contacts($raw);
+    $parsed = sms_collect_contacts($raw, $max);
     $numbers = array();
     if (!empty($parsed['ok'])) {
         foreach ($parsed['contacts'] as $contact) {
@@ -750,7 +800,7 @@ function sms_import_lines($rows)
         $seen[$number] = true;
         $name = sms_contact_name($name);
         $lines[] = $name === '' ? $number : $name . ', ' . $number;
-        if (count($lines) >= 500) {
+        if (count($lines) >= sms_send_limit()) {
             break;
         }
     }
@@ -833,6 +883,9 @@ function sms_import_text_rows($text)
             $cells = explode("\t", (string) $cells[0]);
         }
         $rows[] = is_array($cells) ? $cells : array();
+        if (count($rows) > sms_send_limit() + 1000) {
+            break;
+        }
     }
     fclose($handle);
     return $rows;
@@ -846,6 +899,13 @@ function sms_import_xlsx_rows($path)
     $zip = new ZipArchive();
     if ($zip->open($path) !== true) {
         return null;
+    }
+    foreach (array('xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml') as $part) {
+        $stat = $zip->statName($part);
+        if (is_array($stat) && (int) $stat['size'] > 41943040) {
+            $zip->close();
+            return array();
+        }
     }
     $shared = array();
     $stringXml = $zip->getFromName('xl/sharedStrings.xml');
@@ -909,7 +969,7 @@ function sms_import_xlsx_rows($path)
         if ($cells) {
             $rows[] = $cells;
         }
-        if (count($rows) > 2000) {
+        if (count($rows) > sms_send_limit() + 1000) {
             break;
         }
     }
@@ -2069,7 +2129,42 @@ function sms_insert_messages($conn, $clientId, $campaignId, $tokenId, $source, $
     return $ids;
 }
 
+function sms_db_batch($conn, $step)
+{
+    try {
+        if (DB_DRIVER === 'sqlite') {
+            $conn->query($step === 'begin' ? 'BEGIN' : ($step === 'commit' ? 'COMMIT' : 'ROLLBACK'));
+        } elseif ($step === 'begin') {
+            $conn->begin_transaction();
+        } elseif ($step === 'commit') {
+            $conn->commit();
+        } else {
+            $conn->rollback();
+        }
+        return true;
+    } catch (Throwable $exception) {
+        return false;
+    }
+}
+
 function sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender, $messages)
+{
+    $batched = count($messages) > 1 && sms_db_batch($conn, 'begin');
+    try {
+        $ids = sms_insert_rendered_rows($conn, $clientId, $campaignId, $tokenId, $source, $sender, $messages);
+    } catch (Throwable $exception) {
+        if ($batched) {
+            sms_db_batch($conn, 'rollback');
+        }
+        throw $exception;
+    }
+    if ($batched) {
+        sms_db_batch($conn, 'commit');
+    }
+    return $ids;
+}
+
+function sms_insert_rendered_rows($conn, $clientId, $campaignId, $tokenId, $source, $sender, $messages)
 {
     $status = 'queued';
     $error = '';
@@ -2097,13 +2192,115 @@ function sms_mark_messages($conn, $ids, $status, $error)
     }
     $sentAt = $status === 'sent' ? date('Y-m-d H:i:s') : '';
     $id = 0;
-    $stmt = $conn->prepare('UPDATE sms_messages SET status = ?, error_text = ?, sent_at = NULLIF(?, \'\') WHERE id = ?');
-    $stmt->bind_param('sssi', $status, $error, $sentAt, $id);
-    foreach ($ids as $messageId) {
-        $id = (int) $messageId;
-        $stmt->execute();
+    $batched = count($ids) > 1 && sms_db_batch($conn, 'begin');
+    try {
+        $stmt = $conn->prepare('UPDATE sms_messages SET status = ?, error_text = ?, sent_at = NULLIF(?, \'\') WHERE id = ?');
+        $stmt->bind_param('sssi', $status, $error, $sentAt, $id);
+        foreach ($ids as $messageId) {
+            $id = (int) $messageId;
+            $stmt->execute();
+        }
+        $stmt->close();
+    } catch (Throwable $exception) {
+        if ($batched) {
+            sms_db_batch($conn, 'rollback');
+        }
+        throw $exception;
     }
-    $stmt->close();
+    if ($batched) {
+        sms_db_batch($conn, 'commit');
+    }
+}
+
+function sms_campaign_touch($conn, $campaignId, $at = '')
+{
+    $at = $at !== '' ? $at : date('Y-m-d H:i:s');
+    $campaignId = (int) $campaignId;
+    try {
+        $stmt = $conn->prepare('UPDATE sms_campaigns SET updated_at = ? WHERE id = ?');
+        if ($stmt) {
+            $stmt->bind_param('si', $at, $campaignId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    } catch (Throwable $exception) {
+        error_log('An SMS send could not record its progress time.');
+    }
+}
+
+function sms_claim_sending($conn, $campaignId)
+{
+    $campaignId = (int) $campaignId;
+    $now = date('Y-m-d H:i:s');
+    $staleBefore = date('Y-m-d H:i:s', time() - 90);
+    $sending = 'sending';
+    try {
+        $stmt = $conn->prepare('UPDATE sms_campaigns SET updated_at = ? WHERE id = ? AND status = ? AND (updated_at IS NULL OR updated_at <= ?)');
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('siss', $now, $campaignId, $sending, $staleBefore);
+        $stmt->execute();
+        $claimed = (int) $conn->affected_rows > 0;
+        $stmt->close();
+        return $claimed;
+    } catch (Throwable $exception) {
+        return false;
+    }
+}
+
+function sms_resume_sending($conn, $budgetSeconds)
+{
+    $budgetSeconds = max(5, (int) $budgetSeconds);
+    $started = time();
+    $staleBefore = date('Y-m-d H:i:s', time() - 90);
+    try {
+        $stmt = $conn->prepare('SELECT DISTINCT c.id FROM sms_campaigns c JOIN sms_messages m ON m.campaign_id = c.id WHERE c.channel = ? AND c.status = ? AND m.status = ? AND (c.updated_at IS NULL OR c.updated_at <= ?) ORDER BY c.id ASC LIMIT 5');
+        if (!$stmt) {
+            return;
+        }
+        $channel = 'sms';
+        $sending = 'sending';
+        $queued = 'queued';
+        $stmt->bind_param('ssss', $channel, $sending, $queued, $staleBefore);
+        $stmt->execute();
+        $rows = db_fetch_all($stmt);
+        $stmt->close();
+    } catch (Throwable $exception) {
+        error_log('Background SMS sends could not be listed.');
+        return;
+    }
+    foreach ($rows as $row) {
+        $left = $budgetSeconds - (time() - $started);
+        if ($left < 5) {
+            break;
+        }
+        if (sms_claim_sending($conn, (int) $row['id'])) {
+            sms_deliver_campaign($conn, (int) $row['id'], $left);
+        }
+    }
+}
+
+function sms_start_background($conn, $campaignId)
+{
+    $campaignId = (int) $campaignId;
+    if ($campaignId < 1 || (!function_exists('fastcgi_finish_request') && !function_exists('litespeed_finish_request'))) {
+        return;
+    }
+    register_shutdown_function(function () use ($conn, $campaignId) {
+        ignore_user_abort(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            litespeed_finish_request();
+        }
+        if (sms_claim_sending($conn, $campaignId)) {
+            sms_deliver_campaign($conn, $campaignId, 240);
+        }
+    });
 }
 
 function sms_prohibited_notice($text)
@@ -2144,10 +2341,12 @@ function sms_prohibited_notice($text)
     return '';
 }
 
-function sms_deliver_campaign($conn, $campaignId)
+function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
 {
+    $budgetSeconds = (int) $budgetSeconds;
+    $startedAt = time();
     if (function_exists('set_time_limit')) {
-        @set_time_limit(180);
+        @set_time_limit($budgetSeconds > 0 ? $budgetSeconds + 60 : 180);
     }
     $campaignId = (int) $campaignId;
     $stmt = $conn->prepare('SELECT * FROM sms_campaigns WHERE id = ? AND channel = ?');
@@ -2280,10 +2479,18 @@ function sms_deliver_campaign($conn, $campaignId)
         $groups[$key]['numbers'][] = $item['number'];
         $groups[$key]['ids'][] = $item['id'];
     }
+    $outOfTime = false;
+    $handled = 0;
     foreach ($groups as $groupText => $group) {
         $offset = 0;
         $groupTotal = count($group['numbers']);
         while ($offset < $groupTotal) {
+            if ($budgetSeconds > 0 && (time() - $startedAt) >= $budgetSeconds) {
+                $outOfTime = true;
+                break 2;
+            }
+            sms_campaign_touch($conn, $campaignId);
+            $handled += min(100, $groupTotal - $offset);
             $chunkNumbers = array_slice($group['numbers'], $offset, 100);
             $chunkIds = array_slice($group['ids'], $offset, 100);
             $offset += 100;
@@ -2316,8 +2523,27 @@ function sms_deliver_campaign($conn, $campaignId)
             }
         }
     }
-    $status = $failedNumbers === 0 ? 'sent' : ($failedNumbers === $total ? 'failed' : 'sent');
-    $now = $failedNumbers === $total ? '' : date('Y-m-d H:i:s');
+    if ($outOfTime) {
+        sms_campaign_touch($conn, $campaignId, date('Y-m-d H:i:s', time() - 120));
+        $balance = billing_unit_balances($conn, $clientId);
+        return sms_result(true, '', array(
+            'message' => number_format($total - $handled) . ' SMS are still being sent in the background.',
+            'count' => $handled - $failedNumbers,
+            'failed' => $failedNumbers,
+            'pending' => $total - $handled,
+            'credits' => $creditsSent,
+            'balance' => (int) $balance['sms'],
+            'campaign_id' => $campaignId
+        ));
+    }
+    $sentEarlier = 0;
+    foreach ($rows as $row) {
+        if ((string) $row['status'] === 'sent') {
+            $sentEarlier++;
+        }
+    }
+    $status = $failedNumbers === $total && $sentEarlier === 0 ? 'failed' : 'sent';
+    $now = $status === 'failed' ? '' : date('Y-m-d H:i:s');
     $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ?, sent_at = NULLIF(?, \'\') WHERE id = ?');
     $stmt->bind_param('ssi', $status, $now, $campaignId);
     $stmt->execute();
@@ -2359,7 +2585,7 @@ function sms_send($conn, $clientId, $job)
     if ($blocked !== '') {
         return sms_result(false, $blocked);
     }
-    $parsed = sms_collect_contacts(isset($job['numbers']) ? $job['numbers'] : '');
+    $parsed = sms_collect_contacts(isset($job['numbers']) ? $job['numbers'] : '', $source === 'api' ? 500 : 0);
     if (!$parsed['ok']) {
         return sms_result(false, $parsed['error']);
     }
@@ -2436,6 +2662,18 @@ function sms_send($conn, $clientId, $job)
         $stmt->close();
         return sms_result(false, 'There are not enough SMS credits for this message.');
     }
+    if (count($numbers) > sms_instant_limit()) {
+        sms_campaign_touch($conn, $campaignId, '2000-01-01 00:00:00');
+        $balances = billing_unit_balances($conn, $clientId);
+        return sms_result(true, '', array(
+            'message' => number_format(count($numbers)) . ' SMS are being sent in the background. Follow progress in SMS logs.',
+            'count' => count($numbers),
+            'credits' => $credits,
+            'balance' => (int) $balances['sms'],
+            'campaign_id' => $campaignId,
+            'background' => true
+        ));
+    }
     return sms_deliver_campaign($conn, $campaignId);
 }
 
@@ -2476,8 +2714,10 @@ function sms_cancel_scheduled($conn, $clientId, $campaignId)
     return 'refunded';
 }
 
-function sms_run_queue($conn, $limit)
+function sms_run_queue($conn, $limit, $budgetSeconds = 40)
 {
+    $budgetSeconds = max(5, (int) $budgetSeconds);
+    $queueStarted = time();
     $limit = (int) $limit;
     if ($limit < 1) {
         $limit = 1;
@@ -2509,6 +2749,10 @@ function sms_run_queue($conn, $limit)
         return;
     }
     foreach ($due as $row) {
+        $left = $budgetSeconds - (time() - $queueStarted);
+        if ($left < 3) {
+            break;
+        }
         $id = (int) $row['id'];
         if ($hasUpdated) {
             $claimedAt = date('Y-m-d H:i:s');
@@ -2518,7 +2762,7 @@ function sms_run_queue($conn, $limit)
         }
         $claim->execute();
         if ((int) $conn->affected_rows > 0) {
-            sms_deliver_campaign($conn, $id);
+            sms_deliver_campaign($conn, $id, $hasUpdated ? $left : 0);
         }
     }
     $claim->close();
@@ -2546,16 +2790,9 @@ function sms_run_queue($conn, $limit)
                 $restore->close();
             }
         }
-        $retry = $conn->prepare('SELECT DISTINCT c.id FROM sms_campaigns c JOIN sms_messages m ON m.campaign_id = c.id WHERE c.channel = ? AND c.status = ? AND m.status = ? AND c.updated_at <= ? LIMIT 5');
-        if ($retry) {
-            $queued = 'queued';
-            $retry->bind_param('ssss', $channel, $sending, $queued, $cutoff);
-            $retry->execute();
-            $resume = db_fetch_all($retry);
-            $retry->close();
-            foreach ($resume as $resumeRow) {
-                sms_deliver_campaign($conn, (int) $resumeRow['id']);
-            }
+        $left = $budgetSeconds - (time() - $queueStarted);
+        if ($left >= 5) {
+            sms_resume_sending($conn, $left);
         }
     } catch (Throwable $exception) {
         error_log('A stuck SMS could not be resumed.');

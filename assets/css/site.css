@@ -330,12 +330,12 @@ body.site-public textarea {
 
 .button--primary {
     color: #fff !important;
-    background: linear-gradient(135deg, #16b89f 0%, var(--site-teal) 50%, var(--site-teal-dark) 100%);
+    background: linear-gradient(135deg, #0a7d6e 0%, #08705f 50%, #065a50 100%);
     box-shadow: 0 8px 18px rgba(11, 139, 122, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .button--primary:hover {
-    background: linear-gradient(135deg, #12a58f 0%, var(--site-teal-dark) 100%);
+    background: linear-gradient(135deg, #087365 0%, #054d45 100%);
     box-shadow: 0 12px 24px rgba(11, 139, 122, 0.3);
 }
 
@@ -398,7 +398,7 @@ body.site-public textarea {
 }
 
 .faq-item[open] summary::after {
-    background: linear-gradient(135deg, #16b89f, var(--site-teal-dark));
+    background: linear-gradient(135deg, #0a7d6e, #065a50);
     color: #fff;
     content: "−";
 }
@@ -878,7 +878,7 @@ a.solution-row:focus-visible {
 }
 
 .section-kicker {
-    color: var(--site-teal);
+    color: var(--site-teal-dark);
     font-size: var(--type-label);
     font-weight: 700;
     letter-spacing: 0.13em;
@@ -1776,7 +1776,7 @@ a.solution-row:focus-visible {
 }
 
 .step-number {
-    color: var(--site-teal);
+    color: var(--site-teal-dark);
     font-family: var(--site-heading);
     font-size: var(--type-label);
     font-weight: 700;

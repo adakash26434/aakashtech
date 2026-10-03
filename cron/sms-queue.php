@@ -12,5 +12,5 @@ if (PHP_SAPI !== 'cli') {
     }
 }
 
-sms_run_queue($conn, 20);
+sms_run_queue($conn, 20, 50);
 echo "SMS queue checked\n";

@@ -1676,7 +1676,7 @@ function billing_ensure_portal_tables($conn)
         channel VARCHAR(20) DEFAULT 'sms',
         audience VARCHAR(40) DEFAULT '',
         purpose VARCHAR(40) DEFAULT '',
-        recipients_list TEXT,
+        recipients_list MEDIUMTEXT,
         declaration_text TEXT,
         status VARCHAR(20) DEFAULT 'draft',
         scheduled_at DATETIME DEFAULT NULL,
@@ -2251,7 +2251,7 @@ function billing_add_campaign_columns($conn)
             'channel' => "VARCHAR(20) DEFAULT 'sms'",
             'audience' => "VARCHAR(40) DEFAULT ''",
             'purpose' => "VARCHAR(40) DEFAULT ''",
-            'recipients_list' => 'TEXT',
+            'recipients_list' => 'MEDIUMTEXT',
             'declaration_text' => 'TEXT',
             'language' => "VARCHAR(20) DEFAULT ''",
             'updated_at' => 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP'

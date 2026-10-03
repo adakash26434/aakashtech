@@ -27,8 +27,11 @@ $file = $_FILES['sheet'];
 if (!isset($file['error']) || (int) $file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
     sms_import_json(false, 'That file did not upload. Try a smaller Excel or CSV file.', '', 0);
 }
-if ((int) $file['size'] > 2097152) {
-    sms_import_json(false, 'Keep the file under 2 MB.', '', 0);
+if ((int) $file['size'] > 5242880) {
+    sms_import_json(false, 'Keep the file under 5 MB.', '', 0);
+}
+if (function_exists('set_time_limit')) {
+    @set_time_limit(60);
 }
 $imported = sms_import_file($file['tmp_name'], isset($file['name']) ? $file['name'] : '');
 sms_import_json(!empty($imported['ok']), $imported['error'], $imported['numbers'], (int) $imported['count']);
