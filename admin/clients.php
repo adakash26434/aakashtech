@@ -2,20 +2,6 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
-$portalMessage = '';
-$portalError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
-    verify_csrf();
-    $clientId = isset($_POST['client_id']) ? (int) $_POST['client_id'] : 0;
-    $portalError = billing_save_portal_login(
-        $conn,
-        $clientId,
-        isset($_POST['portal_username']) ? $_POST['portal_username'] : '',
-        isset($_POST['portal_password']) ? $_POST['portal_password'] : ''
-    );
-    $portalMessage = $portalError === '' ? 'SMS portal login saved for that client.' : '';
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
     verify_csrf();
     $id = (int) ($_POST['client_id'] ?? 0);
@@ -46,17 +32,11 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Clients</h1>
-    <p class="text-slate-500 text-sm">Manage registered clients and the SMS portal username each one uses at sms.aakashtechnologies.com.np.</p>
+    <p class="text-slate-500 text-sm">Manage registered clients. SMS credits are spent from the dashboard and API on this site.</p>
 </div>
 
 <?php if ($clientNotice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
-<?php endif; ?>
-<?php if ($portalMessage !== ''): ?>
-    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($portalMessage) ?></div>
-<?php endif; ?>
-<?php if ($portalError !== ''): ?>
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($portalError) ?></div>
 <?php endif; ?>
 
 <div class="dash-panel overflow-hidden">
@@ -70,7 +50,7 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider hidden lg:table-cell">Phone</th>
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider hidden lg:table-cell">Joined</th>
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider">SMS portal</th>
+                        <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider">SMS credits</th>
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
@@ -93,13 +73,8 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                                 <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $cl['status'] === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>"><?= ucfirst($cl['status']) ?></span>
                             </td>
                             <td class="px-4 py-3">
-                                <form method="POST" class="space-y-2 min-w-[180px]">
-                                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                                    <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
-                                    <input name="portal_username" value="<?= e(isset($cl['sms_portal_username']) ? $cl['sms_portal_username'] : '') ?>" class="form-input" placeholder="Portal username" maxlength="60" autocomplete="off">
-                                    <input type="password" name="portal_password" class="form-input" placeholder="<?= !empty($cl['sms_portal_password']) ? 'Saved — leave blank to keep' : 'Portal password' ?>" maxlength="80" autocomplete="new-password">
-                                    <button type="submit" name="save_portal" value="1" class="text-brand-400 text-xs">Save login</button>
-                                </form>
+                                <?php $clientUnits = billing_unit_balances($conn, (int) $cl['id']); ?>
+                                <span class="text-white text-sm"><?= number_format($clientUnits['sms']) ?></span>
                             </td>
                             <td class="px-4 py-3">
                                 <form method="POST">

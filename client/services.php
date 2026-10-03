@@ -79,7 +79,7 @@ $balance = billing_balance($conn, $cid);
                     <?php if ($status === 'booked'): ?>
                         <p class="text-blue-300 text-xs mt-3">Booked. The team builds or delivers this from the details above.</p>
                     <?php elseif (!empty($s['unit_kind']) && ($s['unit_kind'] === 'sms' || $s['unit_kind'] === 'voice_calls' || $s['unit_kind'] === 'voice_minutes')): ?>
-                        <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="sms-portal.php" class="text-brand-300">Open the SMS portal login</a>. Sending uses that username and password after the credit is active.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before the SMS portal login appears.<?php endif; ?></p>
+                        <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="sms-portal.php" class="text-brand-300">Send SMS from this account</a>. Credits fall when a message is sent.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before SMS can be sent.<?php endif; ?></p>
                     <?php endif; ?>
                     <?php if ($status === 'past_due'): ?>
                         <p class="text-yellow-300 text-xs mt-3">Renewal is waiting for wallet funds. It retries on its own.</p>

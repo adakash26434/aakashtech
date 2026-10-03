@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kyc = billing_kyc_load($conn, $cid);
     $locked = $kyc['status'] === 'approved';
     if ($err === '') {
-        $msg = 'Identity submitted. SMS portal login appears after it is approved. You can still correct it until then.';
+        $msg = 'Identity submitted. SMS sending opens after it is approved. You can still correct it until then.';
     }
 }
 
@@ -28,7 +28,7 @@ $statusLabel = array(
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Identity</h1>
-    <p class="text-slate-500 text-sm">Who is sending, and what the messages are for. The SMS portal login stays hidden until this is approved.</p>
+    <p class="text-slate-500 text-sm">Who is sending, and what the messages are for. SMS sending stays closed until this is approved.</p>
 </div>
 
 <?php if ($msg): ?>

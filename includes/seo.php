@@ -31,7 +31,7 @@ function site_seo_phrases()
     return array(
         'bulk-sms' => array(
             'title' => 'Bulk SMS provider in Nepal',
-            'description' => 'Bulk SMS provider in Nepal for cooperatives, companies, parties, and personal notices. The volume rate is on this page. Buy the credits, then send from the SMS portal.'
+            'description' => 'Bulk SMS provider in Nepal for cooperatives, companies, parties, and personal notices. The volume rate is on this page. Buy the credits, then send from your dashboard or API.'
         ),
         'bulk-voice' => array(
             'title' => 'Bulk voice calls in Nepal',
@@ -67,7 +67,7 @@ function site_seo_faqs($slug)
             array('Who is this bulk SMS service for?', 'Cooperatives, companies, parties, schools, and personal use in Nepal. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.'),
             array('Which numbers can receive it?', '10-digit Nepal mobile numbers, including Nepal Telecom and Ncell. The quantity you buy is the number of credits.'),
             array('How is the bulk SMS rate calculated?', 'The row that contains your quantity is the price per SMS. A smaller quantity costs more per message. A larger quantity costs less.'),
-            array('Where are the messages sent?', 'This website adds the credits after payment. Sending is done at sms.aakashtechnologies.com.np with the username and password shown in the client panel.')
+            array('Where are the messages sent?', 'This website adds the credits after payment. After identity is approved, you send from the SMS dashboard in the client account, or with an API token from your own website.')
         ),
         'bulk-voice' => array(
             array('Can I send bulk voice calls in Nepal?', 'Yes. You buy a quantity of recorded calls, in Nepali or English, for an AGM, program, event, election, festival, a school notice, or a general notice. The numbers are 10-digit Nepal mobiles, including Nepal Telecom and Ncell.'),

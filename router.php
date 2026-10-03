@@ -9,6 +9,15 @@ foreach ($segments as $segment) {
     }
 }
 
+if ($requestPath === '/api/sms/send' || $requestPath === '/api/sms/send/') {
+    require __DIR__ . '/api/sms-send.php';
+    return true;
+}
+if ($requestPath === '/api/sms/credit' || $requestPath === '/api/sms/credit/') {
+    require __DIR__ . '/api/sms-credit.php';
+    return true;
+}
+
 if ($requestPath === '/sitemap.xml') {
     require __DIR__ . '/sitemap.php';
     return true;

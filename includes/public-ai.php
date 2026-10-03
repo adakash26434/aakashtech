@@ -80,7 +80,7 @@ function site_ai_public_notes($conn)
     $lines[] = $name . ' publishes its services, rates, and how to buy them on this website.';
     $lines[] = 'List prices below are before 13% VAT. The bill at checkout adds 13% VAT. SMS and voice prices are the rate for each message or call.';
     $lines[] = 'A visitor creates a client account, adds wallet funds, and pays from that wallet. The first wallet top-up is confirmed once by the team. Later checkout and renewals use the wallet.';
-    $lines[] = 'Domain, hosting, Zoho email, and managed server plans renew that same bill from the wallet. A domain year starts when the team marks the registration active. SMS and voice sending opens after identity is approved, on the separate SMS portal. This website records the order and the credits.';
+    $lines[] = 'Domain, hosting, Zoho email, and managed server plans renew that same bill from the wallet. A domain year starts when the team marks the registration active. SMS sending opens in the client dashboard after identity is approved, including an API token for the client’s own website. This website records the order, the credits, and the SMS log.';
     $lines[] = 'Payment account numbers are shown only after sign-in, on the wallet page. Do not recite them.';
     $email = trim((string) $settings['site_email']);
     if ($email !== '') {

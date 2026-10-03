@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['review_order']) || i
         $result = billing_purchase($conn, (int) get_client_id(), $plan, $_POST);
         if (!empty($result['ok'])) {
             if ($needs === 'sms' || $needs === 'voice') {
-                $done = 'Credit is on your account. Sign in to the SMS portal with the username and password on the next page. Sending happens there.';
+                $done = 'Credit is on your account. Send it from the SMS dashboard on the next page. An API token can be created there after identity is approved.';
                 flash('billing', $done);
                 header('Location: sms-portal.php');
             } else {

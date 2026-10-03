@@ -323,3 +323,72 @@ CREATE TABLE IF NOT EXISTS domain_requests (
     INDEX idx_domain_client (client_id),
     INDEX idx_domain_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ====== SMS dashboard: client tokens, delivery log, sender names. The upstream token is a site setting. ======
+CREATE TABLE IF NOT EXISTS sms_api_tokens (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    label       VARCHAR(80) NOT NULL,
+    token_hash  CHAR(64) NOT NULL,
+    token_prefix VARCHAR(16) NOT NULL,
+    status      VARCHAR(20) DEFAULT 'active',
+    allowed_ips VARCHAR(255) DEFAULT '',
+    last_used_at DATETIME DEFAULT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_sms_token_hash (token_hash),
+    INDEX idx_sms_token_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_api_hits (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    token_id    INT NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_hit_token (token_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_messages (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    campaign_id INT DEFAULT 0,
+    token_id    INT DEFAULT 0,
+    source      VARCHAR(20) DEFAULT 'dashboard',
+    sender_id   VARCHAR(20) DEFAULT '',
+    recipient   VARCHAR(20) NOT NULL,
+    message_text TEXT NOT NULL,
+    parts       INT DEFAULT 1,
+    status      VARCHAR(20) DEFAULT 'queued',
+    error_text  VARCHAR(40) DEFAULT '',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at     DATETIME DEFAULT NULL,
+    INDEX idx_sms_msg_client (client_id, created_at),
+    INDEX idx_sms_msg_campaign (campaign_id),
+    INDEX idx_sms_msg_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_sender_names (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    sender_name VARCHAR(20) NOT NULL,
+    status      VARCHAR(20) DEFAULT 'pending',
+    admin_note  VARCHAR(255) DEFAULT '',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_sender_client (client_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_templates (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    label       VARCHAR(80) NOT NULL,
+    message_text TEXT NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_template_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_number_lists (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    label       VARCHAR(80) NOT NULL,
+    numbers_text TEXT NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_list_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

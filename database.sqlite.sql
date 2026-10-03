@@ -296,3 +296,71 @@ CREATE INDEX IF NOT EXISTS idx_domain_client ON domain_requests(client_id);
 CREATE INDEX IF NOT EXISTS idx_domain_status ON domain_requests(status);
 CREATE INDEX IF NOT EXISTS idx_wallet_client ON wallet_entries(client_id);
 CREATE INDEX IF NOT EXISTS idx_wallet_status ON wallet_entries(status);
+
+CREATE TABLE IF NOT EXISTS sms_api_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    token_prefix TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    allowed_ips TEXT DEFAULT '',
+    last_used_at TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_api_hits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    campaign_id INTEGER DEFAULT 0,
+    token_id INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'dashboard',
+    sender_id TEXT DEFAULT '',
+    recipient TEXT NOT NULL,
+    message_text TEXT NOT NULL,
+    parts INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'queued',
+    error_text TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sms_sender_names (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    sender_name TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    admin_note TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sms_token_client ON sms_api_tokens(client_id);
+CREATE INDEX IF NOT EXISTS idx_sms_hit_token ON sms_api_hits(token_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_sms_msg_client ON sms_messages(client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_sms_msg_campaign ON sms_messages(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sms_sender_client ON sms_sender_names(client_id, status);
+
+CREATE TABLE IF NOT EXISTS sms_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    message_text TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_number_lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    numbers_text TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sms_template_client ON sms_templates(client_id);
+CREATE INDEX IF NOT EXISTS idx_sms_list_client ON sms_number_lists(client_id);

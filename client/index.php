@@ -6,30 +6,30 @@ $cid = (int) get_client_id();
 $walletBalance = 0;
 $unitBalances = array('sms' => 0, 'voice_minutes' => 0, 'voice_calls' => 0);
 $my_services = false;
-$my_campaigns = 0;
 $my_tickets = 0;
 $open_tickets = 0;
 $active_services = 0;
 $messagingActive = false;
 $portalLogin = array('username' => '', 'password' => '');
 $recent_tickets = false;
-$recent_campaigns = false;
+$recent_sms = false;
+$my_sms_sent = 0;
 try {
     $walletBalance = billing_balance($conn, $cid);
     $unitBalances = billing_unit_balances($conn, $cid);
     $my_services = $conn->query("SELECT * FROM client_services WHERE client_id = $cid ORDER BY created_at DESC");
-    $campaignCount = $conn->query("SELECT COUNT(*) as c FROM sms_campaigns WHERE client_id = $cid");
     $ticketCount = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid");
     $openCount = $conn->query("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = $cid AND status='open'");
     $serviceCount = $conn->query("SELECT COUNT(*) as c FROM client_services WHERE client_id = $cid AND status IN ('active','booked')");
-    $my_campaigns = ($campaignCount && ($row = $campaignCount->fetch_assoc())) ? (int) $row['c'] : 0;
     $my_tickets = ($ticketCount && ($row = $ticketCount->fetch_assoc())) ? (int) $row['c'] : 0;
     $open_tickets = ($openCount && ($row = $openCount->fetch_assoc())) ? (int) $row['c'] : 0;
     $active_services = ($serviceCount && ($row = $serviceCount->fetch_assoc())) ? (int) $row['c'] : 0;
     $messagingActive = billing_client_has_messaging($conn, $cid);
     $portalLogin = billing_portal_login($conn, $cid);
     $recent_tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
-    $recent_campaigns = $conn->query("SELECT * FROM sms_campaigns WHERE client_id = $cid ORDER BY created_at DESC LIMIT 3");
+    $smsSentCount = $conn->query("SELECT COUNT(*) as c FROM sms_messages WHERE client_id = $cid AND status = 'sent'");
+    $my_sms_sent = ($smsSentCount && ($row = $smsSentCount->fetch_assoc())) ? (int) $row['c'] : 0;
+    $recent_sms = $conn->query("SELECT id, recipient, message_text, status, created_at FROM sms_messages WHERE client_id = $cid ORDER BY id DESC LIMIT 3");
 } catch (Throwable $exception) {
     error_log('Client dashboard could not be loaded.');
 }
@@ -86,8 +86,8 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
     </div>
     <div class="dash-stat-card">
         <div class="dash-stat-icon bg-purple-500/20"><svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-        <div class="dash-stat-value"><?= $my_campaigns ?></div>
-        <div class="dash-stat-label">Messages</div>
+        <div class="dash-stat-value"><?= $my_sms_sent ?></div>
+        <div class="dash-stat-label">SMS sent</div>
     </div>
     <div class="dash-stat-card">
         <div class="dash-stat-icon bg-orange-500/20"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
@@ -114,17 +114,17 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
     <?php if ($messagingActive && $identityStatus === 'approved'): ?>
     <a href="sms-portal.php" class="dash-action-card group">
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-        <div><p class="text-white font-medium text-sm">SMS portal</p><p class="text-slate-500 text-xs">Username and password for sending</p></div>
+        <div><p class="text-white font-medium text-sm">Send SMS</p><p class="text-slate-500 text-xs">Dashboard, logs, and API token</p></div>
     </a>
     <?php elseif ($messagingActive || $identityStatus === 'pending' || $identityStatus === 'rejected'): ?>
     <a href="kyc.php" class="dash-action-card group">
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-        <div><p class="text-white font-medium text-sm">Identity</p><p class="text-slate-500 text-xs">Needed before the SMS portal login appears</p></div>
+        <div><p class="text-white font-medium text-sm">Identity</p><p class="text-slate-500 text-xs">Needed before SMS can be sent</p></div>
     </a>
     <?php else: ?>
     <a href="shop.php?service=bulk-sms" class="dash-action-card group">
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-        <div><p class="text-white font-medium text-sm">Buy SMS credit</p><p class="text-slate-500 text-xs">The portal login appears after the credit is active</p></div>
+        <div><p class="text-white font-medium text-sm">Buy SMS credit</p><p class="text-slate-500 text-xs">Then send from this account</p></div>
     </a>
     <?php endif; ?>
     <a href="support.php" class="dash-action-card group">
@@ -155,17 +155,20 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
         </div>
     </div>
     <div class="dash-panel">
-        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Recent Campaigns</h3><a href="campaigns.php" class="text-brand-400 text-sm hover:text-brand-300">View All →</a></div>
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Recent SMS</h3><a href="sms-logs.php" class="text-brand-400 text-sm hover:text-brand-300">View All →</a></div>
         <div class="divide-y divide-slate-800">
-            <?php if ($recent_campaigns && $recent_campaigns->num_rows > 0): ?>
-                <?php while ($c = $recent_campaigns->fetch_assoc()): ?>
+            <?php if ($recent_sms && $recent_sms->num_rows > 0): ?>
+                <?php while ($smsRow = $recent_sms->fetch_assoc()): ?>
                     <div class="p-4 flex items-start justify-between gap-3">
-                        <div><p class="text-white text-sm font-medium"><?= e($c['campaign_name']) ?></p><p class="text-slate-500 text-xs"><?= number_format($c['recipients_count']) ?> recipients</p></div>
-                        <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $c['status'] === 'sent' ? 'bg-green-500/20 text-green-400' : 'bg-slate-600/20 text-slate-400' ?>"><?= ucfirst($c['status']) ?></span>
+                        <div class="min-w-0">
+                            <p class="text-white text-sm font-medium"><?= e($smsRow['recipient']) ?></p>
+                            <p class="text-slate-500 text-xs truncate"><?= e($smsRow['message_text']) ?></p>
+                        </div>
+                        <a href="sms-portal.php?reuse=<?= (int) $smsRow['id'] ?>" class="text-brand-400 text-xs shrink-0">Send again</a>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
-                <p class="p-8 text-center text-slate-500 text-sm">No campaigns yet.</p>
+                <p class="p-8 text-center text-slate-500 text-sm">No SMS yet.</p>
             <?php endif; ?>
         </div>
     </div>

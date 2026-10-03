@@ -121,7 +121,8 @@ function billing_purposes()
         'event' => 'Event',
         'election' => 'Election',
         'festival' => 'Festival',
-        'notice' => 'General notice'
+        'notice' => 'General notice',
+        'otp' => 'OTP or account alert'
     );
 }
 
@@ -135,13 +136,13 @@ function billing_page_copy()
                 'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per SMS. The homepage Starts from label is only the row chosen for the front page.',
                 'The sender name is 3 to 11 letters or numbers, such as Sahakari. Write the exact message people should receive.',
-                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
+                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and add the numbers when you send.',
                 'Before payment you accept a declaration: the message will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
             ),
             'after' => array(
                 'The SMS count is added to your client account as soon as the wallet payment succeeds.',
-                'This website keeps the order and the credits. Sending is done at sms.aakashtechnologies.com.np. The client panel shows the username and password for that portal after the purchase.',
-                'A copy saved under Messages does not reduce those credits. The credits stay until they are used in the SMS portal.'
+                'Send from the SMS dashboard in this same client account, or create an API token there and call it from your own website for an OTP or alert.',
+                'Credits fall only when a message is sent. A longer message, or Nepali text, can use more than one credit per number.'
             ),
             'examples' => array(
                 array('AGM', 'Namaste. The annual general meeting of [cooperative] is on [date] at [time], [place]. Please attend.'),
@@ -156,13 +157,13 @@ function billing_page_copy()
                 'For a cooperative, a company, a party, a school, or personal use. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.',
                 'Type a quantity that sits inside one row of the rate table. That row is the price per call. The homepage Starts from label is only the row chosen for the front page.',
                 'Write the exact script people should hear, and choose Nepali or English. Add a send date if you already know it.',
-                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and add the numbers later in the SMS portal.',
+                'A number list is optional. If you paste one, each line must be one 10-digit Nepal mobile, including Nepal Telecom and Ncell, and the count must equal the quantity. Leave it empty and keep the script under Messages.',
                 'Before payment you accept a declaration: the call will not be used for anything the Government of Nepal or prevailing law prohibits, and not to deceive or defraud. Misuse is your responsibility under that law.'
             ),
             'after' => array(
                 'The call count is added to your client account as soon as the wallet payment succeeds.',
-                'This website keeps the order, the script, and the credits. The calls are sent from the portal at sms.aakashtechnologies.com.np. An active SMS or voice purchase shows that login in the client panel.',
-                'A copy saved under Messages does not reduce those credits.'
+                'This website keeps the order, the script, and the credits. A voice copy saved under Messages does not place the calls.',
+                'Voice credits stay on the account until the calls are placed.'
             ),
             'examples' => array(
                 array('AGM', 'Namaste. This is a notice from [cooperative]. The annual general meeting is on [date] at [time], [place]. Please attend.'),
@@ -256,12 +257,13 @@ function billing_service_guide()
                 'The price for your quantity, with 13% VAT shown before you pay',
                 'A sender name of 3 to 11 letters or numbers',
                 'SMS credits added when the wallet payment succeeds',
-                'Sending from the SMS portal after identity is approved'
+                'Sending from the SMS dashboard after identity is approved',
+                'An API token for OTP and alerts from your own website'
             ),
             'steps' => array(
                 'Type the quantity and read the bill.',
                 'Pay that bill from the wallet.',
-                'Send the notice from the SMS portal.'
+                'Send the notice from the SMS dashboard, or from your own system with an API token.'
             ),
             'notes' => array(
                 'A smaller quantity costs more per SMS. A larger quantity costs less. The row that contains your number is the rate.',
@@ -1192,6 +1194,9 @@ function billing_ensure($conn)
     billing_ensure_offer_prices($conn);
     billing_sync_catalog($conn);
     site_ensure_public_settings($conn);
+    if (function_exists('sms_ensure_tables')) {
+        sms_ensure_tables($conn);
+    }
 }
 
 if (!function_exists('site_escape')) {
@@ -2170,7 +2175,7 @@ function billing_kyc_send($conn, $clientId, $slot)
 
 function billing_sms_portal_url()
 {
-    return 'http://sms.aakashtechnologies.com.np/';
+    return 'client/sms-portal.php';
 }
 
 function billing_client_has_messaging($conn, $clientId)
@@ -2714,7 +2719,7 @@ function billing_buy_href_plan($code)
 function client_safe_next($value)
 {
     $value = (string) $value;
-    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+(?:&for=domain)?)?$/', $value)) {
+    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|sms-logs|sms-api|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+(?:&for=domain)?)?$/', $value)) {
         return 'index.php';
     }
     return $value;
@@ -3136,7 +3141,7 @@ function billing_prepare_order($conn, $plan, $post)
                 return array('ok' => false, 'error' => $parsed['error']);
             }
             if (count($parsed['numbers']) !== $quantity) {
-                return array('ok' => false, 'error' => 'The list has ' . number_format(count($parsed['numbers'])) . ' numbers and this order is for ' . number_format($quantity) . '. Leave the list empty to add numbers in the SMS portal, or make the counts match.');
+                return array('ok' => false, 'error' => 'The list has ' . number_format(count($parsed['numbers'])) . ' numbers and this order is for ' . number_format($quantity) . '. Leave the list empty to add numbers when you send, or make the counts match.');
             }
             $parsedNumbers = $parsed['numbers'];
         }

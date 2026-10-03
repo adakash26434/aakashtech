@@ -22,7 +22,7 @@ try {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Identity</h1>
-    <p class="text-slate-500 text-sm">Approve the person or organization before their SMS portal login is shown.</p>
+    <p class="text-slate-500 text-sm">Approve the person or organization before they can send SMS or create an API token.</p>
 </div>
 <?php if ($notice): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div>

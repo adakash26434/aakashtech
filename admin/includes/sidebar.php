@@ -9,6 +9,7 @@ $navItems = [
     'services.php'   => ['Services', 'server'],
     'billing.php'    => ['Billing', 'wallet'],
     'campaigns.php'  => ['Messages', 'message-square-text'],
+    'sms-line.php'   => ['SMS line', 'radio'],
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
     'settings.php'   => ['Settings', 'settings'],
 ];

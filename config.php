@@ -64,6 +64,7 @@ if (DB_DRIVER === 'sqlite') {
 }
 
 require_once __DIR__ . '/includes/billing.php';
+require_once __DIR__ . '/includes/sms-gateway.php';
 require_once __DIR__ . '/includes/totp.php';
 try {
     auth_ensure_client_table($conn);
