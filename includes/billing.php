@@ -1884,9 +1884,13 @@ function site_public_settings($conn)
         return $settings;
     }
     foreach ($settings as $key => $value) {
-        if (array_key_exists($key, $stored)) {
-            $settings[$key] = $stored[$key];
+        if (!array_key_exists($key, $stored)) {
+            continue;
         }
+        if (strpos($key, 'home_') === 0 && trim($stored[$key]) === '') {
+            continue;
+        }
+        $settings[$key] = $stored[$key];
     }
     return $settings;
 }

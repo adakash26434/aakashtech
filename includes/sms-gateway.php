@@ -2203,45 +2203,71 @@ function sms_run_queue($conn, $limit)
     $due = db_fetch_all($stmt);
     $stmt->close();
     $sending = 'sending';
-    $claim = $conn->prepare('UPDATE sms_campaigns SET status = ?, updated_at = ? WHERE id = ? AND status = ?');
+    $hasUpdated = false;
+    try {
+        $campaignColumns = array_flip(billing_table_columns($conn, 'sms_campaigns'));
+        $hasUpdated = isset($campaignColumns['updated_at']);
+    } catch (Throwable $exception) {
+        $hasUpdated = false;
+    }
+    $claimSql = $hasUpdated
+        ? 'UPDATE sms_campaigns SET status = ?, updated_at = ? WHERE id = ? AND status = ?'
+        : 'UPDATE sms_campaigns SET status = ? WHERE id = ? AND status = ?';
+    $claim = $conn->prepare($claimSql);
+    if (!$claim) {
+        return;
+    }
     foreach ($due as $row) {
         $id = (int) $row['id'];
-        $claimedAt = date('Y-m-d H:i:s');
-        $claim->bind_param('ssis', $sending, $claimedAt, $id, $scheduled);
+        if ($hasUpdated) {
+            $claimedAt = date('Y-m-d H:i:s');
+            $claim->bind_param('ssis', $sending, $claimedAt, $id, $scheduled);
+        } else {
+            $claim->bind_param('sis', $sending, $id, $scheduled);
+        }
         $claim->execute();
         if ((int) $conn->affected_rows > 0) {
             sms_deliver_campaign($conn, $id);
         }
     }
     $claim->close();
-    $cutoff = date('Y-m-d H:i:s', time() - 600);
-    $stuck = $conn->prepare('SELECT c.id, c.scheduled_at FROM sms_campaigns c WHERE c.channel = ? AND c.status = ? AND c.updated_at <= ? AND NOT EXISTS (SELECT 1 FROM sms_messages m WHERE m.campaign_id = c.id) LIMIT 20');
-    if ($stuck) {
-        $stuck->bind_param('sss', $channel, $sending, $cutoff);
-        $stuck->execute();
-        $abandoned = db_fetch_all($stuck);
-        $stuck->close();
-        $back = 'scheduled';
-        $failed = 'failed';
-        $restore = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND status = ?');
-        foreach ($abandoned as $abandonedRow) {
-            $abandonedId = (int) $abandonedRow['id'];
-            $next = trim((string) $abandonedRow['scheduled_at']) !== '' ? $back : $failed;
-            $restore->bind_param('sis', $next, $abandonedId, $sending);
-            $restore->execute();
-        }
-        $restore->close();
+    if (!$hasUpdated) {
+        return;
     }
-    $retry = $conn->prepare('SELECT DISTINCT c.id FROM sms_campaigns c JOIN sms_messages m ON m.campaign_id = c.id WHERE c.channel = ? AND c.status = ? AND m.status = ? AND c.updated_at <= ? LIMIT 5');
-    if ($retry) {
-        $queued = 'queued';
-        $retry->bind_param('ssss', $channel, $sending, $queued, $cutoff);
-        $retry->execute();
-        $resume = db_fetch_all($retry);
-        $retry->close();
-        foreach ($resume as $resumeRow) {
-            sms_deliver_campaign($conn, (int) $resumeRow['id']);
+    try {
+        $cutoff = date('Y-m-d H:i:s', time() - 600);
+        $stuck = $conn->prepare('SELECT c.id, c.scheduled_at FROM sms_campaigns c WHERE c.channel = ? AND c.status = ? AND c.updated_at <= ? AND NOT EXISTS (SELECT 1 FROM sms_messages m WHERE m.campaign_id = c.id) LIMIT 20');
+        if ($stuck) {
+            $stuck->bind_param('sss', $channel, $sending, $cutoff);
+            $stuck->execute();
+            $abandoned = db_fetch_all($stuck);
+            $stuck->close();
+            $back = 'scheduled';
+            $failed = 'failed';
+            $restore = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND status = ?');
+            if ($restore) {
+                foreach ($abandoned as $abandonedRow) {
+                    $abandonedId = (int) $abandonedRow['id'];
+                    $next = trim((string) $abandonedRow['scheduled_at']) !== '' ? $back : $failed;
+                    $restore->bind_param('sis', $next, $abandonedId, $sending);
+                    $restore->execute();
+                }
+                $restore->close();
+            }
         }
+        $retry = $conn->prepare('SELECT DISTINCT c.id FROM sms_campaigns c JOIN sms_messages m ON m.campaign_id = c.id WHERE c.channel = ? AND c.status = ? AND m.status = ? AND c.updated_at <= ? LIMIT 5');
+        if ($retry) {
+            $queued = 'queued';
+            $retry->bind_param('ssss', $channel, $sending, $queued, $cutoff);
+            $retry->execute();
+            $resume = db_fetch_all($retry);
+            $retry->close();
+            foreach ($resume as $resumeRow) {
+                sms_deliver_campaign($conn, (int) $resumeRow['id']);
+            }
+        }
+    } catch (Throwable $exception) {
+        error_log('A stuck SMS could not be resumed.');
     }
 }
 

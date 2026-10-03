@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 
 $msg = '';
 $err = '';
+$homeDraft = array();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
     verify_csrf();
@@ -126,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_homepage'])) {
     }
     if ($homeMissing) {
         $err = 'Fill every homepage line. Nothing was saved.';
+        $homeDraft = $homeValues;
     } else {
         foreach ($homeValues as $key => $value) {
             billing_set_setting($conn, $key, $value);
@@ -240,6 +242,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai'])) {
 }
 
 $settings = site_public_settings($conn);
+if (!empty($homeDraft) && is_array($homeDraft)) {
+    foreach ($homeDraft as $key => $value) {
+        $settings[$key] = $value;
+    }
+}
 $notifyEmail = billing_notify_address($conn);
 $mailFrom = billing_mail_from_address($conn);
 $notifyTestAt = billing_setting($conn, 'notify_test_at');
