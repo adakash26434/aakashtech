@@ -53,4 +53,10 @@ if (
     exit;
 }
 
+$target = __DIR__ . $requestPath;
+if ($requestPath !== '/' && !is_file($target) && !is_dir($target)) {
+    require __DIR__ . '/404.php';
+    return true;
+}
+
 return false;

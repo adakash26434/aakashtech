@@ -142,7 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_legal'])) {
     $cookies = !empty($_POST['restore_cookies']) ? '' : site_legal_plain(isset($_POST['cookie_policy']) ? $_POST['cookie_policy'] : '', 12000);
     billing_set_setting($conn, 'privacy_policy', $privacy);
     billing_set_setting($conn, 'cookie_policy', $cookies);
-    $msg = 'Privacy policy and cookie notice saved. They appear in the public footer.';
+    $terms = !empty($_POST['restore_terms']) ? '' : site_legal_plain(isset($_POST['terms_of_service']) ? $_POST['terms_of_service'] : '', 12000);
+    billing_set_setting($conn, 'terms_of_service', $terms);
+    $msg = 'Privacy policy, cookie notice, and terms saved. They appear in the public footer.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
@@ -335,7 +337,7 @@ if (isset($_POST['save_homepage'])) {
 </div>
 <div x-show="tab==='legal'" x-cloak>
 <div class="dash-panel mb-6">
-    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Privacy and cookies</h3></div>
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Privacy, cookies, and terms</h3></div>
     <form method="POST" action="" class="p-5 space-y-4">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <p class="text-slate-400 text-sm">These pages are linked from the public footer. The prepared text follows the Individual Privacy Act, 2075 and the Individual Privacy Regulation, 2077, and it describes the one sign-in cookie this site sets. Edit the wording here. Tick restore to put the prepared text back.</p>
@@ -353,7 +355,14 @@ if (isset($_POST['save_homepage'])) {
                 <input type="checkbox" name="restore_cookies" value="1"> Restore the prepared cookie notice
             </label>
         </div>
-        <button type="submit" name="save_legal" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save privacy and cookies</button>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="terms_of_service">Terms of service</label>
+            <textarea id="terms_of_service" name="terms_of_service" maxlength="12000" rows="10" class="form-input"><?= e(site_legal_text($settings, 'terms_of_service')) ?></textarea>
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="restore_terms" value="1"> Restore the prepared terms
+            </label>
+        </div>
+        <button type="submit" name="save_legal" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save privacy, cookies, and terms</button>
     </form>
 </div>
 

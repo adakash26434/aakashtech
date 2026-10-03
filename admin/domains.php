@@ -124,7 +124,7 @@ try {
                         <label class="block text-slate-400 text-xs font-medium mb-1.5" for="note-<?= (int) $row['id'] ?>">Why it was not registered</label>
                         <textarea id="note-<?= (int) $row['id'] ?>" name="admin_note" rows="2" maxlength="400" class="form-input resize-none"></textarea>
                     </div>
-                    <button type="submit" name="decision" value="declined" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Decline</button>
+                    <button type="submit" name="decision" value="declined" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300" onclick="return confirm('Decline this domain request?')">Decline</button>
                 </form>
             <?php elseif ($ready): ?>
                 <form method="POST" class="space-y-3">
@@ -135,7 +135,7 @@ try {
                         <label class="block text-slate-400 text-xs font-medium mb-1.5" for="note-<?= (int) $row['id'] ?>">Why it was not registered</label>
                         <textarea id="note-<?= (int) $row['id'] ?>" name="admin_note" rows="2" maxlength="400" class="form-input resize-none"></textarea>
                     </div>
-                    <button type="submit" name="decision" value="declined" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Decline</button>
+                    <button type="submit" name="decision" value="declined" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300" onclick="return confirm('Decline this domain request?')">Decline</button>
                 </form>
             <?php elseif ($row['admin_note'] !== ''): ?>
                 <p class="text-slate-400 text-sm"><?= e($row['admin_note']) ?></p>

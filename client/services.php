@@ -153,7 +153,7 @@ $balance = billing_balance($conn, $cid);
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
                             <input type="hidden" name="enabled" value="<?= (int) $s['auto_renew'] === 1 ? '0' : '1' ?>">
-                            <button type="submit" name="set_auto_renew" value="1" class="text-brand-400 text-sm">
+                            <button type="submit" name="set_auto_renew" value="1" class="text-brand-400 text-sm"<?= (int) $s['auto_renew'] === 1 ? ' onclick="return confirm(\'Turn auto-renew off? This service stops when it expires unless you renew it yourself.\')"' : '' ?>>
                                 <?= (int) $s['auto_renew'] === 1 ? 'Turn auto-renew off' : 'Turn auto-renew on' ?>
                             </button>
                         </form>

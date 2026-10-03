@@ -27,6 +27,21 @@ function site_cookie_builtin($name)
         . "\n\n" . 'The team can edit this notice. The copy on this page is the current one.';
 }
 
+function site_terms_builtin($name, $email)
+{
+    $name = trim((string) $name) !== '' ? trim((string) $name) : 'Aakash Technologies';
+    $email = trim((string) $email) !== '' ? trim((string) $email) : 'info@aakashtechnologies.com.np';
+    return 'These terms apply when a person or an organization creates an account with ' . $name . ', adds wallet funds, or buys or books a service on this site.'
+        . "\n\n" . 'The account. One account belongs to one person or one organization. The details on it must be true. The account holder keeps the password and the Google Authenticator code private and is responsible for what is done after a sign-in with them.'
+        . "\n\n" . 'Rates and the wallet. Rates are shown in Nepali rupees on the service pages, with 13% VAT where it applies. Services are paid from the prepaid wallet. A top-up shows in the wallet after the team confirms the payment. Wallet funds are used only for services on this site.'
+        . "\n\n" . 'Renewals. A plan with auto-renew turned on renews from the wallet on its renewal date. If the wallet is short, the renewal is tried again for 7 days. After that the service pauses until the wallet covers it. Auto-renew can be turned off on My Services.'
+        . "\n\n" . 'SMS and voice. SMS and voice calls open after identity (KYC) is approved. A sender name is used only after the team approves it. Before sending, the client accepts the declaration that the service will not be used for anything Nepal law forbids, or for false or fraudulent messages. Messages go only to people who expect them. A credit is used when a message or call is sent. The team can stop sending from an account that breaks these rules.'
+        . "\n\n" . 'Domains. A domain is registered for a year at a time, in the name and with the documents the client gives. The team registers it after the yearly bill is paid. If the registry refuses the name, the amount can be returned to the wallet.'
+        . "\n\n" . 'Hosting, email, and websites. The client is responsible for what is published or stored on the account. The team can pause a service that is used for unlawful content, spam, or an attack on another system.'
+        . "\n\n" . 'Support. Questions go through a support ticket after sign-in, or to ' . $email . '.'
+        . "\n\n" . 'Changes. The team can edit these terms. The copy on this page is the current one.';
+}
+
 function site_legal_text($settings, $key)
 {
     $stored = (is_array($settings) && isset($settings[$key])) ? trim((string) $settings[$key]) : '';
@@ -38,6 +53,9 @@ function site_legal_text($settings, $key)
     $location = (is_array($settings) && isset($settings['site_location'])) ? $settings['site_location'] : 'Nepal';
     if ($key === 'cookie_policy') {
         return site_cookie_builtin($name);
+    }
+    if ($key === 'terms_of_service') {
+        return site_terms_builtin($name, $email);
     }
     return site_privacy_builtin($name, $email, $location);
 }

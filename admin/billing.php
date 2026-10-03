@@ -3,6 +3,22 @@ require_once __DIR__ . '/../config.php';
 
 require_admin();
 
+if (isset($_GET['export']) && $_GET['export'] === 'wallet') {
+    $fromDay = isset($_GET['from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $_GET['from']) ? (string) $_GET['from'] : date('Y-m-01');
+    $toDay = isset($_GET['to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $_GET['to']) ? (string) $_GET['to'] : date('Y-m-d');
+    $fromAt = $fromDay . ' 00:00:00';
+    $toAt = $toDay . ' 23:59:59';
+    $entryStmt = $conn->prepare('SELECT w.id, w.created_at, w.client_id, c.name, c.email, w.kind, w.direction, w.amount, w.status, w.method, w.reference_note FROM wallet_entries w LEFT JOIN client_users c ON c.id = w.client_id WHERE w.created_at >= ? AND w.created_at <= ? ORDER BY w.id ASC');
+    $entryStmt->bind_param('ss', $fromAt, $toAt);
+    $entryStmt->execute();
+    $entryRows = array();
+    foreach (db_fetch_all($entryStmt) as $entry) {
+        $entryRows[] = array($entry['id'], $entry['created_at'], $entry['client_id'], $entry['name'], $entry['email'], $entry['kind'], $entry['direction'], number_format((float) $entry['amount'], 2, '.', ''), $entry['status'], $entry['method'], $entry['reference_note']);
+    }
+    $entryStmt->close();
+    admin_csv_send('wallet-' . $fromDay . '-to-' . $toDay . '.csv', array('Entry', 'Date', 'Client ID', 'Client', 'Email', 'Kind', 'Direction', 'Amount NPR', 'Status', 'Method', 'Reference'), $entryRows);
+}
+
 $msg = '';
 $err = '';
 
@@ -106,6 +122,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = $saved > 0 && $failed === 0 ? 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.' : '';
         $err = $failed > 0 ? 'Each offer rate must be lower than its regular rate, or left blank. Regular rates must stay above zero.' : ($saved > 0 ? '' : 'Enter a valid price for each plan.');
     }
+    if ($err === '' && $msg !== '') {
+        $doneTab = 'wallet';
+        if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
+            $doneTab = 'rates';
+        } elseif (isset($_POST['refund_domain'])) {
+            $doneTab = 'records';
+        } elseif (!isset($_POST['approve_topup']) && !isset($_POST['reject_topup']) && !isset($_POST['manual_wallet'])) {
+            $doneTab = 'delivery';
+        }
+        flash('billing_notice', $msg);
+        $doneFind = isset($_GET['q']) && is_string($_GET['q']) ? trim($_GET['q']) : '';
+        header('Location: billing.php?tab=' . $doneTab . ($doneFind !== '' ? '&q=' . rawurlencode($doneFind) : ''));
+        exit;
+    }
+}
+$billingNotice = flash('billing_notice');
+if ($msg === '' && $billingNotice !== '') {
+    $msg = (string) $billingNotice;
 }
 
 require_once __DIR__ . '/includes/header.php';
@@ -158,6 +192,12 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
     <button type="button" @click="tab='records'" :class="tab==='records' ? 'is-on' : ''">Subscriptions</button>
 </div>
 <div x-show="tab==='wallet'">
+<form method="GET" class="mb-4 flex flex-wrap items-end gap-2">
+    <input type="hidden" name="export" value="wallet">
+    <label class="text-slate-400 text-xs">From<input type="date" name="from" value="<?= e(date('Y-m-01')) ?>" class="form-input mt-1"></label>
+    <label class="text-slate-400 text-xs">To<input type="date" name="to" value="<?= e(date('Y-m-d')) ?>" class="form-input mt-1"></label>
+    <button type="submit" class="px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Download wallet entries (CSV)</button>
+</form>
 <section class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">Wallet top-ups waiting for confirmation</h3>
@@ -186,7 +226,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="entry_id" value="<?= (int) $row['id'] ?>">
                                     <button type="submit" name="approve_topup" value="1" class="text-brand-400 text-sm">Confirm</button>
-                                    <button type="submit" name="reject_topup" value="1" class="text-red-400 text-sm">Reject</button>
+                                    <button type="submit" name="reject_topup" value="1" class="text-red-400 text-sm" onclick="return confirm('Reject this payment? The client wallet is not credited.')">Reject</button>
                                 </form>
                             </td>
                         </tr>
@@ -339,7 +379,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_panel" value="1" class="text-brand-400 text-xs">Save cPanel login</button>
                     <?php if (trim((string) $row['panel_user']) !== '' || (string) $row['panel_pass'] !== ''): ?>
-                        <button type="submit" name="clear_panel" value="1" class="text-slate-500 text-xs">Remove login</button>
+                        <button type="submit" name="clear_panel" value="1" class="text-slate-500 text-xs" onclick="return confirm('Remove this cPanel login from the client page?')">Remove login</button>
                     <?php endif; ?>
                 </div>
             </form>
@@ -375,7 +415,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_mail" value="1" class="text-brand-400 text-xs">Show email login</button>
                     <?php if ((string) $row['panel_user'] === 'open'): ?>
-                        <button type="submit" name="clear_mail" value="1" class="text-slate-500 text-xs">Remove login</button>
+                        <button type="submit" name="clear_mail" value="1" class="text-slate-500 text-xs" onclick="return confirm('Remove this email login from the client page?')">Remove login</button>
                     <?php endif; ?>
                 </div>
             </form>
@@ -401,7 +441,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_website" value="1" class="text-brand-400 text-xs">Save website link</button>
                     <?php if ((string) $row['panel_user'] === 'open'): ?>
-                        <button type="submit" name="clear_website" value="1" class="text-slate-500 text-xs">Remove link</button>
+                        <button type="submit" name="clear_website" value="1" class="text-slate-500 text-xs" onclick="return confirm('Remove this website link from the client page?')">Remove link</button>
                     <?php endif; ?>
                 </div>
             </form>
@@ -475,7 +515,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                                     <form method="POST" class="mt-2">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
-                                        <button type="submit" name="refund_domain" value="1" class="text-yellow-300 text-xs">Return to wallet</button>
+                                        <button type="submit" name="refund_domain" value="1" class="text-yellow-300 text-xs" onclick="return confirm('Return this domain payment to the client wallet?')">Return to wallet</button>
                                     </form>
                                 <?php endif; ?>
                             </td>

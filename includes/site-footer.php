@@ -102,6 +102,7 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
             <nav class="footer-legal" aria-label="Policies">
                 <a href="privacy.php">Privacy</a>
                 <a href="cookies.php">Cookies</a>
+                <a href="terms.php">Terms</a>
             </nav>
             <?php if ($siteFooter !== ''): ?><span><?= site_escape($siteFooter) ?></span><?php endif; ?>
         </div>

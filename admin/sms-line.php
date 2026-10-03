@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/includes/header.php';
-require_once __DIR__ . '/includes/sidebar.php';
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 $msg = '';
 $err = '';
@@ -83,6 +83,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $err === '' && $msg !== '' && (isset($_POST['grant_sms']) || isset($_POST['take_sms']) || isset($_POST['decision']) || isset($_POST['save_line']))) {
+    $doneTab = isset($_POST['decision']) ? 'names' : (isset($_POST['save_line']) ? 'line' : 'credits');
+    flash('sms_line_notice', $msg);
+    header('Location: sms-line.php?tab=' . $doneTab);
+    exit;
+}
+$lineNotice = flash('sms_line_notice');
+if ($msg === '' && $lineNotice !== '') {
+    $msg = (string) $lineNotice;
+}
+
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
+
 $line = array('provider' => '', 'sender' => '', 'sender_mode' => 'fixed', 'connected' => false);
 $storedKey = '';
 $tokenSet = false;
@@ -99,6 +113,8 @@ $vendorStock = array('balance' => null, 'checked' => '', 'error' => '', 'label' 
 $clientsHolding = 0;
 $grantClients = false;
 $creditNotes = false;
+$pendingNames = 0;
+$grantPick = isset($_GET['grant']) ? (int) $_GET['grant'] : 0;
 try {
     sms_credit_columns($conn);
     $line = sms_line($conn);
@@ -107,12 +123,15 @@ try {
     $tokenTail = $tokenSet ? substr($storedKey, -4) : '';
     $endpoint = billing_setting($conn, 'sms_line_endpoint');
     $vendorLabel = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
-    $senders = $conn->query('SELECT s.*, c.name AS client_name, c.email AS client_email FROM sms_sender_names s JOIN client_users c ON c.id = s.client_id ORDER BY s.id DESC LIMIT 50');
+    $senders = $conn->query("SELECT s.*, c.name AS client_name, c.email AS client_email FROM sms_sender_names s JOIN client_users c ON c.id = s.client_id ORDER BY CASE WHEN s.status = 'pending' THEN 0 ELSE 1 END, s.id DESC LIMIT 50");
     $usage = sms_admin_usage($conn, $usageFind);
     $history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
     $vendorStock = sms_vendor_stock($conn, false);
     $clientsHolding = sms_clients_holding($conn);
-    $grantClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
+    $grantClients = $conn->query("SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left FROM client_users c LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = 'sms' ORDER BY c.name ASC LIMIT 300");
+    $pendingResult = $conn->query("SELECT COUNT(*) AS c FROM sms_sender_names WHERE status = 'pending'");
+    $pendingRow = $pendingResult ? $pendingResult->fetch_assoc() : null;
+    $pendingNames = $pendingRow ? (int) $pendingRow['c'] : 0;
     $creditNotes = $conn->query('SELECT n.id, n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
 } catch (Throwable $exception) {
     error_log('SMS line page could not be loaded.');
@@ -180,7 +199,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
     <button type="button" @click="tab='clients'" :class="tab==='clients' ? 'is-on' : ''">Clients</button>
     <button type="button" @click="tab='credits'" :class="tab==='credits' ? 'is-on' : ''">Credits</button>
     <button type="button" @click="tab='line'" :class="tab==='line' ? 'is-on' : ''">Line</button>
-    <button type="button" @click="tab='names'" :class="tab==='names' ? 'is-on' : ''">Sender names</button>
+    <button type="button" @click="tab='names'" :class="tab==='names' ? 'is-on' : ''">Sender names<?= $pendingNames > 0 ? ' (' . (int) $pendingNames . ' waiting)' : '' ?></button>
     <button type="button" @click="tab='history'" :class="tab==='history' ? 'is-on' : ''">History</button>
 </div>
 <div x-show="tab==='clients'">
@@ -199,7 +218,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase">Client</th>
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase">Used</th>
                         <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase">Left</th>
-                        <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase">History</th>
+                        <th class="px-4 py-3 text-slate-400 text-xs font-medium uppercase"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800">
@@ -211,8 +230,8 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                                 <?php if ($usageEmail !== ''): ?><a class="block text-slate-500 text-xs hover:text-brand-300" href="mailto:<?= e($usageEmail) ?>"><?= e($usageEmail) ?></a><?php else: ?><p class="text-slate-500 text-xs"><?= e($usageRow['email']) ?></p><?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_used']) ?></td>
-                            <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_left']) ?></td>
-                            <td class="px-4 py-3"><a class="text-brand-400 text-sm" href="sms-line.php?tab=history&client=<?= (int) $usageRow['id'] ?>">See messages</a></td>
+                            <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_left']) ?><?php if ((int) $usageRow['sms_left'] < 100): ?> <span class="sms-state sms-state-<?= (int) $usageRow['sms_left'] < 1 ? 'failed' : 'wait' ?>"><?= (int) $usageRow['sms_left'] < 1 ? 'Empty' : 'Low' ?></span><?php endif; ?></td>
+                            <td class="px-4 py-3 text-sm whitespace-nowrap"><a class="text-brand-400" href="sms-line.php?tab=credits&grant=<?= (int) $usageRow['id'] ?>">Add credits</a> · <a class="text-brand-400" href="sms-line.php?tab=history&client=<?= (int) $usageRow['id'] ?>">See messages</a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -229,7 +248,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
 <div x-show="tab==='credits'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add SMS credits</h3></div>
-    <form method="POST" class="p-5 grid md:grid-cols-4 gap-3 items-end">
+    <form method="POST" class="p-5 grid md:grid-cols-4 gap-3 items-end" x-data="{ credits: '' }">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="grant_client">Client</label>
@@ -237,20 +256,25 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <option value="">Choose</option>
                 <?php if ($grantClients): ?>
                     <?php while ($grantClient = $grantClients->fetch_assoc()): ?>
-                        <option value="<?= (int) $grantClient['id'] ?>"><?= e($grantClient['name']) ?> · <?= e($grantClient['email']) ?></option>
+                        <option value="<?= (int) $grantClient['id'] ?>" <?= $grantPick === (int) $grantClient['id'] ? 'selected' : '' ?>><?= e($grantClient['name']) ?> · <?= e($grantClient['email']) ?> · <?= number_format((int) $grantClient['sms_left']) ?> left</option>
                     <?php endwhile; ?>
                 <?php endif; ?>
             </select>
         </div>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="grant_credits">Credits</label>
-            <input id="grant_credits" name="grant_credits" type="number" min="1" max="500000" required class="form-input" placeholder="1000">
+            <input id="grant_credits" name="grant_credits" type="number" min="1" max="500000" required class="form-input" placeholder="1000" x-model="credits">
+            <div class="flex flex-wrap gap-1 mt-2">
+                <?php foreach (array(500, 1000, 5000, 10000) as $quickCredits): ?>
+                    <button type="button" class="px-2.5 py-1 rounded-lg border border-slate-700 text-xs text-slate-300" @click="credits = '<?= (int) $quickCredits ?>'"><?= number_format($quickCredits) ?></button>
+                <?php endforeach; ?>
+            </div>
         </div>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="grant_note">Reason</label>
             <input id="grant_note" name="grant_note" type="text" maxlength="160" required class="form-input" placeholder="Paid at the office">
         </div>
-        <button type="submit" name="grant_sms" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Add credits</button>
+        <button type="submit" name="grant_sms" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl" onclick="var s=document.getElementById('grant_client'); var n=document.getElementById('grant_credits'); return !s.value || !n.value || confirm('Add ' + n.value + ' SMS credits to ' + s.options[s.selectedIndex].text.split(' · ')[0] + '?');">Add credits</button>
     </form>
 </div>
 
@@ -271,7 +295,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                 <input type="hidden" name="client_id" value="<?= (int) $noteRow['client_id'] ?>">
                                 <input type="hidden" name="note_id" value="<?= (int) $noteRow['id'] ?>">
-                                <button type="submit" name="take_sms" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer">Take back unused</button>
+                                <button type="submit" name="take_sms" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer" onclick="return confirm('Take back the unused part of these credits from this client?')">Take back unused</button>
                             </form>
                         <?php endif; ?>
                     </div>
@@ -386,7 +410,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     <input type="hidden" name="sender_id" value="<?= (int) $row['id'] ?>">
                     <div class="min-w-[180px]">
                         <p class="text-white text-sm"><?= e($row['sender_name']) ?></p>
-                        <p class="text-slate-500 text-xs"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['client_name']) ?></a> · <?= e($row['status']) ?></p>
+                        <p class="text-slate-500 text-xs"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['client_name']) ?></a> <span class="sms-state sms-state-<?= $row['status'] === 'approved' ? 'sent' : ($row['status'] === 'rejected' ? 'failed' : 'wait') ?>"><?= e(ucfirst((string) $row['status'])) ?></span></p>
                     </div>
                     <input type="text" name="admin_note" value="<?= e($row['admin_note']) ?>" class="form-input max-w-xs" placeholder="Note">
                     <button type="submit" name="decision" value="approved" class="text-green-400 text-sm bg-transparent border-0 cursor-pointer">Approve</button>
@@ -423,7 +447,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <article class="p-4">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
                         <p class="text-white text-sm"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['name']) ?></a> <?php $historyEmail = filter_var($row['email'], FILTER_VALIDATE_EMAIL) ? (string) $row['email'] : ''; ?><?php if ($historyEmail !== ''): ?><a class="text-slate-500 hover:text-brand-300" href="mailto:<?= e($historyEmail) ?>"><?= e($historyEmail) ?></a><?php else: ?><span class="text-slate-500"><?= e($row['email']) ?></span><?php endif; ?></p>
-                        <p class="text-slate-500 text-xs"><?= e(sms_format_time($row['created_at'])) ?> · <?= e(ucfirst($row['status'])) ?> · <?= (int) $row['parts'] ?> credit<?= (int) $row['parts'] === 1 ? '' : 's' ?> · <?= e($row['source']) ?></p>
+                        <p class="text-slate-500 text-xs"><?= e(sms_format_time($row['created_at'])) ?> · <?= (int) $row['parts'] ?> credit<?= (int) $row['parts'] === 1 ? '' : 's' ?> · <?= e($row['source'] === 'api' ? 'API' : 'Dashboard') ?> <span class="sms-state sms-state-<?= e(in_array($row['status'], array('sent', 'failed'), true) ? $row['status'] : 'wait') ?>"><?= e(ucfirst($row['status'])) ?></span></p>
                     </div>
                     <?php $historyPhone = preg_replace('/[^0-9+]/', '', (string) $row['recipient']); ?>
                     <p class="text-slate-300 text-sm mt-1">To <?php if ($historyPhone !== ''): ?><a class="hover:text-brand-300" href="tel:<?= e($historyPhone) ?>"><?= e($row['recipient']) ?></a><?php else: ?><?= e($row['recipient']) ?><?php endif; ?></p>

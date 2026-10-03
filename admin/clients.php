@@ -1,9 +1,37 @@
 <?php
-require_once __DIR__ . '/includes/header.php';
-require_once __DIR__ . '/includes/sidebar.php';
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 $find = admin_find_text(isset($_REQUEST['q']) ? $_REQUEST['q'] : '');
 $findBack = $find === '' ? 'clients.php' : 'clients.php?q=' . rawurlencode($find);
+
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    $exportRows = array();
+    $exportSql = 'SELECT c.id, c.name, c.email, c.phone, c.company, c.status, c.created_at, COALESCE(w.balance, 0) AS wallet, COALESCE(u.balance, 0) AS sms_left FROM client_users c LEFT JOIN client_wallets w ON w.client_id = c.id LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = \'sms\'';
+    if ($find === '') {
+        $exportResult = $conn->query($exportSql . ' ORDER BY c.created_at DESC');
+        $exportList = array();
+        if ($exportResult) {
+            while ($exportRow = $exportResult->fetch_assoc()) {
+                $exportList[] = $exportRow;
+            }
+        }
+    } else {
+        $like = '%' . $find . '%';
+        $exportStmt = $conn->prepare($exportSql . ' WHERE c.name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.company LIKE ? ORDER BY c.created_at DESC');
+        $exportStmt->bind_param('ssss', $like, $like, $like, $like);
+        $exportStmt->execute();
+        $exportList = db_fetch_all($exportStmt);
+        $exportStmt->close();
+    }
+    foreach ($exportList as $exportRow) {
+        $exportRows[] = array($exportRow['id'], $exportRow['name'], $exportRow['email'], $exportRow['phone'], $exportRow['company'], $exportRow['status'], $exportRow['created_at'], number_format((float) $exportRow['wallet'], 2, '.', ''), (int) $exportRow['sms_left']);
+    }
+    admin_csv_send('clients-' . date('Y-m-d') . '.csv', array('ID', 'Name', 'Email', 'Mobile', 'Company', 'Status', 'Joined', 'Wallet NPR', 'SMS credits left'), $exportRows);
+}
+
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
     verify_csrf();
@@ -94,8 +122,27 @@ if ($planResult) {
 }
 
 $clientRows = array();
+$perPage = 50;
+$pageNo = max(1, isset($_GET['page']) ? (int) $_GET['page'] : 1);
+$clientTotal = 0;
+$choiceRows = array();
+try {
+    $choiceResult = $conn->query('SELECT id, name, email, phone FROM client_users ORDER BY name LIMIT 2000');
+    if ($choiceResult) {
+        while ($choiceRow = $choiceResult->fetch_assoc()) {
+            $choiceRows[] = $choiceRow;
+        }
+    }
+} catch (Throwable $exception) {
+    error_log('Client choice list could not be loaded.');
+}
 if ($find === '') {
-    $clientResult = $conn->query('SELECT * FROM client_users ORDER BY created_at DESC LIMIT 200');
+    $totalResult = $conn->query('SELECT COUNT(*) AS c FROM client_users');
+    $totalRow = $totalResult ? $totalResult->fetch_assoc() : null;
+    $clientTotal = $totalRow ? (int) $totalRow['c'] : 0;
+    $pageCount = max(1, (int) ceil($clientTotal / $perPage));
+    $pageNo = min($pageNo, $pageCount);
+    $clientResult = $conn->query('SELECT * FROM client_users ORDER BY created_at DESC LIMIT ' . $perPage . ' OFFSET ' . (($pageNo - 1) * $perPage));
     if ($clientResult) {
         while ($clientRow = $clientResult->fetch_assoc()) {
             $clientRows[] = $clientRow;
@@ -117,7 +164,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Clients</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 accounts.' : 'Matches for “' . e($find) . '”.' ?> Open a name to add SMS or a service for that client. The bulk API key stays on <a class="text-brand-400" href="sms-line.php">SMS line</a>.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? number_format($clientTotal) . ($clientTotal === 1 ? ' account' : ' accounts') . ', newest first.' : 'Matches for “' . e($find) . '”.' ?> Open a name to add SMS or a service for that client. The bulk API key stays on <a class="text-brand-400" href="sms-line.php">SMS line</a>.</p>
 </div>
 <?php if ($clientNotice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
@@ -135,6 +182,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, email, phone, or company">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+    <a href="clients.php?export=csv<?= $find !== '' ? '&q=' . rawurlencode($find) : '' ?>" class="px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Download CSV</a>
 </form>
 </div>
 <div x-show="tab==='work'" x-cloak>
@@ -162,7 +210,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
             <p class="text-slate-500 text-xs">The wallet is not charged. Yearly or monthly services still renew from the wallet later. For SMS or voice, enter how many credits to add.</p>
             <select name="service_client" required class="form-input">
                 <option value="">Client</option>
-                <?php foreach ($clientRows as $choice): ?>
+                <?php foreach ($choiceRows as $choice): ?>
                     <option value="<?= (int) $choice['id'] ?>"><?= e($choice['name']) ?> · <?= e($choice['email']) ?></option>
                 <?php endforeach; ?>
             </select>
@@ -187,7 +235,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
         <p class="text-slate-500 text-xs">The client cannot change the sign-in email or the mobile number. Use this only after they ask. Both stay required. The old email is told when the sign-in address changes, and any unused password-reset link is cancelled.</p>
         <select name="contact_client" required class="form-input">
             <option value="">Client</option>
-            <?php foreach ($clientRows as $choice): ?>
+            <?php foreach ($choiceRows as $choice): ?>
                 <option value="<?= (int) $choice['id'] ?>"><?= e($choice['name']) ?> · <?= e($choice['email']) ?> · <?= e($choice['phone']) ?></option>
             <?php endforeach; ?>
         </select>
@@ -241,7 +289,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
                                     <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
-                                    <button type="submit" name="toggle_client" class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
+                                    <button type="submit" name="toggle_client"<?= $cl['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                                 </form>
                                 <?php if (isset($cl['totp_secret']) && $cl['totp_secret'] !== ''): ?>
                                     <form method="POST" class="mt-2" onsubmit="return confirm('Reset Google Authenticator for this client? They set it up again at the next sign-in.');">
@@ -263,6 +311,15 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
         <p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No clients registered yet.' : 'No account matches that search.' ?></p>
     <?php endif; ?>
 </div>
+<?php if ($find === '' && $clientTotal > $perPage): ?>
+    <nav class="mt-4 flex items-center justify-between text-sm" aria-label="Client pages">
+        <span class="text-slate-500">Page <?= $pageNo ?> of <?= $pageCount ?></span>
+        <span class="flex gap-2">
+            <?php if ($pageNo > 1): ?><a class="px-4 py-2 bg-white text-slate-700 rounded-xl border border-slate-300" href="clients.php?page=<?= $pageNo - 1 ?>">Newer</a><?php endif; ?>
+            <?php if ($pageNo < $pageCount): ?><a class="px-4 py-2 bg-white text-slate-700 rounded-xl border border-slate-300" href="clients.php?page=<?= $pageNo + 1 ?>">Older</a><?php endif; ?>
+        </span>
+    </nav>
+<?php endif; ?>
 </div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

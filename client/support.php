@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_ticket'])) {
     if ($ticketId < 1 || $follow === '') {
         $err = 'Write the follow-up before saving.';
     } else {
-        $lookup = $conn->prepare('SELECT subject, status FROM support_tickets WHERE id = ? AND client_id = ? LIMIT 1');
+        $lookup = $conn->prepare('SELECT subject, status, client_followup FROM support_tickets WHERE id = ? AND client_id = ? LIMIT 1');
         $lookup->bind_param('ii', $ticketId, $cid);
         $lookup->execute();
         $ticketRow = db_fetch_assoc($lookup);
@@ -59,8 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_ticket'])) {
         } else {
             $open = 'open';
             $now = date('Y-m-d H:i:s');
+            $earlier = trim((string) $ticketRow['client_followup']);
+            $thread = ($earlier !== '' ? $earlier . "\n\n" : '') . '[' . date('Y-m-d H:i') . '] ' . $follow;
+            if (strlen($thread) > 8000) {
+                $thread = substr($thread, -8000);
+            }
             $save = $conn->prepare('UPDATE support_tickets SET client_followup = ?, status = ?, updated_at = ? WHERE id = ? AND client_id = ?');
-            $save->bind_param('sssii', $follow, $open, $now, $ticketId, $cid);
+            $save->bind_param('sssii', $thread, $open, $now, $ticketId, $cid);
             if ($save->execute()) {
                 billing_notify($conn, 'Follow-up on ticket: ' . $ticketRow['subject'], array(
                     'A client added a follow-up on a support ticket.',
@@ -188,7 +193,7 @@ if ($find !== '') {
                     <?php endif; ?>
                     <?php if (!empty($t['client_followup'])): ?>
                         <div class="p-3 bg-slate-800/50 rounded-xl mb-3">
-                            <p class="text-slate-400 text-xs mb-1">Your follow-up</p>
+                            <p class="text-slate-400 text-xs mb-1">Your follow-ups</p>
                             <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['client_followup']) ?></p>
                         </div>
                     <?php endif; ?>
@@ -197,7 +202,7 @@ if ($find !== '') {
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
                             <label class="block text-slate-400 text-xs font-medium" for="follow-<?= (int) $t['id'] ?>">Add a follow-up</label>
-                            <textarea id="follow-<?= (int) $t['id'] ?>" name="client_followup" rows="3" maxlength="2000" class="form-input" placeholder="What changed, or what you still need"><?= e(isset($t['client_followup']) ? $t['client_followup'] : '') ?></textarea>
+                            <textarea id="follow-<?= (int) $t['id'] ?>" name="client_followup" rows="3" maxlength="2000" class="form-input" placeholder="What changed, or what you still need"></textarea>
                             <button type="submit" name="follow_ticket" value="1" class="px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save follow-up</button>
                         </form>
                     <?php endif; ?>
@@ -205,7 +210,12 @@ if ($find !== '') {
             </div>
         <?php endforeach; ?>
     <?php else: ?>
-        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet. Use the form above when you need the team.' : 'No ticket matches that search.' ?></p></div>
+        <div class="dash-panel p-12 text-center">
+            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet.' : 'No ticket matches that search.' ?></p>
+            <?php if ($find === ''): ?>
+                <button type="button" @click="tab='work'" class="mt-4 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open a new ticket</button>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </div>
 </div>

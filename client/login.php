@@ -331,7 +331,7 @@ try {
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e(auth_math_prompt('register')) ?>? *</label>
                     <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" class="form-input" placeholder="Answer">
                 </div>
-                <p class="text-slate-500 text-xs">Creating the account is your consent to keep the name, email, and mobile for this account. Read the <a href="../privacy.php" class="text-brand-400">privacy policy</a>.</p>
+                <p class="text-slate-500 text-xs">Creating the account is your consent to keep the name, email, and mobile for this account. Read the <a href="../privacy.php" class="text-brand-400">privacy policy</a> and the <a href="../terms.php" class="text-brand-400">terms of service</a>.</p>
                 <button type="submit" name="register" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Create Account
                 </button>

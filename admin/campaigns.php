@@ -121,7 +121,7 @@ if ($find !== '') {
                                     <form method="POST" class="mt-2">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="campaign_id" value="<?= (int) $c['id'] ?>">
-                                        <button type="submit" name="return_voice" value="1" class="text-slate-500 text-xs">Return credits</button>
+                                        <button type="submit" name="return_voice" value="1" class="text-slate-500 text-xs" onclick="return confirm('Return these voice credits to the client?')">Return credits</button>
                                     </form>
                                 <?php endif; ?>
                             </td>

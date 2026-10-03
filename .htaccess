@@ -16,6 +16,7 @@ RewriteRule ^robots\.txt$ robots.php [L]
 
 # Default to index.php
 DirectoryIndex index.php
+ErrorDocument 404 /404.php
 
 # Hide config and the cPanel settings file. PHP can still read them.
 <FilesMatch "^(config\.php|cpanel-config\.php|router\.php|README\.md)$">

@@ -723,6 +723,28 @@ function admin_find_text($value)
     return $value;
 }
 
+function admin_csv_send($filename, $heading, $rows)
+{
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9._-]/', '-', (string) $filename) . '"');
+    header('Cache-Control: no-store');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    $clean = function ($cell) {
+        $cell = (string) $cell;
+        return ($cell !== '' && strpos('=+-@', $cell[0]) !== false && !is_numeric($cell)) ? "'" . $cell : $cell;
+    };
+    fputcsv($out, array_map($clean, $heading));
+    foreach ($rows as $row) {
+        fputcsv($out, array_map($clean, $row));
+    }
+    fclose($out);
+    exit;
+}
+
 function flash($key, $msg = null) {
     if ($msg !== null) {
         $_SESSION['flash_' . $key] = $msg;

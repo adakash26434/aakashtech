@@ -1796,6 +1796,7 @@ function site_public_defaults()
         'home_contact_heading' => 'Rates and orders are already online.',
         'privacy_policy' => '',
         'cookie_policy' => '',
+        'terms_of_service' => '',
         'logo_path' => '',
         'esewa_id' => defined('ESEWA_ID') ? ESEWA_ID : '',
         'khalti_id' => defined('KHALTI_ID') ? KHALTI_ID : '',
@@ -1876,7 +1877,7 @@ function site_public_settings($conn)
         if (!empty($stored['logo_path'])) {
             $settings['logo_path'] = $stored['logo_path'];
         }
-        foreach (array('privacy_policy', 'cookie_policy') as $legalKey) {
+        foreach (array('privacy_policy', 'cookie_policy', 'terms_of_service') as $legalKey) {
             if (isset($stored[$legalKey]) && trim($stored[$legalKey]) !== '') {
                 $settings[$legalKey] = $stored[$legalKey];
             }
@@ -2883,15 +2884,17 @@ function billing_form_guard_token($key)
     return $token;
 }
 
-function billing_form_guard_check($key, $post)
+function billing_form_guard_check($key, $post, $askMath = true)
 {
     $honeypot = isset($post['fax_number']) ? trim((string) $post['fax_number']) : '';
     if ($honeypot !== '') {
         return 'The form could not be submitted. Reload the page and try again.';
     }
-    $mathError = auth_math_verify($key, isset($post['human_check']) ? $post['human_check'] : '');
-    if ($mathError !== '') {
-        return $mathError;
+    if ($askMath) {
+        $mathError = auth_math_verify($key, isset($post['human_check']) ? $post['human_check'] : '');
+        if ($mathError !== '') {
+            return $mathError;
+        }
     }
     $token = isset($post['form_guard']) ? (string) $post['form_guard'] : '';
     $stored = (isset($_SESSION['form_guard'][$key]) && is_array($_SESSION['form_guard'][$key])) ? $_SESSION['form_guard'][$key] : null;

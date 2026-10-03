@@ -197,6 +197,29 @@ function sms_log_reason($code)
         </select>
     </div>
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm rounded-xl">Find</button>
+    <?php
+    $quickRanges = array(
+        'Today' => array(date('Y-m-d'), date('Y-m-d')),
+        'Last 7 days' => array(date('Y-m-d', strtotime('-6 days')), date('Y-m-d')),
+        'This month' => array(date('Y-m-01'), date('Y-m-d'))
+    );
+    ?>
+    <div class="flex flex-wrap items-center gap-1 text-xs pb-2">
+        <?php foreach ($quickRanges as $rangeLabel => $range): ?>
+            <?php
+            $rangeQuery = array('from' => $range[0], 'to' => $range[1]);
+            if ($status !== '') { $rangeQuery['status'] = $status; }
+            if ($search !== '') { $rangeQuery['q'] = $search; }
+            if ($source !== '') { $rangeQuery['source'] = $source; }
+            if ($sendId > 0) { $rangeQuery['send'] = $sendId; }
+            $rangeOn = $from === $range[0] && $to === $range[1];
+            ?>
+            <a href="sms-logs.php?<?= e(http_build_query($rangeQuery)) ?>" class="px-2.5 py-1.5 rounded-lg <?= $rangeOn ? 'bg-brand-500/15 text-brand-400' : 'text-slate-400 hover:text-white' ?>"><?= e($rangeLabel) ?></a>
+        <?php endforeach; ?>
+        <?php if ($from !== '' || $to !== '' || $search !== '' || $source !== ''): ?>
+            <a href="sms-logs.php<?= $sendId > 0 ? '?send=' . (int) $sendId : '' ?>" class="px-2.5 py-1.5 text-slate-500">Clear</a>
+        <?php endif; ?>
+    </div>
 </form>
 <?php if ($lookupNumber !== ''): ?>
     <?php $latest = $rows ? $rows[0] : null; ?>
@@ -268,8 +291,7 @@ function sms_log_reason($code)
                             <td class="px-4 py-3 text-slate-300 text-sm"><?= (int) $row['parts'] ?></td>
                             <td class="px-4 py-3 text-slate-400 text-xs"><?= e($row['source'] === 'api' ? 'API' : 'Dashboard') ?></td>
                             <td class="px-4 py-3 text-sm">
-                                <?php $statusClass = $row['status'] === 'sent' ? 'text-green-400' : ($row['status'] === 'failed' ? 'text-red-400' : 'text-yellow-200'); ?>
-                                <span class="<?= e($statusClass) ?>"><?= e(ucfirst($row['status'])) ?></span>
+                                <span class="sms-state sms-state-<?= e(in_array($row['status'], array('sent', 'failed'), true) ? $row['status'] : 'wait') ?>" style="margin-left:0"><?= e(ucfirst($row['status'])) ?></span>
                                 <?php if ($reason !== ''): ?><span class="block text-slate-500 text-xs"><?= e($reason) ?></span><?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm whitespace-nowrap"><a href="sms-portal.php?reuse=<?= (int) $row['id'] ?>" class="text-brand-400 text-xs">Send again</a></td>

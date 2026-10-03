@@ -270,7 +270,7 @@ $voiceFree = max(0, (int) $balances['voice_calls'] - $voiceHeld);
                         <form method="POST">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="campaign_id" value="<?= (int) $c['id'] ?>">
-                            <button type="submit" name="cancel_campaign" class="text-slate-400 text-xs bg-transparent border-0 cursor-pointer">Cancel</button>
+                            <button type="submit" name="cancel_campaign" class="text-slate-400 text-xs bg-transparent border-0 cursor-pointer" onclick="return confirm('Cancel this voice campaign?')">Cancel</button>
                         </form>
                     <?php endif; ?>
                 </div>

@@ -63,6 +63,14 @@ function site_seo_phrases()
 function site_seo_faqs($slug)
 {
     $faqs = array(
+        'home' => array(
+            array('How do I pay?', 'Create a client account and add funds to the wallet. The first top-up is confirmed by the team. After that, checkout and renewals are paid from the wallet.'),
+            array('Do prices include VAT?', 'The service pages show the rate. The bill adds 13% VAT, and the total is shown before you pay.'),
+            array('When can I start sending bulk SMS?', 'After the SMS credits are on the account and identity (KYC) is approved. An individual uses a citizenship certificate or National Identity Card. An organization uses its registration and PAN or VAT certificate.'),
+            array('Can I send SMS with each person\'s name?', 'Yes. Upload an Excel or CSV file with a name column, and each message can start with that person\'s name.'),
+            array('What happens when a plan renews?', 'A plan with auto-renew on is paid from the wallet on the due date. If the wallet is short, it is tried again for 7 days, then the service pauses until the wallet covers it.'),
+            array('How do I get help?', 'Open a support ticket from the client account, or use the contact form on this page.')
+        ),
         'bulk-sms' => array(
             array('Who is this bulk SMS service for?', 'Cooperatives, companies, parties, schools, and personal use in Nepal. Typical notices are an AGM, program, event, election, festival, a school notice, or a general notice.'),
             array('Which numbers can receive it?', '10-digit Nepal mobile numbers, including Nepal Telecom and Ncell. The quantity you buy is the number of credits.'),
@@ -185,6 +193,12 @@ function site_seo_home_graph($publicSite, $sameAs)
                 '@type' => 'ItemList',
                 'name' => 'Services',
                 'itemListElement' => $items
+            ),
+            array(
+                '@type' => 'FAQPage',
+                'mainEntity' => array_map(function ($faq) {
+                    return array('@type' => 'Question', 'name' => $faq[0], 'acceptedAnswer' => array('@type' => 'Answer', 'text' => $faq[1]));
+                }, site_seo_faqs('home'))
             )
         )
     );

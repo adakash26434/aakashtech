@@ -96,7 +96,7 @@ try {
                         <label class="block text-slate-400 text-xs font-medium mb-1.5" for="note-<?= $clientId ?>">Why it needs a change</label>
                         <textarea id="note-<?= $clientId ?>" name="admin_note" rows="2" maxlength="400" class="form-input resize-none"></textarea>
                     </div>
-                    <button type="submit" name="decision" value="reject" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Send back for a change</button>
+                    <button type="submit" name="decision" value="reject" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300" onclick="return confirm('Send these documents back to the client for a change?')">Send back for a change</button>
                 </form>
             <?php elseif ($row['admin_note'] !== ''): ?>
                 <p class="text-slate-400 text-sm">Last note: <?= e($row['admin_note']) ?></p>

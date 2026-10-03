@@ -471,6 +471,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             </div>
         </section>
 
+        <section id="faq" class="section faq-section">
+            <div class="wrap faq-wrap reveal">
+                <span class="section-kicker">Questions</span>
+                <h2 class="font-heading">Common questions</h2>
+                <div class="faq-list">
+                    <?php foreach (site_seo_faqs('home') as $faqIndex => $faq): ?>
+                        <details class="faq-item"<?= $faqIndex === 0 ? ' open' : '' ?>>
+                            <summary><?= site_escape($faq[0]) ?></summary>
+                            <p><?= site_escape($faq[1]) ?></p>
+                        </details>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+
         <section id="contact" class="section contact-section">
             <div class="wrap contact-layout">
                 <div class="contact-copy reveal">

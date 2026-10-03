@@ -15,6 +15,25 @@ $navItems = [
     'manual.php'     => ['मार्गदर्शन', 'book-open'],
 ];
 $navHere = $currentPage === 'client.php' ? 'clients.php' : $currentPage;
+$navWaiting = array();
+foreach (array(
+    'inquiries.php' => "SELECT COUNT(*) AS c FROM inquiries WHERE status = 'new'",
+    'kyc.php' => "SELECT COUNT(*) AS c FROM client_kyc WHERE status = 'pending'",
+    'domains.php' => "SELECT COUNT(*) AS c FROM domain_requests WHERE status = 'paid' OR (status = 'requested' AND CAST(price AS DECIMAL(12,2)) <= 0)",
+    'billing.php' => "SELECT COUNT(*) AS c FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'",
+    'sms-line.php' => "SELECT COUNT(*) AS c FROM sms_sender_names WHERE status = 'pending'",
+    'tickets.php' => "SELECT COUNT(*) AS c FROM support_tickets WHERE status = 'open'",
+) as $navPage => $navSql) {
+    try {
+        $navResult = $conn->query($navSql);
+        $navRow = $navResult ? $navResult->fetch_assoc() : null;
+        if ($navRow && (int) $navRow['c'] > 0) {
+            $navWaiting[$navPage] = (int) $navRow['c'];
+        }
+    } catch (Throwable $exception) {
+        error_log('Admin menu count could not be loaded.');
+    }
+}
 $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
 ?>
 <!-- Sidebar -->
@@ -43,6 +62,9 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
             <a href="<?= e($page) ?>" @click="sidebarOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 <?= $navHere === $page ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50' ?>">
                 <i class="portal-icon" data-lucide="<?= e($item[1]) ?>" aria-hidden="true"></i>
                 <?= $item[0] ?>
+                <?php if (isset($navWaiting[$page])): ?>
+                    <span class="portal-nav-count" title="<?= (int) $navWaiting[$page] ?> waiting"><?= $navWaiting[$page] > 99 ? '99+' : (int) $navWaiting[$page] ?></span>
+                <?php endif; ?>
             </a>
         <?php endforeach; ?>
     </nav>

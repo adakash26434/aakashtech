@@ -353,4 +353,29 @@ print(r.json())</pre>
         </div>
     </div>
 </div>
+<style>
+.sms-code-wrap { position: relative; }
+.sms-code-copy { position: absolute; top: 8px; right: 8px; padding: 3px 10px; border: 1px solid #cddbd4; border-radius: 8px; background: #fff; color: #075e54; font-size: 12px; font-weight: 700; cursor: pointer; }
+</style>
+<script>
+document.querySelectorAll('pre[class~="bg-slate-900/70"]').forEach(function (block) {
+    if (block.id === 'sms-ready-call') return;
+    var wrap = document.createElement('div');
+    wrap.className = 'sms-code-wrap';
+    block.parentNode.insertBefore(wrap, block);
+    wrap.appendChild(block);
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sms-code-copy';
+    button.textContent = 'Copy';
+    button.addEventListener('click', function () {
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(block.textContent).then(function () {
+            button.textContent = 'Copied';
+            setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+        });
+    });
+    wrap.appendChild(button);
+});
+</script>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

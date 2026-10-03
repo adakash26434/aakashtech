@@ -111,7 +111,7 @@ if ($find !== '') {
     </div>
 </div>
 
-<div x-data="{ tab: '<?= $err !== '' ? 'work' : 'list' ?>' }">
+<div x-data="{ tab: '<?= ($err !== '' || !empty($_GET['amount'])) ? 'work' : 'list' ?>' }">
 <div class="portal-tabs" role="tablist">
     <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Activity</button>
     <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">Add funds</button>
@@ -192,7 +192,7 @@ if ($find !== '') {
                             <td class="px-4 py-3 text-slate-400 text-sm"><?= e(date('M d, Y', strtotime($entry['created_at']))) ?></td>
                             <td class="px-4 py-3 text-white text-sm"><?= e(ucfirst($entry['kind'])) ?><?= $entry['reference_note'] !== '' ? ' · ' . e($entry['reference_note']) : '' ?></td>
                             <td class="px-4 py-3 text-sm <?= $entry['direction'] === 'credit' ? 'text-green-400' : 'text-white' ?>"><?= $entry['direction'] === 'credit' ? '+' : '−' ?><?= e(billing_money_label($entry['amount'])) ?></td>
-                            <td class="px-4 py-3 text-slate-400 text-sm"><?= e(ucfirst($entry['status'])) ?></td>
+                            <td class="px-4 py-3 text-slate-400 text-sm"><?= e(ucfirst($entry['status'])) ?><?php if ($entry['status'] === 'completed'): ?> · <a class="text-brand-400" href="receipt.php?id=<?= (int) $entry['id'] ?>" target="_blank" rel="noopener">Receipt</a><?php endif; ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>

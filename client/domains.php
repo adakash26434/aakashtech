@@ -83,7 +83,7 @@ $fundsLeft = $balance;
                 <form method="POST" class="mt-3">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="request_id" value="<?= (int) $row['id'] ?>">
-                    <button type="submit" name="cancel_domain" value="1" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300">Cancel this request</button>
+                    <button type="submit" name="cancel_domain" value="1" class="px-5 py-2.5 bg-white text-slate-700 text-sm font-medium rounded-xl border border-slate-300" onclick="return confirm('Cancel this domain request?')">Cancel this request</button>
                 </form>
             <?php endif; ?>
             <?php if ($status === 'paid' || $status === 'active'): ?>

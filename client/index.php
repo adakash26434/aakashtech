@@ -23,6 +23,8 @@ $websiteWaiting = 0;
 $trainingWaiting = 0;
 $topupWaiting = 0;
 $renewalWaiting = 0;
+$renewSoon = array();
+$renewSoonTotal = 0.0;
 try {
     $walletBalance = billing_balance($conn, $cid);
     $unitBalances = billing_unit_balances($conn, $cid);
@@ -32,9 +34,8 @@ try {
     $countRow = db_fetch_assoc($countStmt);
     $countStmt->close();
     $my_tickets = $countRow ? (int) $countRow['c'] : 0;
-    $openStatus = 'open';
-    $openStmt = $conn->prepare('SELECT COUNT(*) as c FROM support_tickets WHERE client_id = ? AND status = ?');
-    $openStmt->bind_param('is', $cid, $openStatus);
+    $openStmt = $conn->prepare("SELECT COUNT(*) as c FROM support_tickets WHERE client_id = ? AND status IN ('open','in_progress')");
+    $openStmt->bind_param('i', $cid);
     $openStmt->execute();
     $openRow = db_fetch_assoc($openStmt);
     $openStmt->close();
@@ -77,6 +78,11 @@ try {
         if ($ownedStatus === 'past_due') {
             $renewalWaiting++;
         }
+        $renewOn = (string) $owned['next_renewal'];
+        if ($ownedStatus === 'active' && $renewOn !== '' && strtotime($renewOn) !== false && strtotime($renewOn) <= strtotime('+7 days')) {
+            $renewSoon[] = array('name' => (string) $owned['service_name'], 'on' => substr($renewOn, 0, 10), 'price' => (float) $owned['price'], 'auto' => (int) $owned['auto_renew'] === 1);
+            $renewSoonTotal += (int) $owned['auto_renew'] === 1 ? (float) $owned['price'] : 0;
+        }
         if (in_array($ownedCode, hosting_panel_plans(), true) && $ownedStatus === 'active' && !hosting_panel_ready($owned)) {
             $hostingWaiting++;
         }
@@ -113,17 +119,23 @@ try {
 require_once __DIR__ . '/../includes/domain-check.php';
 $unpaidDomains = 0;
 $paidDomains = 0;
-foreach (domain_client_requests($conn, $cid) as $domainRow) {
-    if ($domainRow['status'] === 'requested' && isset($domainRow['price']) && (float) $domainRow['price'] > 0) {
-        $unpaidDomains++;
+$identityStatus = '';
+$showIdentity = false;
+try {
+    foreach (domain_client_requests($conn, $cid) as $domainRow) {
+        if ($domainRow['status'] === 'requested' && isset($domainRow['price']) && (float) $domainRow['price'] > 0) {
+            $unpaidDomains++;
+        }
+        if ($domainRow['status'] === 'paid') {
+            $paidDomains++;
+        }
     }
-    if ($domainRow['status'] === 'paid') {
-        $paidDomains++;
-    }
+    $identity = billing_kyc_load($conn, $cid);
+    $identityStatus = (string) $identity['status'];
+    $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending' || $identityStatus === 'rejected' || billing_client_has_messaging($conn, $cid));
+} catch (Throwable $exception) {
+    error_log('Client dashboard notices could not be loaded.');
 }
-$identity = billing_kyc_load($conn, $cid);
-$identityStatus = (string) $identity['status'];
-$showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending' || $identityStatus === 'rejected' || billing_client_has_messaging($conn, $cid));
 ?>
 <?php if ((int) $unitBalances['sms'] > 0 && (int) $unitBalances['sms'] < 100): ?>
     <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-200">
@@ -159,6 +171,19 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
 <?php if ($renewalWaiting > 0): ?>
     <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
         A renewal is waiting for wallet funds. It retries on its own. <a href="wallet.php" class="text-brand-300">Add funds</a>
+    </div>
+<?php endif; ?>
+<?php if ($renewSoon): ?>
+    <div class="mb-6 p-4 <?= $renewSoonTotal > $walletBalance ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-100' : 'bg-blue-500/10 border-blue-500/30 text-blue-300' ?> border rounded-xl text-sm">
+        <p>Renewing in the next 7 days:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+            <?php foreach ($renewSoon as $soon): ?>
+                <li><?= e($soon['name']) ?> · <?= e($soon['on']) ?> · <?= e(billing_money_label($soon['price'])) ?><?= $soon['auto'] ? '' : ' · auto-renew is off' ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php if ($renewSoonTotal > $walletBalance): ?>
+            <p class="mt-2">The wallet is short for these renewals. <a href="wallet.php?amount=<?= (int) ceil($renewSoonTotal - $walletBalance) ?>" class="text-brand-300">Add funds</a></p>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 <?php if ($showIdentity): ?>
@@ -343,7 +368,8 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
                             <p class="text-white text-sm font-medium"><?= e($smsRow['recipient']) ?></p>
                             <p class="text-slate-500 text-xs truncate"><?= e($smsRow['message_text']) ?></p>
                         </div>
-                        <span class="text-slate-500 text-[10px] uppercase shrink-0"><?= e((string) $smsRow['status']) ?></span>
+                        <?php $smsState = (string) $smsRow['status']; ?>
+                        <span class="sms-state shrink-0 <?= $smsState === 'sent' ? 'sms-state-sent' : ($smsState === 'failed' ? 'sms-state-failed' : 'sms-state-wait') ?>"><?= e(ucfirst($smsState)) ?></span>
                         <?php if ((string) $smsRow['status'] === 'sent' || (string) $smsRow['status'] === 'failed'): ?>
                             <a href="sms-portal.php?reuse=<?= (int) $smsRow['id'] ?>" class="text-brand-400 text-xs shrink-0">Send again</a>
                         <?php endif; ?>
