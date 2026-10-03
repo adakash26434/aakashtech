@@ -144,36 +144,36 @@ try {
 
 <!-- Stat Cards -->
 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-    <div class="dash-stat-card">
+    <a href="inquiries.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-blue-500/20"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
         <div class="dash-stat-value"><?= $total_inquiries ?></div>
         <div class="dash-stat-label">Inquiries</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="clients.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-green-500/20"><svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
         <div class="dash-stat-value"><?= $total_clients ?></div>
         <div class="dash-stat-label">Clients</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="billing.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-brand-500/20"><svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg></div>
         <div class="dash-stat-value"><?= $active_services ?></div>
         <div class="dash-stat-label">Active Services</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="tickets.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-orange-500/20"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
         <div class="dash-stat-value"><?= $open_tickets ?></div>
         <div class="dash-stat-label">Open Tickets</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="campaigns.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-purple-500/20"><svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
         <div class="dash-stat-value"><?= $total_campaigns ?></div>
         <div class="dash-stat-label">Messages</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="inquiries.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-red-500/20"><svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div>
         <div class="dash-stat-value"><?= $new_inquiries ?></div>
         <div class="dash-stat-label">New Inquiries</div>
-    </div>
+    </a>
 </div>
 
 <!-- Two columns -->
@@ -216,7 +216,7 @@ try {
                     <div class="p-4 hover:bg-slate-800/50 transition flex items-center gap-3">
                         <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color'] ?? '#06b6d4') ?>"><?= strtoupper(substr($cl['name'], 0, 1)) ?></div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-white font-medium text-sm truncate"><?= e($cl['name']) ?></p>
+                            <a href="client.php?id=<?= (int) $cl['id'] ?>" class="text-white font-medium text-sm truncate block hover:text-brand-300"><?= e($cl['name']) ?></a>
                             <p class="text-slate-500 text-xs truncate"><?= e($cl['email']) ?></p>
                         </div>
                         <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $cl['status'] === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>"><?= ucfirst($cl['status']) ?></span>

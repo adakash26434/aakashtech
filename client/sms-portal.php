@@ -334,9 +334,9 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                             <?php endforeach; ?>
                         </select>
                     <?php else: ?>
-                        <input type="text" class="form-input" value="<?= e($phoneName !== '' ? $phoneName : 'Set when the line is connected') ?>" readonly>
+                        <input type="text" class="form-input" value="<?= e($phoneName !== '' ? $phoneName : ($route['connected'] ? 'Registered on this line' : 'Set when the line is connected')) ?>" readonly>
                         <input type="hidden" name="sender_id" value="<?= e($phoneName) ?>">
-                        <p class="text-slate-500 text-xs mt-1">Recipients see this name. It is the name registered for this SMS line.</p>
+                        <p class="text-slate-500 text-xs mt-1">Recipients see the name registered for this SMS line.</p>
                     <?php endif; ?>
                 </div>
                 <div>

@@ -38,10 +38,18 @@ try {
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Domain requests</h1>
     <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting requests stay in view. Older finished names are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Register a paid name yourself at the registry, then mark it active. Declining a paid request returns the amount to the wallet. <a class="text-brand-400" href="manual.php#domain">नेपाली चरण</a></p>
 </div>
+<div x-data="{ tab: '<?= $error !== '' ? 'work' : 'list' ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Request list</button>
+    <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">Add a name</button>
+</div>
+<div x-show="tab==='list'">
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Domain, client, or email">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
 </form>
+</div>
+<div x-show="tab==='work'" x-cloak>
 <section class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add a name you already registered</h3></div>
     <form method="POST" class="p-5 grid md:grid-cols-3 gap-3 items-end">
@@ -65,8 +73,10 @@ try {
     </form>
     <p class="px-5 pb-4 text-slate-500 text-xs">Use this when the name was registered at the office. The wallet is not charged now. The year still renews from the wallet.</p>
 </section>
+</div>
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
+<div x-show="tab==='list'">
 <?php if (!$rows): ?><div class="dash-panel"><div class="p-6 text-slate-400 text-sm"><?= $find === '' ? 'No domain request yet.' : 'No domain matches that search.' ?></div></div><?php endif; ?>
 <?php foreach ($rows as $row): ?>
     <?php
@@ -133,4 +143,6 @@ try {
         </div>
     </article>
 <?php endforeach; ?>
+</div>
+</div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

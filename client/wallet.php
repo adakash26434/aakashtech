@@ -111,6 +111,12 @@ if ($find !== '') {
     </div>
 </div>
 
+<div x-data="{ tab: '<?= $err !== '' ? 'work' : 'list' ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Activity</button>
+    <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">Add funds</button>
+</div>
+<div x-show="tab==='work'" x-cloak>
 <div class="grid lg:grid-cols-2 gap-6 mb-8">
     <section class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add funds</h3></div>
@@ -161,7 +167,8 @@ if ($find !== '') {
         </div>
     </section>
 </div>
-
+</div>
+<div x-show="tab==='list'">
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Note, type, or status">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
@@ -195,4 +202,6 @@ if ($find !== '') {
         </table>
     </div>
 </section>
+</div>
+</div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

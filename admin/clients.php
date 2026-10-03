@@ -119,17 +119,25 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Clients</h1>
     <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 accounts.' : 'Matches for “' . e($find) . '”.' ?> Create an account here when the person did not register on the website. SMS use and message history stay on <a class="text-brand-400" href="sms-line.php">SMS line</a>.</p>
 </div>
-<form method="GET" class="mb-4 flex flex-wrap gap-2">
-    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, email, phone, or company">
-    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
-</form>
-
 <?php if ($clientNotice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
 <?php endif; ?>
 <?php if ($clientError !== ''): ?>
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($clientError) ?></div>
 <?php endif; ?>
+
+<div x-data="{ tab: '<?= $clientError !== '' ? 'work' : 'list' ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''" :aria-selected="tab==='list'">Client list</button>
+    <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''" :aria-selected="tab==='work'">Add or change</button>
+</div>
+<div x-show="tab==='list'">
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, email, phone, or company">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
+</div>
+<div x-show="tab==='work'" x-cloak>
 
 <div class="grid lg:grid-cols-2 gap-6 mb-6">
     <div class="dash-panel">
@@ -188,7 +196,8 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
         <button type="submit" name="set_contact" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save email and mobile</button>
     </form>
 </div>
-
+</div>
+<div x-show="tab==='list'">
 <div class="dash-panel overflow-hidden">
     <?php if ($clientRows): ?>
         <div class="overflow-x-auto">
@@ -211,7 +220,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                                 <div class="flex items-center gap-3">
                                     <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color']) ?>"><?= strtoupper(substr($cl['name'], 0, 1)) ?></div>
                                     <div>
-                                        <p class="text-white text-sm font-medium"><?= e($cl['name']) ?></p>
+                                        <a href="client.php?id=<?= (int) $cl['id'] ?>" class="text-white text-sm font-medium hover:text-brand-300"><?= e($cl['name']) ?></a>
                                         <p class="text-slate-500 text-xs"><?= e($cl['email']) ?></p>
                                     </div>
                                 </div>
@@ -252,5 +261,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
     <?php else: ?>
         <p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No clients registered yet.' : 'No account matches that search.' ?></p>
     <?php endif; ?>
+</div>
+</div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

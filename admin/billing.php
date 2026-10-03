@@ -137,6 +137,24 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
+<?php
+$billTab = 'wallet';
+if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
+    $billTab = 'rates';
+} elseif (isset($_POST['save_panel']) || isset($_POST['clear_panel']) || isset($_POST['save_mail']) || isset($_POST['clear_mail']) || isset($_POST['save_website']) || isset($_POST['clear_website']) || isset($_POST['save_training']) || isset($_POST['clear_training'])) {
+    $billTab = 'delivery';
+} elseif (isset($_POST['refund_domain'])) {
+    $billTab = 'records';
+}
+?>
+<div x-data="{ tab: '<?= e($billTab) ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" @click="tab='wallet'" :class="tab==='wallet' ? 'is-on' : ''">Wallet</button>
+    <button type="button" @click="tab='rates'" :class="tab==='rates' ? 'is-on' : ''">Rates</button>
+    <button type="button" @click="tab='delivery'" :class="tab==='delivery' ? 'is-on' : ''">Delivery</button>
+    <button type="button" @click="tab='records'" :class="tab==='records' ? 'is-on' : ''">Subscriptions</button>
+</div>
+<div x-show="tab==='wallet'">
 <section class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">Wallet top-ups waiting for confirmation</h3>
@@ -224,7 +242,8 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
         <p class="p-6 text-slate-500 text-sm">No office payment has been added yet.</p>
     <?php endif; ?>
 </section>
-
+</div>
+<div x-show="tab==='rates'" x-cloak>
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">SMS and voice volume rates</h3>
@@ -290,7 +309,8 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
         <button type="submit" name="save_prices" value="1" class="mt-5 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save prices</button>
     </form>
 </section>
-
+</div>
+<div x-show="tab==='delivery'" x-cloak>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or service in the sections below">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
@@ -412,7 +432,8 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
         <?php endforeach; ?>
     </div>
 </section>
-
+</div>
+<div x-show="tab==='records'" x-cloak>
 <section class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Client subscriptions</h3></div>
     <div class="overflow-x-auto">
@@ -482,4 +503,6 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
         <?php endif; ?>
     </div>
 </section>
+</div>
+</div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

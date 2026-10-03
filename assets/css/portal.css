@@ -12,6 +12,35 @@
     --portal-brand-dark: #075e54;
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
+.portal-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.portal-tabs button {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--portal-line);
+    background: #fff;
+    color: var(--portal-text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.portal-tabs button.is-on {
+    background: var(--portal-brand);
+    border-color: var(--portal-brand);
+    color: #fff;
+}
+
 body.portal-shell {
     min-height: 100vh;
     overflow-x: clip;
@@ -290,7 +319,10 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell.portal-auth {
     isolation: isolate;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: safe center;
     min-height: 100vh;
     height: auto;
     overflow-x: clip;
@@ -298,8 +330,8 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-shell.portal-auth > .relative {
-    margin-top: 2.5rem;
-    margin-bottom: 3rem;
+    width: 100%;
+    margin: 2.5rem auto 3rem;
 }
 
 .portal-shell.portal-auth form {
@@ -310,6 +342,21 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell.portal-auth form button {
     box-shadow: 0 10px 24px rgba(11, 139, 122, 0.18);
+}
+
+.field-hint {
+    min-height: 1.1em;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.field-hint--bad {
+    color: #b42318;
+}
+
+.field-hint--ok {
+    color: #087365;
 }
 
 .portal-shell .portal-icon {

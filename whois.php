@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_whois'])) {
     verify_csrf();
     $mathError = auth_math_verify('whois-check', isset($_POST['human_check']) ? $_POST['human_check'] : '');
     $last = isset($_SESSION['whois_check_at']) ? (int) $_SESSION['whois_check_at'] : 0;
-    $typedName = trim((string) (isset($_POST['name']) ? $_POST['name'] : ''));
+    $typedName = trim((string) (isset($_POST['whois_domain']) ? $_POST['whois_domain'] : ''));
     $typedTld = domain_tld(isset($_POST['tld']) ? $_POST['tld'] : '');
     if ($mathError !== '') {
         $error = $mathError;
@@ -101,10 +101,10 @@ if ($record && isset($record['domain'], $record['tld']) && $record['status'] ===
                     <?php if ($error !== ''): ?>
                         <p class="form-status form-status--error" role="alert"><?= site_escape($error) ?></p>
                     <?php endif; ?>
-                    <form method="POST" class="domain-check">
+                    <form method="POST" class="domain-check" autocomplete="off">
                         <input type="hidden" name="csrf_token" value="<?= site_escape(csrf_token()) ?>">
-                        <label for="name">Name</label>
-                        <input id="name" name="name" type="text" maxlength="80" required placeholder="yourcoop.com.np" value="<?= site_escape($typedName) ?>">
+                        <label for="whois-domain">Domain name</label>
+                        <input id="whois-domain" name="whois_domain" type="text" maxlength="80" required placeholder="aakashdigital.com.np" value="<?= site_escape($typedName) ?>" autocomplete="off" autocapitalize="off" spellcheck="false">
                         <label for="tld">Ending, if it is not already in the name</label>
                         <select id="tld" name="tld" class="domain-ending">
                             <option value="" <?= $typedTld === '' ? 'selected' : '' ?>>Already included</option>

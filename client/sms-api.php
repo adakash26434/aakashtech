@@ -83,6 +83,12 @@ $apiBalance = billing_unit_balances($conn, $cid);
         </div>
     </div>
 <?php else: ?>
+    <div x-data="{ tab: 'list' }">
+    <div class="portal-tabs" role="tablist">
+        <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Your tokens</button>
+        <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New token</button>
+    </div>
+    <div x-show="tab==='work'" x-cloak>
     <div class="grid lg:grid-cols-2 gap-6 mb-6">
         <div class="dash-panel">
             <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">New token</h3></div>
@@ -103,7 +109,10 @@ $apiBalance = billing_unit_balances($conn, $cid);
                 <button type="submit" name="create_token" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Create token</button>
             </form>
         </div>
-        <div class="dash-panel">
+    </div>
+    </div>
+    <div x-show="tab==='list'">
+        <div class="dash-panel mb-6">
             <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Your tokens</h3></div>
             <?php if ($tokens): ?>
                 <div class="divide-y divide-slate-800">
@@ -131,6 +140,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
                 <p class="p-5 text-slate-500 text-sm">No tokens yet.</p>
             <?php endif; ?>
         </div>
+    </div>
     </div>
 <?php endif; ?>
 

@@ -354,7 +354,8 @@ function sms_resolve_sender($conn, $clientId, $requested)
         return array('sender' => '', 'error' => 'SMS sending is not open yet. The team is still connecting the line.');
     }
     if (!$route['choose_sender']) {
-        if ($route['sender'] === '') {
+        $line = sms_line($conn);
+        if ($line['provider'] === 'sparrow' && $route['sender'] === '') {
             return array('sender' => '', 'error' => 'The name on the phone is not set yet.');
         }
         return array('sender' => $route['sender'], 'error' => '');
@@ -840,6 +841,104 @@ function sms_http_form($url, $fields, $timeout = 25)
     );
 }
 
+function sms_http_json($url, $payload, $headers, $timeout = 25)
+{
+    if (!function_exists('curl_init')) {
+        return array('ok' => false, 'status' => 0, 'body' => '');
+    }
+    $timeout = (int) $timeout;
+    if ($timeout < 3) {
+        $timeout = 3;
+    }
+    if ($timeout > 25) {
+        $timeout = 25;
+    }
+    $bodyIn = json_encode($payload);
+    if ($bodyIn === false) {
+        $bodyIn = '{}';
+    }
+    $headers[] = 'Content-Type: application/json';
+    $headers[] = 'Accept: application/json';
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyIn);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(8, $timeout));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $body = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    unset($ch);
+    if (!is_string($body)) {
+        $body = '';
+    }
+    if (strlen($body) > 4000) {
+        $body = substr($body, 0, 4000);
+    }
+    return array(
+        'ok' => $status >= 200 && $status < 300,
+        'status' => $status,
+        'body' => $body
+    );
+}
+
+function sms_aakash_invalid_rows($node, &$rows)
+{
+    if (!is_array($node)) {
+        return;
+    }
+    if (isset($node['invalid']) && is_array($node['invalid'])) {
+        foreach ($node['invalid'] as $item) {
+            $rows[] = $item;
+        }
+    }
+    foreach ($node as $item) {
+        if (is_array($item)) {
+            sms_aakash_invalid_rows($item, $rows);
+        }
+    }
+}
+
+function sms_aakash_v4_problem($json)
+{
+    if (!is_array($json)) {
+        return 'line-rejected';
+    }
+    $messages = array();
+    $failed = !empty($json['error']);
+    if (!empty($json['errors']) && is_array($json['errors'])) {
+        $failed = true;
+        foreach ($json['errors'] as $error) {
+            if (is_array($error) && isset($error['message'])) {
+                $messages[] = strtolower((string) $error['message']);
+            }
+        }
+    }
+    if (isset($json['responses']) && is_array($json['responses'])) {
+        foreach ($json['responses'] as $response) {
+            if (!is_array($response) || empty($response['error'])) {
+                continue;
+            }
+            $failed = true;
+            if (isset($response['message'])) {
+                $messages[] = strtolower((string) $response['message']);
+            }
+            if (!empty($response['errors']) && is_array($response['errors'])) {
+                foreach ($response['errors'] as $error) {
+                    if (is_array($error) && isset($error['message'])) {
+                        $messages[] = strtolower((string) $error['message']);
+                    }
+                }
+            }
+        }
+    }
+    $joined = implode(' ', $messages);
+    if (strpos($joined, 'balance') !== false || strpos($joined, 'credit') !== false) {
+        return 'line-empty';
+    }
+    return $failed ? 'line-rejected' : '';
+}
+
 function sms_line_mobile($value)
 {
     $digits = auth_mobile_number($value);
@@ -901,7 +1000,25 @@ function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
     }
     $to = implode(',', $numbers);
     if ($line['provider'] === 'aakash') {
-        $url = $line['endpoint'] !== '' ? $line['endpoint'] : 'https://sms.aakashsms.com/sms/v3/send/';
+        $custom = $line['endpoint'];
+        $useV4 = $custom === '' || strpos($custom, '/sms/v4/') !== false;
+        if ($useV4) {
+            $url = $custom !== '' ? $custom : 'https://sms.aakashsms.com/sms/v4/send-user';
+            $response = sms_http_json($url, array(
+                'to' => array_values($numbers),
+                'text' => array($text)
+            ), array('auth-token: ' . $line['token']), $timeout);
+            $json = json_decode($response['body'], true);
+            $problem = sms_aakash_v4_problem(is_array($json) ? $json : array());
+            if ($response['ok'] && $problem === '') {
+                $invalid = array();
+                sms_aakash_invalid_rows(is_array($json) ? $json : array(), $invalid);
+                $rejected = sms_aakash_rejected(array('data' => array('invalid' => $invalid, 'valid' => array())), $numbers);
+                return array('code' => '', 'rejected' => is_array($rejected) ? $rejected : array());
+            }
+            return array('code' => $problem !== '' ? $problem : 'line-rejected', 'rejected' => array());
+        }
+        $url = $custom !== '' ? $custom : 'https://sms.aakashsms.com/sms/v3/send/';
         $response = sms_http_form($url, array(
             'auth_token' => $line['token'],
             'to' => $to,
@@ -970,7 +1087,12 @@ function sms_line_balance($conn)
         return array('ok' => false, 'error' => 'Save the SMS line first.', 'balance' => null);
     }
     if ($line['provider'] === 'aakash') {
-        $response = sms_http_form('https://sms.aakashsms.com/sms/v1/credit', array('auth_token' => $line['token']));
+        $response = sms_http_json('https://sms.aakashsms.com/sms/v4/credit', new stdClass(), array('auth-token: ' . $line['token']));
+        $json = json_decode($response['body'], true);
+        $balance = is_array($json) ? sms_find_balance($json) : null;
+        if ($balance === null) {
+            $response = sms_http_form('https://sms.aakashsms.com/sms/v1/credit', array('auth_token' => $line['token']));
+        }
     } else {
         $response = sms_http_form('http://api.sparrowsms.com/v2/credit/', array('token' => $line['token']));
     }
@@ -1095,12 +1217,15 @@ function sms_line_test($conn, $number)
         return 'Enter one 10-digit Nepal mobile for the check.';
     }
     $line = sms_line($conn);
-    if (!$line['connected'] || $line['sender'] === '') {
-        return 'Save the API key and the sender name first.';
+    if (!$line['connected']) {
+        return 'Save the API key first.';
+    }
+    if ($line['provider'] === 'sparrow' && $line['sender'] === '') {
+        return 'Save the sender name on the Sparrow account first.';
     }
     $checked = sms_vendor_send($conn, array($digits), 'Aakash Technologies line check.', $line['sender']);
     if ($checked['code'] !== '' || $checked['rejected']) {
-        return 'The line did not accept the check. Confirm the API key, the sender name, and that the line still has credit.';
+        return 'The line did not accept the check. Confirm the API key and that the bought account still has credit.';
     }
     return '';
 }
@@ -1112,8 +1237,11 @@ function sms_save_line($conn, $post)
         $provider = '';
     }
     $sender = strtoupper(billing_plain_line(isset($post['sms_line_sender']) ? $post['sms_line_sender'] : '', 11));
-    if ($provider !== '' && !preg_match('/^[A-Z0-9]{3,11}$/', $sender)) {
-        return 'Enter the sender name registered on that line, 3 to 11 letters or numbers.';
+    if ($provider === 'sparrow' && !preg_match('/^[A-Z0-9]{3,11}$/', $sender)) {
+        return 'Enter the sender name registered on the Sparrow account, 3 to 11 letters or numbers.';
+    }
+    if ($provider === 'aakash') {
+        $sender = '';
     }
     $mode = (isset($post['sms_line_sender_mode']) && $post['sms_line_sender_mode'] === 'approved') ? 'approved' : 'fixed';
     if ($provider !== 'sparrow') {

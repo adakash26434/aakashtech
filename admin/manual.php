@@ -129,12 +129,12 @@ require_once __DIR__ . '/includes/sidebar.php';
     <div class="p-5 space-y-3 text-sm text-slate-300">
         <p>थोक SMS विक्रेतासँग किनेको API key यही पोर्टलको <a class="text-brand-400" href="sms-line.php">SMS line</a> मा टाँस्नुहोस्। फाइल खोल्न पर्दैन। ग्राहकले त्यो key देख्दैन।</p>
         <ol class="list-decimal pl-5 space-y-2">
-            <li>Aakash SMS को प्यानलबाट <strong class="text-white">auth token</strong> कपी गर्नुहोस्। Sparrow को प्यानलबाट <strong class="text-white">token</strong> कपी गर्नुहोस्। दुवै यही फर्मको API key मा जान्छ।</li>
+            <li>Aakash SMS को प्यानलबाट <strong class="text-white">auth token</strong> कपी गर्नुहोस्। त्यो v4 लाइनको हेडरमा जान्छ। Sparrow को प्यानलबाट <strong class="text-white">token</strong> कपी गर्नुहोस्। दुवै यही फर्मको API key मा जान्छ।</li>
             <li>SMS line खोल्नुहोस्। Where the bulk SMS is bought मा त्यो खाता छान्नुहोस्।</li>
             <li>API key मा टाँस्नुहोस्। टाँस्दा हेर्न Show the key while pasting खोल्नुहोस्। Save line पछि key लुक्छ र अन्तिम ४ अक्षर मात्र देखिन्छ।</li>
-            <li>Sender name मा त्यही खातामा दर्ता भएको Sender ID राख्नुहोस्। ३ देखि ११ अक्षर।</li>
-            <li>फोनमा सधैँ एउटै नाम देखाउन Fixed छाड्नुहोस्। Sparrow मा ग्राहकको आफ्नै नाम चलाउनु छ भने Approved names छान्नुहोस्। ग्राहकले नाम माग्छ, तपाईंले स्वीकृत गरेपछि मात्र जान्छ।</li>
-            <li>Send URL खाली छाड्नुहोस्। मानक ठेगाना आफैँ लाग्छ।</li>
+            <li>Aakash SMS छाने Sender name हाल्नु पर्दैन। v4 ले त्यो माग्दैन। फोनमा देखिने नाम त्यो टोकनमा दर्ता भएको नाम हो।</li>
+            <li>Sparrow छाने मात्र Sender name हाल्नुहोस्। ३ देखि ११ अक्षर। ग्राहकको आफ्नै नाम चलाउनु छ भने Approved names छान्नुहोस्।</li>
+            <li>Send URL खाली छाड्नुहोस्। Aakash SMS मा <strong class="text-white">sms/v4/send-user</strong> आफैँ लाग्छ। बाँकी क्रेडिट <strong class="text-white">sms/v4/credit</strong> बाट आउँछ।</li>
             <li>Save line थिच्नुहोस्। हरियोमा Connected र key को अन्तिम ४ अक्षर आएपछि जोडियो।</li>
             <li>Check line balance ले विक्रेताको बाँकी क्रेडिट देखाउँछ। त्यो ग्राहकको क्रेडिट होइन।</li>
             <li>Send a check ले एउटा नेपाली मोबाइलमा जाँच सन्देश पठाउँछ। त्यसले ग्राहकको क्रेडिट काट्दैन। विक्रेताको क्रेडिट लाग्छ।</li>

@@ -115,6 +115,31 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
     <p class="mb-4 text-xs text-slate-500">Bulk balance checked <?= e(sms_format_time($vendorStock['checked'])) ?>.</p>
 <?php endif; ?>
 
+<?php
+$smsTab = 'clients';
+if ($historyClient > 0 || $historyStatus !== '') {
+    $smsTab = 'history';
+} elseif (!$line['connected'] || isset($_POST['save_line']) || isset($_POST['check_balance']) || isset($_POST['test_line'])) {
+    $smsTab = 'line';
+} elseif (isset($_POST['grant_sms'])) {
+    $smsTab = 'credits';
+} elseif (isset($_POST['decision'])) {
+    $smsTab = 'names';
+}
+$aakashRoute = 'v4';
+if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sms/v4/') === false) {
+    $aakashRoute = 'custom';
+}
+?>
+<div x-data="{ tab: '<?= e($smsTab) ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" @click="tab='clients'" :class="tab==='clients' ? 'is-on' : ''">Clients</button>
+    <button type="button" @click="tab='credits'" :class="tab==='credits' ? 'is-on' : ''">Credits</button>
+    <button type="button" @click="tab='line'" :class="tab==='line' ? 'is-on' : ''">Line</button>
+    <button type="button" @click="tab='names'" :class="tab==='names' ? 'is-on' : ''">Sender names</button>
+    <button type="button" @click="tab='history'" :class="tab==='history' ? 'is-on' : ''">History</button>
+</div>
+<div x-show="tab==='clients'">
 <div class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Who has used SMS</h3></div>
     <form method="GET" class="p-4 flex flex-wrap gap-2 border-b border-slate-800">
@@ -152,7 +177,8 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
         <p class="p-6 text-slate-500 text-sm"><?= $usageFind === '' ? 'No client has SMS credit or a sent message yet.' : 'No SMS client matches that search.' ?></p>
     <?php endif; ?>
 </div>
-
+</div>
+<div x-show="tab==='credits'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add SMS credits</h3></div>
     <form method="POST" class="p-5 grid md:grid-cols-4 gap-3 items-end">
@@ -198,28 +224,34 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
         <p class="p-6 text-slate-500 text-sm">No credit has been added yet. A wallet purchase, a renewal, or Add SMS credits shows here.</p>
     <?php endif; ?>
 </div>
-
+</div>
+<div x-show="tab==='line'" x-cloak>
 <div class="grid lg:grid-cols-2 gap-6 mb-6">
     <div class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Map the vendor API key</h3></div>
-        <form method="POST" class="p-5 space-y-4" x-data="{ showKey: false }">
+        <form method="POST" class="p-5 space-y-4" x-data="{ showKey: false, provider: '<?= e($line['provider']) ?>' }">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <?php if ($line['connected']): ?>
                 <p class="text-sm text-green-400">Connected to <?= e($vendorLabel) ?>. Saved API key ends in <?= e($tokenTail) ?>.</p>
             <?php else: ?>
                 <p class="text-sm text-yellow-200">No API key is mapped yet. Clients cannot send until this is saved.</p>
             <?php endif; ?>
+            <?php if ($aakashRoute === 'custom'): ?>
+                <p class="text-sm text-yellow-200">A send address is saved, and it is not the v4 address. Clear Send URL and save again so Aakash SMS uses sms/v4/send-user.</p>
+            <?php elseif ($line['provider'] === 'aakash' && $line['connected']): ?>
+                <p class="text-sm text-slate-300">Sends go to sms/v4/send-user. The token is sent as the auth-token header. Balance is read from sms/v4/credit.</p>
+            <?php endif; ?>
             <div class="rounded-xl border border-slate-700 p-4 text-sm text-slate-300">
                 <p class="text-white font-medium mb-2">विक्रेताको स्क्रिनबाट यहीँ ल्याउनुहोस्</p>
                 <ul class="space-y-1">
-                    <li>Aakash SMS को <span class="text-white">auth token</span> → API key</li>
-                    <li>Sparrow को <span class="text-white">token</span> → API key</li>
-                    <li>Sender ID वा Identity → Sender name</li>
+                    <li>Aakash SMS ड्यासबोर्डको <span class="text-white">auth token</span> → API key। v4 ले यो हेडरमा पठाउँछ।</li>
+                    <li>Sparrow को <span class="text-white">token</span> → API key, र Sender ID → Sender name।</li>
+                    <li x-show="provider==='aakash'">Aakash SMS v4 मा Sender name यो फारमबाट जाँदैन। फोनमा देखिने नाम त्यो टोकनमा दर्ता भएको नाम हो।</li>
                 </ul>
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_provider">1. Where the bulk SMS is bought</label>
-                <select id="sms_line_provider" name="sms_line_provider" class="form-input">
+                <select id="sms_line_provider" name="sms_line_provider" class="form-input" x-model="provider">
                     <option value="" <?= $line['provider'] === '' ? 'selected' : '' ?>>Not connected</option>
                     <option value="aakash" <?= $line['provider'] === 'aakash' ? 'selected' : '' ?>>Aakash SMS account</option>
                     <option value="sparrow" <?= $line['provider'] === 'sparrow' ? 'selected' : '' ?>>Sparrow SMS account</option>
@@ -234,21 +266,26 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
                 </label>
                 <p class="text-slate-500 text-xs mt-1">यो पूरा key फेरि देखिँदैन। सेभ भएपछि अन्तिम ४ अक्षर मात्र देखिन्छ। खाली छाडे पुरानै key रहन्छ। Not connected छानेर सेभ गरे key मेटिन्छ।</p>
             </div>
-            <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_sender">3. Sender name on that account</label>
-                <input id="sms_line_sender" type="text" name="sms_line_sender" maxlength="11" value="<?= e($line['sender']) ?>" class="form-input" placeholder="AAKASH">
-                <p class="text-slate-500 text-xs mt-1">Aakash SMS uses the name registered on that token. Sparrow also needs this as the default from name. 3 to 11 letters or numbers.</p>
+            <div x-show="provider==='sparrow'" x-cloak>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_sender">3. Sender name on the Sparrow account</label>
+                <input id="sms_line_sender" type="text" name="sms_line_sender" maxlength="11" value="<?= e($line['sender']) ?>" class="form-input" placeholder="AAKASH" :disabled="provider!=='sparrow'">
+                <p class="text-slate-500 text-xs mt-1">3 to 11 letters or numbers. This is the from name Sparrow requires.</p>
             </div>
-            <div>
+            <div x-show="provider==='sparrow'" x-cloak>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_sender_mode">4. Who chooses the name on the phone</label>
-                <select id="sms_line_sender_mode" name="sms_line_sender_mode" class="form-input">
+                <select id="sms_line_sender_mode" name="sms_line_sender_mode" class="form-input" :disabled="provider!=='sparrow'">
                     <option value="fixed" <?= $line['sender_mode'] !== 'approved' ? 'selected' : '' ?>>Always the name above</option>
-                    <option value="approved" <?= $line['sender_mode'] === 'approved' ? 'selected' : '' ?>>Sparrow only: a client name after you approve it</option>
+                    <option value="approved" <?= $line['sender_mode'] === 'approved' ? 'selected' : '' ?>>A client name after you approve it</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_endpoint">5. Send URL, optional</label>
-                <input id="sms_line_endpoint" type="text" name="sms_line_endpoint" value="<?= e($endpoint) ?>" class="form-input" placeholder="Leave empty for the standard address">
+            <div x-show="provider==='aakash'">
+                <label class="block text-slate-400 text-xs font-medium mb-1.5" for="sms_line_endpoint">3. Send URL</label>
+                <input id="sms_line_endpoint" type="text" name="sms_line_endpoint" value="<?= e($endpoint) ?>" class="form-input" placeholder="Leave empty for sms/v4/send-user" :disabled="provider!=='aakash'">
+                <p class="text-slate-500 text-xs mt-1">Leave this empty. The token is sent in the auth-token header, and numbers go in the v4 to array. Balance uses sms/v4/credit.</p>
+            </div>
+            <div x-show="provider==='sparrow'" x-cloak>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">5. Send URL, optional</label>
+                <input type="text" name="sms_line_endpoint" value="<?= e($endpoint) ?>" class="form-input" placeholder="Leave empty for the Sparrow address" :disabled="provider!=='sparrow'">
             </div>
             <button type="submit" name="save_line" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save line</button>
         </form>
@@ -258,7 +295,7 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
             <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Line balance</h3></div>
             <form method="POST" class="p-5 space-y-3">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <p class="text-slate-400 text-sm">Checks the credits left on the account you buy from, so you know when to top it up. Clients still spend only the credits they bought here.</p>
+                <p class="text-slate-400 text-sm">Reads the credits left on the account you buy from. For Aakash SMS that is sms/v4/credit. Clients still spend only the credits they bought here.</p>
                 <button type="submit" name="check_balance" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">Check line balance</button>
             </form>
         </div>
@@ -279,7 +316,8 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
         </div>
     </div>
 </div>
-
+</div>
+<div x-show="tab==='names'" x-cloak>
 <div class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Sender name requests</h3></div>
     <?php if ($senders && $senders->num_rows > 0): ?>
@@ -302,7 +340,8 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
         <p class="p-6 text-slate-500 text-sm">No sender name requests. Clients only see this when Sparrow is set to approved names.</p>
     <?php endif; ?>
 </div>
-
+</div>
+<div x-show="tab==='history'" x-cloak>
 <div class="dash-panel overflow-hidden">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Sent message history</h3></div>
     <form method="GET" class="p-4 flex flex-wrap gap-2 border-b border-slate-800">
@@ -335,5 +374,7 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
     <?php else: ?>
         <p class="p-6 text-slate-500 text-sm">No message matches this view.</p>
     <?php endif; ?>
+</div>
+</div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

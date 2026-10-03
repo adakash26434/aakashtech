@@ -75,6 +75,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_account'])) {
+    header('Content-Type: application/json; charset=UTF-8');
+    if (!csrf_is_valid()) {
+        echo json_encode(array('ok' => false, 'message' => 'The form expired. Refresh the page and try again.'));
+        exit;
+    }
+    if (auth_attempt_blocked($conn, 'register-check', 40, 900)) {
+        echo json_encode(array('ok' => false, 'message' => 'Wait a moment, then check again.'));
+        exit;
+    }
+    auth_note_attempt($conn, 'register-check');
+    $field = isset($_POST['field']) ? (string) $_POST['field'] : '';
+    $value = isset($_POST['value']) ? (string) $_POST['value'] : '';
+    $email = '';
+    $phone = '';
+    $company = '';
+    if ($field === 'email') {
+        $email = strtolower(trim($value));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(array('ok' => false, 'message' => 'Please enter a valid email.'));
+            exit;
+        }
+    } elseif ($field === 'phone') {
+        $phone = auth_mobile_number($value);
+        if ($phone === '') {
+            echo json_encode(array('ok' => false, 'message' => 'Enter a 10-digit mobile number.'));
+            exit;
+        }
+    } elseif ($field === 'company') {
+        $company = billing_plain_line($value, 120);
+        if ($company === '') {
+            echo json_encode(array('ok' => true, 'message' => ''));
+            exit;
+        }
+    } else {
+        echo json_encode(array('ok' => true, 'message' => ''));
+        exit;
+    }
+    $taken = billing_client_taken($conn, $email, $phone, $company, 0);
+    echo json_encode(array('ok' => $taken === '', 'message' => $taken === '' ? 'Available.' : $taken));
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $showRegister = true;
     $name = substr(trim((string) ($_POST['name'] ?? '')), 0, 80);
@@ -242,7 +285,7 @@ try {
             </p>
         <?php else: ?>
             <!-- Register Form -->
-            <form method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-4">
+            <form id="register-form" method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-4">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div style="position:absolute;left:-9999px;height:0;overflow:hidden" aria-hidden="true">
                     <label>Website</label>
@@ -253,27 +296,32 @@ try {
                     <input type="text" name="name" required class="form-input" placeholder="John Doe" value="<?= e($registerValues['name']) ?>">
                 </div>
                 <div>
-                    <label class="block text-slate-300 text-sm font-medium mb-2">Email *</label>
-                    <input type="email" name="email" required autocomplete="email" class="form-input" placeholder="you@example.com" value="<?= e($registerValues['email']) ?>">
+                    <label class="block text-slate-300 text-sm font-medium mb-2" for="reg-email">Email *</label>
+                    <input id="reg-email" type="email" name="email" required autocomplete="email" class="form-input" placeholder="you@example.com" value="<?= e($registerValues['email']) ?>">
+                    <p id="reg-email-hint" class="field-hint" aria-live="polite"></p>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-slate-300 text-sm font-medium mb-2">Mobile *</label>
-                        <input type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($registerValues['phone']) ?>">
+                        <label class="block text-slate-300 text-sm font-medium mb-2" for="reg-phone">Mobile *</label>
+                        <input id="reg-phone" type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($registerValues['phone']) ?>">
+                        <p id="reg-phone-hint" class="field-hint" aria-live="polite"></p>
                     </div>
                     <div>
-                        <label class="block text-slate-300 text-sm font-medium mb-2">Company</label>
-                        <input type="text" name="company" class="form-input" placeholder="Company Ltd" value="<?= e($registerValues['company']) ?>">
+                        <label class="block text-slate-300 text-sm font-medium mb-2" for="reg-company">Company</label>
+                        <input id="reg-company" type="text" name="company" class="form-input" placeholder="Company Ltd" value="<?= e($registerValues['company']) ?>">
+                        <p id="reg-company-hint" class="field-hint" aria-live="polite"></p>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-slate-300 text-sm font-medium mb-2">Password *</label>
-                        <input type="password" name="password" required autocomplete="new-password" class="form-input" placeholder="Min 8 characters">
+                        <label class="block text-slate-300 text-sm font-medium mb-2" for="reg-password">Password *</label>
+                        <input id="reg-password" type="password" name="password" required minlength="8" autocomplete="new-password" class="form-input" placeholder="Min 8 characters">
+                        <p id="reg-password-hint" class="field-hint" aria-live="polite"></p>
                     </div>
                     <div>
-                        <label class="block text-slate-300 text-sm font-medium mb-2">Confirm *</label>
-                        <input type="password" name="confirm_password" required autocomplete="new-password" class="form-input" placeholder="Repeat">
+                        <label class="block text-slate-300 text-sm font-medium mb-2" for="reg-confirm">Confirm *</label>
+                        <input id="reg-confirm" type="password" name="confirm_password" required minlength="8" autocomplete="new-password" class="form-input" placeholder="Repeat">
+                        <p id="reg-confirm-hint" class="field-hint" aria-live="polite"></p>
                     </div>
                 </div>
                 <div>
@@ -289,6 +337,75 @@ try {
                 Already have an account? <a href="login.php" class="text-brand-400 hover:text-brand-300 font-medium">Sign in</a><br>
                 <a href="../index.php" class="text-slate-500 hover:text-brand-400 text-xs mt-2 inline-block">← Back to Website</a>
             </p>
+            <script>
+            (function () {
+                var form = document.getElementById('register-form');
+                if (!form) return;
+                var token = form.querySelector('input[name="csrf_token"]').value;
+                var password = document.getElementById('reg-password');
+                var confirm = document.getElementById('reg-confirm');
+                function hint(id, message, ok) {
+                    var node = document.getElementById(id);
+                    if (!node) return;
+                    node.textContent = message || '';
+                    node.className = 'field-hint' + (message ? (ok ? ' field-hint--ok' : ' field-hint--bad') : '');
+                }
+                function passwords() {
+                    var passHint = '';
+                    if (password.value !== '' && password.value.length < 8) {
+                        passHint = 'Password must be at least 8 characters.';
+                    }
+                    hint('reg-password-hint', passHint, false);
+                    if (confirm.value === '') {
+                        hint('reg-confirm-hint', '', false);
+                        return passHint === '';
+                    }
+                    var same = password.value === confirm.value;
+                    hint('reg-confirm-hint', same ? 'Passwords match.' : 'Passwords do not match.', same);
+                    return passHint === '' && same;
+                }
+                function ask(field, input, hintId) {
+                    var value = input.value.trim();
+                    if (value === '') {
+                        hint(hintId, '', false);
+                        return;
+                    }
+                    var body = new FormData();
+                    body.append('csrf_token', token);
+                    body.append('check_account', '1');
+                    body.append('field', field);
+                    body.append('value', value);
+                    fetch('login.php?action=register', { method: 'POST', body: body, credentials: 'same-origin' })
+                        .then(function (response) { return response.json(); })
+                        .then(function (data) {
+                            hint(hintId, data && data.message ? data.message : '', !!(data && data.ok));
+                        })
+                        .catch(function () {});
+                }
+                var timers = {};
+                function later(field, input, hintId) {
+                    clearTimeout(timers[field]);
+                    timers[field] = setTimeout(function () { ask(field, input, hintId); }, 400);
+                }
+                password.addEventListener('input', passwords);
+                confirm.addEventListener('input', passwords);
+                document.getElementById('reg-email').addEventListener('input', function () { later('email', this, 'reg-email-hint'); });
+                document.getElementById('reg-phone').addEventListener('input', function () { later('phone', this, 'reg-phone-hint'); });
+                document.getElementById('reg-company').addEventListener('input', function () { later('company', this, 'reg-company-hint'); });
+                form.addEventListener('submit', function (event) {
+                    if (!passwords()) {
+                        event.preventDefault();
+                        confirm.focus();
+                    }
+                    ['reg-email-hint', 'reg-phone-hint', 'reg-company-hint'].forEach(function (id) {
+                        var node = document.getElementById(id);
+                        if (node && node.className.indexOf('field-hint--bad') !== -1) {
+                            event.preventDefault();
+                        }
+                    });
+                });
+            }());
+            </script>
         <?php endif; ?>
     </div>
 </body>

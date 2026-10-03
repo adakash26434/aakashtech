@@ -221,6 +221,31 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
     <p class="text-slate-500 text-sm">Logo, public contact details, and the inbox that receives new requests. <a class="text-brand-400" href="manual.php#settings">नेपाली चरण</a></p>
 </div>
 
+<?php if ($msg): ?>
+    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
+<?php endif; ?>
+<?php if ($err): ?>
+    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
+<?php endif; ?>
+
+<?php
+$settingsTab = 'mail';
+if (isset($_POST['save_legal'])) {
+    $settingsTab = 'legal';
+} elseif (isset($_POST['save_ai'])) {
+    $settingsTab = 'assistant';
+} elseif (isset($_POST['update_settings']) || isset($_POST['change_password'])) {
+    $settingsTab = 'site';
+}
+?>
+<div x-data="{ tab: '<?= e($settingsTab) ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" @click="tab='mail'" :class="tab==='mail' ? 'is-on' : ''">Mail</button>
+    <button type="button" @click="tab='legal'" :class="tab==='legal' ? 'is-on' : ''">Privacy</button>
+    <button type="button" @click="tab='assistant'" :class="tab==='assistant' ? 'is-on' : ''">Assistant</button>
+    <button type="button" @click="tab='site'" :class="tab==='site' ? 'is-on' : ''">Site</button>
+</div>
+<div x-show="tab==='mail'">
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Request emails</h3></div>
     <form method="POST" action="" class="p-5 space-y-4">
@@ -262,6 +287,8 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
     </div>
 </div>
 
+</div>
+<div x-show="tab==='legal'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Privacy and cookies</h3></div>
     <form method="POST" action="" class="p-5 space-y-4">
@@ -285,6 +312,8 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
     </form>
 </div>
 
+</div>
+<div x-show="tab==='assistant'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Public assistant</h3></div>
     <form method="POST" action="" class="p-5 space-y-4" autocomplete="off">
@@ -320,14 +349,8 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
         <button type="submit" name="save_ai" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save assistant</button>
     </form>
 </div>
-
-<?php if ($msg): ?>
-    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
-<?php endif; ?>
-<?php if ($err): ?>
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
-<?php endif; ?>
-
+</div>
+<div x-show="tab==='site'" x-cloak>
 <div class="grid lg:grid-cols-2 gap-6">
     <!-- Site Settings -->
     <div class="dash-panel">
@@ -454,5 +477,7 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
         </form>
     </div>
     <?php require __DIR__ . '/../includes/totp-manage-card.php'; ?>
+</div>
+</div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

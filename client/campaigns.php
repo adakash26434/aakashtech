@@ -139,6 +139,12 @@ $voiceFree = max(0, (int) $balances['voice_calls'] - $voiceHeld);
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
+<div x-data="{ tab: '<?= $err !== '' ? 'work' : 'list' ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Jobs</button>
+    <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New voice call</button>
+</div>
+<div x-show="tab==='work'" x-cloak>
 <div class="grid lg:grid-cols-2 gap-6 mb-6">
     <div class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">SMS</h3></div>
@@ -208,7 +214,8 @@ $voiceFree = max(0, (int) $balances['voice_calls'] - $voiceHeld);
         <?php endif; ?>
     </div>
 </div>
-
+</div>
+<div x-show="tab==='list'">
 <div class="dash-panel overflow-hidden">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Your jobs</h3></div>
     <?php if ($campaignRows): ?>
@@ -269,5 +276,7 @@ $voiceFree = max(0, (int) $balances['voice_calls'] - $voiceHeld);
     <?php else: ?>
         <p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No messages yet. SMS you send shows here. A voice job stays here until the team places the call.' : 'No message matches that name.' ?></p>
     <?php endif; ?>
+</div>
+</div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -175,26 +175,26 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
 
 <!-- Stats -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="dash-stat-card">
+    <a href="services.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-brand-500/20"><svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg></div>
         <div class="dash-stat-value"><?= $active_services ?></div>
         <div class="dash-stat-label">Services</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="sms-logs.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-purple-500/20"><svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
         <div class="dash-stat-value"><?= $my_sms_sent ?></div>
         <div class="dash-stat-label">SMS sent</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="support.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-orange-500/20"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
         <div class="dash-stat-value"><?= $open_tickets ?></div>
         <div class="dash-stat-label">Open Tickets</div>
-    </div>
-    <div class="dash-stat-card">
+    </a>
+    <a href="support.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-blue-500/20"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
         <div class="dash-stat-value"><?= $my_tickets ?></div>
         <div class="dash-stat-label">Total Tickets</div>
-    </div>
+    </a>
 </div>
 
 <?php if ($messagingActive): ?>

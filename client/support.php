@@ -82,7 +82,12 @@ if ($find !== '') {
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
-<!-- Create Ticket -->
+<div x-data="{ tab: '<?= $err !== '' ? 'work' : 'list' ?>' }">
+<div class="portal-tabs" role="tablist">
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Tickets</button>
+    <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New ticket</button>
+</div>
+<div x-show="tab==='work'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Open New Ticket</h3></div>
     <form method="POST" action="" class="p-5 space-y-4">
@@ -107,7 +112,8 @@ if ($find !== '') {
         <button type="submit" name="create_ticket" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit Ticket</button>
     </form>
 </div>
-
+</div>
+<div x-show="tab==='list'">
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Subject or message">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
@@ -148,5 +154,7 @@ if ($find !== '') {
     <?php else: ?>
         <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet. Use the form above when you need the team.' : 'No ticket matches that search.' ?></p></div>
     <?php endif; ?>
+</div>
+</div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
