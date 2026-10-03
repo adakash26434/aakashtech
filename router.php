@@ -17,6 +17,10 @@ if ($requestPath === '/api/sms/credit' || $requestPath === '/api/sms/credit/') {
     require __DIR__ . '/api/sms-credit.php';
     return true;
 }
+if ($requestPath === '/api/sms/report' || $requestPath === '/api/sms/report/') {
+    require __DIR__ . '/api/sms-report.php';
+    return true;
+}
 
 if ($requestPath === '/sitemap.xml') {
     require __DIR__ . '/sitemap.php';

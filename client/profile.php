@@ -27,6 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $saved = billing_client_save_profile($conn, $cid, $name, $company, $address);
     if ($saved !== '') {
         $err = $saved;
+        $client['name'] = billing_plain_line($name, 80);
+        $client['company'] = billing_plain_line($company, 120);
+        $client['address'] = billing_plain_block($address, 300);
     } else {
         $client['name'] = billing_plain_line($name, 80);
         $client['company'] = billing_plain_line($company, 120);

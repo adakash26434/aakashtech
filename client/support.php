@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 $cid = get_client_id();
 $msg = '';
 $err = '';
+$ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     verify_csrf();
@@ -14,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     if (!in_array($priority, $priorities, true)) {
         $priority = 'medium';
     }
+    $ticketDraft = array('subject' => $subject, 'description' => $desc, 'priority' => $priority);
     if ($subject === '' || $desc === '') {
         $err = 'Subject and description are required.';
     } else {
@@ -32,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
                 'Open Admin → Support Tickets.'
             ));
             $msg = 'Support ticket created! We will respond shortly.';
+            $ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium');
         } else {
             $err = 'Failed to create ticket.';
         }
@@ -130,19 +133,18 @@ if ($find !== '') {
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5">Subject *</label>
-            <input type="text" name="subject" required class="form-input" placeholder="Brief description of your issue">
+            <input type="text" name="subject" required class="form-input" placeholder="Brief description of your issue" value="<?= e($ticketDraft['subject']) ?>">
         </div>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5">Description *</label>
-            <textarea name="description" required rows="4" class="form-input resize-none" placeholder="Describe your issue in detail..."></textarea>
+            <textarea name="description" required rows="4" class="form-input resize-none" placeholder="Describe your issue in detail..."><?= e($ticketDraft['description']) ?></textarea>
         </div>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5">Priority</label>
             <select name="priority" class="form-input w-auto">
-                <option value="low">Low</option>
-                <option value="medium" selected>Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <?php foreach (array('low', 'medium', 'high', 'urgent') as $priorityChoice): ?>
+                    <option value="<?= e($priorityChoice) ?>" <?= $ticketDraft['priority'] === $priorityChoice ? 'selected' : '' ?>><?= e(ucfirst($priorityChoice)) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <button type="submit" name="create_ticket" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit Ticket</button>

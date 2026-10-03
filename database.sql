@@ -426,6 +426,7 @@ CREATE TABLE IF NOT EXISTS sms_number_lists (
     client_id   INT NOT NULL,
     label       VARCHAR(80) NOT NULL,
     numbers_text TEXT NOT NULL,
+    list_kind   VARCHAR(20) DEFAULT 'program',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_sms_list_client (client_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

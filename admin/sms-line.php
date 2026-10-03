@@ -36,6 +36,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_line'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['take_sms'])) {
+    verify_csrf();
+    $reversed = sms_admin_reverse(
+        $conn,
+        isset($_POST['client_id']) ? (int) $_POST['client_id'] : 0,
+        isset($_POST['note_id']) ? (int) $_POST['note_id'] : 0
+    );
+    if ($reversed['error'] === '') {
+        $msg = $reversed['message'];
+    } else {
+        $err = $reversed['error'];
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_sms'])) {
     verify_csrf();
     $granted = sms_admin_grant(
@@ -80,7 +94,7 @@ $history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
 $vendorStock = sms_vendor_stock($conn, false);
 $clientsHolding = sms_clients_holding($conn);
 $grantClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
-$creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
+$creditNotes = $conn->query('SELECT n.id, n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">SMS line</h1>
@@ -120,7 +134,7 @@ $smsTab = 'clients';
 $smsTabs = array('clients', 'credits', 'line', 'names', 'history');
 if (isset($_POST['save_line']) || isset($_POST['check_balance']) || isset($_POST['test_line'])) {
     $smsTab = 'line';
-} elseif (isset($_POST['grant_sms'])) {
+} elseif (isset($_POST['grant_sms']) || isset($_POST['take_sms'])) {
     $smsTab = 'credits';
 } elseif (isset($_POST['decision'])) {
     $smsTab = 'names';
@@ -148,8 +162,8 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
 <div class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Who has used SMS</h3></div>
     <form method="GET" class="p-4 flex flex-wrap gap-2 border-b border-slate-800">
-        <input type="search" name="q" value="<?= e($usageFind) ?>" class="form-input max-w-sm" placeholder="Client name, email, number, or message">
-        <?php if ($historyClient > 0): ?><input type="hidden" name="client" value="<?= (int) $historyClient ?>"><?php endif; ?>
+        <input type="hidden" name="tab" value="clients">
+        <input type="search" name="q" value="<?= e($usageFind) ?>" class="form-input max-w-sm" placeholder="Client name, email, mobile, or message">
         <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
     </form>
     <?php if ($usage['rows']): ?>
@@ -173,12 +187,15 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                             </td>
                             <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_used']) ?></td>
                             <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_left']) ?></td>
-                            <td class="px-4 py-3"><a class="text-brand-400 text-sm" href="sms-line.php?client=<?= (int) $usageRow['id'] ?>">See messages</a></td>
+                            <td class="px-4 py-3"><a class="text-brand-400 text-sm" href="sms-line.php?tab=history&client=<?= (int) $usageRow['id'] ?>">See messages</a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+        <?php if ((int) $usage['clients'] > count($usage['rows'])): ?>
+            <p class="px-4 py-3 text-slate-500 text-xs">Showing 100 of <?= number_format((int) $usage['clients']) ?> clients. The totals above include everyone.</p>
+        <?php endif; ?>
     <?php else: ?>
         <p class="p-6 text-slate-500 text-sm"><?= $usageFind === '' ? 'No client has SMS credit or a sent message yet.' : 'No SMS client matches that search.' ?></p>
     <?php endif; ?>
@@ -222,7 +239,17 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                         <p class="text-white text-sm"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $noteRow['client_id'] ?>"><?= e($noteRow['name']) ?></a> <?php $noteEmail = filter_var($noteRow['email'], FILTER_VALIDATE_EMAIL) ? (string) $noteRow['email'] : ''; ?><?php if ($noteEmail !== ''): ?><a class="text-slate-500 hover:text-brand-300" href="mailto:<?= e($noteEmail) ?>"><?= e($noteEmail) ?></a><?php else: ?><span class="text-slate-500"><?= e($noteRow['email']) ?></span><?php endif; ?></p>
                         <p class="text-slate-400 text-xs mt-1"><?= e($noteRow['note']) ?></p>
                     </div>
-                    <p class="text-white text-sm"><?= number_format((int) $noteRow['credits']) ?> SMS<?= trim((string) $noteRow['reversed_at']) !== '' ? ' · Taken back' : '' ?> · <?= e(sms_format_time($noteRow['created_at'])) ?></p>
+                    <div class="text-right">
+                        <p class="text-white text-sm"><?= number_format((int) $noteRow['credits']) ?> SMS<?= trim((string) $noteRow['reversed_at']) !== '' ? ' · Taken back' : '' ?> · <?= e(sms_format_time($noteRow['created_at'])) ?></p>
+                        <?php if (trim((string) $noteRow['reversed_at']) === '' && (string) $noteRow['note'] !== 'Bought from the wallet'): ?>
+                            <form method="POST" class="mt-2">
+                                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                                <input type="hidden" name="client_id" value="<?= (int) $noteRow['client_id'] ?>">
+                                <input type="hidden" name="note_id" value="<?= (int) $noteRow['id'] ?>">
+                                <button type="submit" name="take_sms" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer">Take back unused</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endwhile; ?>
         </div>
@@ -351,6 +378,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
 <div class="dash-panel overflow-hidden">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Sent message history</h3></div>
     <form method="GET" class="p-4 flex flex-wrap gap-2 border-b border-slate-800">
+        <input type="hidden" name="tab" value="history">
         <input type="search" name="q" value="<?= e($usageFind) ?>" class="form-input max-w-sm" placeholder="Client, number, or message text">
         <?php if ($historyClient > 0): ?><input type="hidden" name="client" value="<?= (int) $historyClient ?>"><?php endif; ?>
         <select name="status" class="form-input max-w-[160px]">
@@ -361,7 +389,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
         </select>
         <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
         <?php if ($historyClient > 0 || $usageFind !== '' || $historyStatus !== ''): ?>
-            <a href="sms-line.php" class="px-4 py-2 text-slate-400 text-sm">Clear</a>
+            <a href="sms-line.php?tab=history" class="px-4 py-2 text-slate-400 text-sm">Clear</a>
         <?php endif; ?>
     </form>
     <?php if ($history): ?>
@@ -375,9 +403,13 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     <?php $historyPhone = preg_replace('/[^0-9+]/', '', (string) $row['recipient']); ?>
                     <p class="text-slate-300 text-sm mt-1">To <?php if ($historyPhone !== ''): ?><a class="hover:text-brand-300" href="tel:<?= e($historyPhone) ?>"><?= e($row['recipient']) ?></a><?php else: ?><?= e($row['recipient']) ?><?php endif; ?></p>
                     <p class="text-slate-200 text-sm mt-2 whitespace-pre-wrap"><?= e($row['message_text']) ?></p>
+                    <?php if (trim((string) $row['error_text']) !== ''): ?><p class="text-slate-500 text-xs mt-1"><?= e($row['error_text']) ?></p><?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </div>
+        <?php if (count($history) >= 80): ?>
+            <p class="px-4 py-3 text-slate-500 text-xs">Showing the latest 80. Narrow the client or the status to see a shorter list.</p>
+        <?php endif; ?>
     <?php else: ?>
         <p class="p-6 text-slate-500 text-sm">No message matches this view.</p>
     <?php endif; ?>

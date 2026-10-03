@@ -6,6 +6,7 @@ Options -Indexes
 
 RewriteRule ^api/sms/send/?$ api/sms-send.php [L]
 RewriteRule ^api/sms/credit/?$ api/sms-credit.php [L]
+RewriteRule ^api/sms/report/?$ api/sms-report.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^robots\.txt$ robots.php [L]
 

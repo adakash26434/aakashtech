@@ -45,12 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
         $again = isset($_POST['new_password_again']) ? (string) $_POST['new_password_again'] : '';
         if ($newPassword !== $again) {
             flash('client_error', 'The two passwords do not match.');
+            $_SESSION['client_password_draft'] = array('id' => $id, 'one' => $newPassword, 'two' => $again);
         } else {
             $passwordError = client_admin_set_password($conn, $id, $newPassword);
             if ($passwordError === '') {
                 flash('client_notice', 'Password saved. Tell the client: ' . $newPassword . '. It is shown once and is not written in the email.');
             } else {
                 flash('client_error', $passwordError);
+                $_SESSION['client_password_draft'] = array('id' => $id, 'one' => $newPassword, 'two' => $again);
             }
         }
     } elseif (isset($_POST['set_contact'])) {
@@ -64,6 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
             flash('client_notice', 'Email and mobile saved.');
         } else {
             flash('client_error', $contactError);
+            $_SESSION['client_contact_draft'] = array(
+                'id' => $id,
+                'email' => isset($_POST['contact_email']) ? (string) $_POST['contact_email'] : '',
+                'phone' => isset($_POST['contact_phone']) ? (string) $_POST['contact_phone'] : ''
+            );
         }
     } elseif (isset($_POST['grant_sms'])) {
         $grantError = sms_admin_grant(
@@ -211,6 +218,20 @@ foreach ($servicePlans as $servicePlan) {
 
 $notice = flash('client_notice');
 $problem = flash('client_error');
+$contactEmail = $client ? (string) $client['email'] : '';
+$contactPhone = $client ? (string) $client['phone'] : '';
+$passwordOne = '';
+$passwordTwo = '';
+if ($client && isset($_SESSION['client_contact_draft']) && is_array($_SESSION['client_contact_draft']) && (int) $_SESSION['client_contact_draft']['id'] === (int) $client['id']) {
+    $contactEmail = (string) $_SESSION['client_contact_draft']['email'];
+    $contactPhone = (string) $_SESSION['client_contact_draft']['phone'];
+    unset($_SESSION['client_contact_draft']);
+}
+if ($client && isset($_SESSION['client_password_draft']) && is_array($_SESSION['client_password_draft']) && (int) $_SESSION['client_password_draft']['id'] === (int) $client['id']) {
+    $passwordOne = (string) $_SESSION['client_password_draft']['one'];
+    $passwordTwo = (string) $_SESSION['client_password_draft']['two'];
+    unset($_SESSION['client_password_draft']);
+}
 ?>
 <div class="mb-8">
     <a href="<?= e($back) ?>" class="text-brand-400 text-sm">← Clients</a>
@@ -262,7 +283,7 @@ $problem = flash('client_error');
                         <button type="submit" name="reset_authenticator" class="text-sm bg-transparent border-0 cursor-pointer p-0 text-slate-400">Reset authenticator</button>
                     </form>
                 <?php endif; ?>
-                <a class="text-brand-400 text-sm" href="sms-line.php?client=<?= (int) $client['id'] ?>">SMS history</a>
+                <a class="text-brand-400 text-sm" href="sms-line.php?tab=history&client=<?= (int) $client['id'] ?>">SMS history</a>
             </div>
         </section>
         <section class="dash-panel">
@@ -271,8 +292,8 @@ $problem = flash('client_error');
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
                 <p class="text-slate-500 text-xs">The client cannot change these. Both stay required.</p>
-                <input name="contact_email" type="email" required maxlength="120" class="form-input" value="<?= e($client['email']) ?>">
-                <input name="contact_phone" required inputmode="numeric" maxlength="16" class="form-input" value="<?= e($client['phone']) ?>">
+                <input name="contact_email" type="email" required maxlength="120" class="form-input" value="<?= e($contactEmail) ?>">
+                <input name="contact_phone" required inputmode="numeric" maxlength="16" class="form-input" value="<?= e($contactPhone) ?>">
                 <button type="submit" name="set_contact" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save email and mobile</button>
             </form>
         </section>
@@ -300,8 +321,8 @@ $problem = flash('client_error');
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
                     <p class="text-slate-400 text-sm">Set a password when they are at the office. It is shown once on this page so you can tell them. The email says the password changed and does not include it.</p>
-                    <input name="new_password" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="New password, at least 8 characters">
-                    <input name="new_password_again" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="Type it again">
+                    <input name="new_password" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="New password, at least 8 characters" value="<?= e($passwordOne) ?>">
+                    <input name="new_password_again" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="Type it again" value="<?= e($passwordTwo) ?>">
                     <button type="submit" name="set_password" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save password</button>
                 </form>
             </div>

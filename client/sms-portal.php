@@ -7,6 +7,7 @@ sms_run_queue($conn, 5);
 $notice = flash('billing');
 $msg = '';
 $err = '';
+$sentLog = 0;
 $balances = billing_unit_balances($conn, $cid);
 $kycReady = billing_kyc_approved($conn, $cid);
 $sendOpen = true;
@@ -57,8 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_campaign'])) {
     verify_csrf();
     $cancelId = isset($_POST['campaign_id']) ? (int) $_POST['campaign_id'] : 0;
-    if (sms_cancel_scheduled($conn, $cid, $cancelId)) {
-        $msg = 'Scheduled SMS cancelled. No credits were used.';
+    $cancelled = sms_cancel_scheduled($conn, $cid, $cancelId);
+    if ($cancelled === 'refunded') {
+        $msg = 'Scheduled SMS cancelled. The held credits are back on this account.';
+        $balances = billing_unit_balances($conn, $cid);
+    } elseif ($cancelled === 'released') {
+        $msg = 'Scheduled SMS cancelled. No credits were held.';
     } else {
         $err = 'That SMS could not be cancelled.';
     }
@@ -90,9 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_list'])) {
     verify_csrf();
     $values['message_content'] = isset($_POST['message_content']) ? (string) $_POST['message_content'] : '';
     $values['numbers'] = isset($_POST['numbers']) ? (string) $_POST['numbers'] : '';
-    $saved = sms_save_number_list($conn, $cid, isset($_POST['list_label']) ? $_POST['list_label'] : '', $values['numbers']);
+    $saved = sms_save_number_list($conn, $cid, isset($_POST['list_label']) ? $_POST['list_label'] : '', $values['numbers'], isset($_POST['list_kind']) ? $_POST['list_kind'] : 'program');
     if ($saved === '') {
-        $msg = 'Number list saved. Duplicates were kept once.';
+        $msg = 'Number list saved. Choose it again from Saved lists the next time this program or regular notice is sent. A repeated name replaces that list.';
     } else {
         $err = $saved;
     }
@@ -135,6 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
             $scheduled = '';
         }
         $scheduledValue = $scheduled !== '' ? str_replace('T', ' ', $scheduled) . ':00' : '';
+        if (preg_match('/\[[^\]\r\n]{1,40}\]/u', $values['message_content'])) {
+            $err = 'Replace the words in brackets, such as [मिति] or [code], with your own details before sending.';
+        }
+        if ($err === '') {
         $result = sms_send($conn, $cid, array(
             'name' => $values['campaign_name'],
             'text' => $values['message_content'],
@@ -147,6 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
         ));
         if (!empty($result['ok'])) {
             $msg = $result['message'];
+            if (!empty($result['campaign_id'])) {
+                $msg .= ' See who received it in SMS logs.';
+                $sentLog = (int) $result['campaign_id'];
+            }
             $balances = billing_unit_balances($conn, $cid);
             $values = array(
                 'campaign_name' => '',
@@ -159,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
             );
         } else {
             $err = $result['error'];
+        }
         }
     }
 }
@@ -209,6 +223,10 @@ $composer = array(
     'templates' => array(),
     'lists' => array()
 );
+$sampleMessages = sms_sample_messages();
+foreach ($sampleMessages as $sampleMessage) {
+    $composer['templates'][] = $sampleMessage;
+}
 foreach ($templates as $templateRow) {
     $composer['templates'][] = array(
         'id' => (int) $templateRow['id'],
@@ -246,7 +264,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div>
 <?php endif; ?>
 <?php if ($msg): ?>
-    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
+    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?><?php if ($sentLog > 0): ?> <a class="text-brand-300" href="sms-logs.php?send=<?= (int) $sentLog ?>">Open this send</a><?php endif; ?></div>
 <?php endif; ?>
 <?php if ($err): ?>
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
@@ -347,27 +365,53 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-1.5">
                         <label class="block text-slate-400 text-xs font-medium">Message</label>
-                        <select class="text-xs bg-transparent text-brand-400 max-w-[11rem]" @change="pickTemplate($event.target.value); $event.target.selectedIndex = 0">
-                            <option value="">Saved messages</option>
-                            <?php foreach ($templates as $templateRow): ?>
-                                <option value="<?= (int) $templateRow['id'] ?>"><?= e($templateRow['label']) ?></option>
-                            <?php endforeach; ?>
+                        <select class="text-xs bg-transparent text-brand-400 max-w-[16rem]" @change="pickTemplate($event.target.value); $event.target.selectedIndex = 0">
+                            <option value="">Sample or saved message</option>
+                            <optgroup label="सहकारी नमूना">
+                                <?php foreach ($sampleMessages as $sampleMessage): ?>
+                                    <option value="<?= e($sampleMessage['id']) ?>"><?= e($sampleMessage['label']) ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php if ($templates): ?>
+                                <optgroup label="Saved messages">
+                                    <?php foreach ($templates as $templateRow): ?>
+                                        <option value="<?= (int) $templateRow['id'] ?>"><?= e($templateRow['label']) ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endif; ?>
                         </select>
                     </div>
                     <textarea name="message_content" x-model="text" required rows="4" maxlength="1000" class="form-input" placeholder="The exact text people should receive"><?= e($values['message_content']) ?></textarea>
                     <p class="text-xs mt-1" :class="estimate().short ? 'text-red-400' : 'text-slate-500'" x-text="estimate().label"></p>
-                    <p class="text-slate-500 text-xs mt-1">A request for a password, PIN, or OTP, and a scam, threat, or sexual message, is refused.</p>
+                    <p class="text-slate-500 text-xs mt-1">सहकारी नमूना छानेपछि [मिति], [कोड], [code] जस्ता कोष्ठक आफ्नो विवरणले बदल्नुहोस्। Sending stays blocked until those brackets are gone. A request for someone else's password, PIN, or OTP is refused. Your own code, such as "Your code is 482193", can be sent.</p>
                 </div>
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-1.5">
                         <label class="block text-slate-400 text-xs font-medium">Numbers</label>
                         <div class="flex items-center gap-3">
-                            <select class="text-xs bg-transparent text-brand-400 max-w-[9rem]" @change="pickList($event.target.value); $event.target.selectedIndex = 0">
+                            <select class="text-xs bg-transparent text-brand-400 max-w-[14rem]" @change="pickList($event.target.value); $event.target.selectedIndex = 0">
                                 <option value="">Saved lists</option>
-                            <?php foreach ($numberLists as $listRow): ?>
-                                <?php $listCount = $listRow['numbers_text'] === '' ? 0 : substr_count(trim((string) $listRow['numbers_text']), "\n") + 1; ?>
-                                <option value="<?= (int) $listRow['id'] ?>"><?= e($listRow['label']) ?> (<?= (int) $listCount ?>)</option>
-                            <?php endforeach; ?>
+                                <?php
+                                $listGroups = array('program' => 'Program', 'regular' => 'Regular');
+                                foreach ($listGroups as $listKind => $listHeading):
+                                    $groupLists = array();
+                                    foreach ($numberLists as $listRow) {
+                                        $rowKind = (isset($listRow['list_kind']) && $listRow['list_kind'] === 'regular') ? 'regular' : 'program';
+                                        if ($rowKind === $listKind) {
+                                            $groupLists[] = $listRow;
+                                        }
+                                    }
+                                    if (!$groupLists) {
+                                        continue;
+                                    }
+                                ?>
+                                    <optgroup label="<?= e($listHeading) ?>">
+                                        <?php foreach ($groupLists as $listRow): ?>
+                                            <?php $listCount = $listRow['numbers_text'] === '' ? 0 : substr_count(trim((string) $listRow['numbers_text']), "\n") + 1; ?>
+                                            <option value="<?= (int) $listRow['id'] ?>"><?= e($listRow['label']) ?> (<?= (int) $listCount ?>)</option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
                             </select>
                             <label class="text-brand-400 text-xs cursor-pointer">Upload .txt or .csv
                             <input type="file" accept=".txt,.csv,text/plain" class="hidden" @change="
@@ -382,7 +426,8 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                         </div>
                     </div>
                     <textarea name="numbers" x-model="numbers" required rows="6" class="form-input" placeholder="9800000001 or Name, 9800000001"><?= e($values['numbers']) ?></textarea>
-                    <p class="text-slate-500 text-xs mt-1">Up to 500 numbers. Write <code class="text-brand-300">{name}</code> in the message and <code class="text-brand-300">Ram, 9800000001</code> on each line to use that person’s name. A line with only a number is sent once. Nepal Telecom and Ncell only.</p>
+                    <p class="text-slate-500 text-xs mt-1">If someone says the SMS never arrived, <a class="text-brand-400" href="sms-logs.php">look up their mobile</a>.</p>
+                    <p class="text-slate-500 text-xs mt-1">Up to 500 numbers. Save the list below as a program, such as AGM members or directors, or as a regular notice, such as monthly interest or loan installments. The same name replaces that list. Write <code class="text-brand-300">{name}</code> in the message and <code class="text-brand-300">Ram, 9800000001</code> on each line to use that person’s name. Nepal Telecom and Ncell only.</p>
                 </div>
                 <div>
                     <label class="block text-slate-400 text-xs font-medium mb-1.5">Send later, optional, Nepal time</label>
@@ -407,8 +452,12 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="message_content" value="">
                     <input type="hidden" name="numbers" value="">
-                    <input type="text" name="list_label" maxlength="60" required class="form-input" placeholder="Save numbers as">
-                    <button type="submit" name="save_list" class="shrink-0 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-xl">Save</button>
+                    <select name="list_kind" class="form-input max-w-[9rem]">
+                        <option value="program">Program</option>
+                        <option value="regular">Regular</option>
+                    </select>
+                    <input type="text" name="list_label" maxlength="60" required class="form-input" placeholder="AGM members, or Monthly interest">
+                    <button type="submit" name="save_list" class="shrink-0 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-xl">Save list</button>
                 </form>
             </div>
             <?php if ($templates || $numberLists): ?>
@@ -463,7 +512,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                     <div class="px-5 py-3 flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <p class="text-white text-sm"><?= e($sched['campaign_name']) ?></p>
-                            <p class="text-slate-500 text-xs"><?= e(sms_format_time($sched['scheduled_at'])) ?> Nepal time · <?= (int) $sched['recipients_count'] ?> numbers · credits are used when it sends</p>
+                            <p class="text-slate-500 text-xs"><?= e(sms_format_time($sched['scheduled_at'])) ?> Nepal time · <?= (int) $sched['recipients_count'] ?> numbers · credits stay held until this sends. Cancel returns them.</p>
                         </div>
                         <form method="POST">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">

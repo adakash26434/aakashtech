@@ -63,6 +63,7 @@ function sms_ensure_tables($conn)
             client_id INTEGER NOT NULL,
             label TEXT NOT NULL,
             numbers_text TEXT NOT NULL,
+            list_kind TEXT DEFAULT 'program',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
         billing_exec($conn, 'CREATE INDEX IF NOT EXISTS idx_sms_template_client ON sms_templates(client_id)');
@@ -76,6 +77,7 @@ function sms_ensure_tables($conn)
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
         sms_credit_columns($conn);
+        sms_list_columns($conn);
         return;
     }
 
@@ -138,6 +140,7 @@ function sms_ensure_tables($conn)
         client_id INT NOT NULL,
         label VARCHAR(80) NOT NULL,
         numbers_text TEXT NOT NULL,
+        list_kind VARCHAR(20) DEFAULT 'program',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_sms_list_client (client_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -151,6 +154,7 @@ function sms_ensure_tables($conn)
         INDEX idx_sms_credit_client (client_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     sms_credit_columns($conn);
+    sms_list_columns($conn);
 }
 
 function sms_credit_columns($conn)
@@ -161,6 +165,40 @@ function sms_credit_columns($conn)
     }
     $definition = DB_DRIVER === 'sqlite' ? 'TEXT DEFAULT NULL' : 'DATETIME DEFAULT NULL';
     billing_exec($conn, 'ALTER TABLE sms_credit_notes ADD COLUMN reversed_at ' . $definition);
+}
+
+function sms_list_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'sms_number_lists'));
+    if (!$present || isset($present['list_kind'])) {
+        return;
+    }
+    $definition = DB_DRIVER === 'sqlite' ? "TEXT DEFAULT 'program'" : "VARCHAR(20) DEFAULT 'program'";
+    billing_exec($conn, 'ALTER TABLE sms_number_lists ADD COLUMN list_kind ' . $definition);
+}
+
+function sms_sample_messages()
+{
+    return array(
+        array('id' => 'sample-otp-np', 'label' => 'OTP · नेपाली', 'text' => 'नमस्कार। [सहकारी] को तपाईंको कोड [कोड] हो। यो कोड अरूलाई नदिनुहोस्।'),
+        array('id' => 'sample-otp-en', 'label' => 'OTP · English', 'text' => 'Namaste. Your [cooperative] code is [code]. Do not share this code.'),
+        array('id' => 'sample-agm-np', 'label' => 'AGM · नेपाली', 'text' => 'नमस्कार। [सहकारी] को वार्षिक साधारण सभा मिति [मिति], [समय] बजे [स्थान] मा हुनेछ। सबै शेयर सदस्यलाई उपस्थित हुन अनुरोध छ।'),
+        array('id' => 'sample-agm-en', 'label' => 'AGM · English', 'text' => 'Namaste. The annual general meeting of [cooperative] is on [date] at [time], [place]. All share members are requested to attend.'),
+        array('id' => 'sample-board-np', 'label' => 'सञ्चालक बैठक · नेपाली', 'text' => 'नमस्कार। [सहकारी] को सञ्चालक समितिको बैठक मिति [मिति], [समय] बजे [स्थान] मा बस्नेछ। सबै सञ्चालकलाई समयमै उपस्थित हुन अनुरोध छ।'),
+        array('id' => 'sample-board-en', 'label' => 'Board meeting · English', 'text' => 'Namaste. The board meeting of [cooperative] is on [date] at [time], [place]. All directors are requested to attend on time.'),
+        array('id' => 'sample-rate-save-np', 'label' => 'बचत ब्याजदर · नेपाली', 'text' => 'नमस्कार। [सहकारी] को बचत ब्याजदर मिति [मिति] देखि [नयाँ दर] कायम हुनेछ। जानकारीका लागि कार्यालयमा सम्पर्क गर्नुहोस्।'),
+        array('id' => 'sample-rate-save-en', 'label' => 'Savings rate · English', 'text' => 'Namaste. From [date], the savings interest rate of [cooperative] will be [new rate]. Please contact the office for details.'),
+        array('id' => 'sample-rate-loan-np', 'label' => 'ऋण ब्याजदर · नेपाली', 'text' => 'नमस्कार। [सहकारी] को ऋण ब्याजदर मिति [मिति] देखि [नयाँ दर] कायम हुनेछ। जानकारीका लागि कार्यालयमा सम्पर्क गर्नुहोस्।'),
+        array('id' => 'sample-rate-loan-en', 'label' => 'Loan rate · English', 'text' => 'Namaste. From [date], the loan interest rate of [cooperative] will be [new rate]. Please contact the office for details.'),
+        array('id' => 'sample-dividend-np', 'label' => 'लाभांश · नेपाली', 'text' => 'नमस्कार। [सहकारी] को लाभांश वितरण मिति [मिति] देखि [स्थान] मा सुरु हुन्छ। शेयर प्रमाणपत्र साथमा ल्याउनुहोस्।'),
+        array('id' => 'sample-dividend-en', 'label' => 'Dividend · English', 'text' => 'Namaste. [cooperative] will distribute dividends from [date] at [place]. Please bring your share certificate.'),
+        array('id' => 'sample-installment-np', 'label' => 'ऋण किस्ता · नेपाली', 'text' => 'नमस्कार। [सहकारी] मा तपाईंको ऋण किस्ता मिति [मिति] भित्र बुझाउनुहोस्। ढिला भएमा जरिवाना लाग्न सक्छ।'),
+        array('id' => 'sample-installment-en', 'label' => 'Loan installment · English', 'text' => 'Namaste. Please pay your loan installment at [cooperative] by [date]. A delay may add a penalty.'),
+        array('id' => 'sample-share-np', 'label' => 'शेयर संकलन · नेपाली', 'text' => 'नमस्कार। [सहकारी] मा नयाँ शेयर संकलन मिति [मिति] सम्म खुला छ। इच्छुक सदस्यले कार्यालयमा सम्पर्क गर्नुहोस्।'),
+        array('id' => 'sample-share-en', 'label' => 'Share collection · English', 'text' => 'Namaste. New share collection at [cooperative] is open until [date]. Please contact the office.'),
+        array('id' => 'sample-closed-np', 'label' => 'कार्यालय बिदा · नेपाली', 'text' => 'नमस्कार। [सहकारी] को कार्यालय मिति [मिति] मा बिदा रहनेछ। अर्को कार्यदिनदेखि सेवा खुल्नेछ।'),
+        array('id' => 'sample-closed-en', 'label' => 'Office closed · English', 'text' => 'Namaste. The office of [cooperative] will remain closed on [date]. Service resumes the next working day.')
+    );
 }
 
 function sms_templates($conn, $clientId)
@@ -220,7 +258,8 @@ function sms_delete_template($conn, $clientId, $templateId)
 function sms_number_lists($conn, $clientId)
 {
     $clientId = (int) $clientId;
-    $stmt = $conn->prepare('SELECT id, label, numbers_text FROM sms_number_lists WHERE client_id = ? ORDER BY id DESC');
+    sms_list_columns($conn);
+    $stmt = $conn->prepare('SELECT id, label, numbers_text, list_kind FROM sms_number_lists WHERE client_id = ? ORDER BY list_kind ASC, label ASC');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
     $rows = db_fetch_all($stmt);
@@ -228,7 +267,7 @@ function sms_number_lists($conn, $clientId)
     return $rows;
 }
 
-function sms_save_number_list($conn, $clientId, $label, $raw)
+function sms_save_number_list($conn, $clientId, $label, $raw, $kind = 'program')
 {
     $clientId = (int) $clientId;
     $gate = sms_client_gate($conn, $clientId);
@@ -237,23 +276,38 @@ function sms_save_number_list($conn, $clientId, $label, $raw)
     }
     $label = billing_plain_line($label, 60);
     if ($label === '') {
-        return 'Name this number list.';
+        return 'Name this number list, such as AGM members or Monthly interest.';
     }
+    $kind = $kind === 'regular' ? 'regular' : 'program';
     $parsed = sms_collect_numbers($raw);
     if (!$parsed['ok']) {
         return $parsed['error'];
+    }
+    sms_list_columns($conn);
+    $numbers = implode("\n", $parsed['numbers']);
+    $existing = $conn->prepare('SELECT id FROM sms_number_lists WHERE client_id = ? AND label = ? AND list_kind = ? LIMIT 1');
+    $existing->bind_param('iss', $clientId, $label, $kind);
+    $existing->execute();
+    $found = db_fetch_assoc($existing);
+    $existing->close();
+    if ($found) {
+        $id = (int) $found['id'];
+        $stmt = $conn->prepare('UPDATE sms_number_lists SET numbers_text = ? WHERE id = ? AND client_id = ?');
+        $stmt->bind_param('sii', $numbers, $id, $clientId);
+        $stmt->execute();
+        $stmt->close();
+        return '';
     }
     $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM sms_number_lists WHERE client_id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
     $count = db_fetch_assoc($stmt);
     $stmt->close();
-    if ($count && (int) $count['c'] >= 20) {
-        return 'Delete a number list before adding another. Twenty is the limit.';
+    if ($count && (int) $count['c'] >= 40) {
+        return 'Delete a number list before adding another. Forty is the limit.';
     }
-    $numbers = implode("\n", $parsed['numbers']);
-    $stmt = $conn->prepare('INSERT INTO sms_number_lists (client_id, label, numbers_text) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $clientId, $label, $numbers);
+    $stmt = $conn->prepare('INSERT INTO sms_number_lists (client_id, label, numbers_text, list_kind) VALUES (?, ?, ?, ?)');
+    $stmt->bind_param('isss', $clientId, $label, $numbers, $kind);
     $stmt->execute();
     $stmt->close();
     return '';
@@ -348,7 +402,7 @@ function sms_unverified_used($conn, $clientId)
         $stmt->close();
         $used += $row ? (int) $row['used_credits'] : 0;
     }
-    $waiting = $conn->prepare('SELECT message_content, recipients_count FROM sms_campaigns WHERE client_id = ? AND channel = \'sms\' AND status = \'scheduled\'');
+    $waiting = $conn->prepare('SELECT c.message_content, c.recipients_count FROM sms_campaigns c WHERE c.client_id = ? AND c.channel = \'sms\' AND c.status = \'scheduled\' AND NOT EXISTS (SELECT 1 FROM sms_messages m WHERE m.campaign_id = c.id AND m.status IN (\'queued\', \'sending\', \'scheduled\', \'sent\'))');
     if ($waiting) {
         $waiting->bind_param('i', $clientId);
         $waiting->execute();
@@ -712,7 +766,7 @@ function sms_recent_sends($conn, $clientId)
     $clientId = (int) $clientId;
     $channel = 'sms';
     $draft = 'draft';
-    $stmt = $conn->prepare('SELECT c.id, c.campaign_name, c.status, c.created_at, COALESCE(SUM(CASE WHEN m.status = \'sent\' THEN 1 ELSE 0 END), 0) AS sent_count, COALESCE(SUM(CASE WHEN m.status = \'failed\' THEN 1 ELSE 0 END), 0) AS failed_count FROM sms_campaigns c LEFT JOIN sms_messages m ON m.campaign_id = c.id AND m.client_id = c.client_id WHERE c.client_id = ? AND c.channel = ? AND c.status <> ? GROUP BY c.id, c.campaign_name, c.status, c.created_at ORDER BY c.id DESC LIMIT 12');
+    $stmt = $conn->prepare('SELECT c.id, c.campaign_name, c.status, c.created_at, COALESCE(SUM(CASE WHEN m.status = \'sent\' THEN 1 ELSE 0 END), 0) AS sent_count, COALESCE(SUM(CASE WHEN m.status = \'failed\' THEN 1 ELSE 0 END), 0) AS failed_count, COALESCE(SUM(CASE WHEN m.status = \'sent\' THEN m.parts ELSE 0 END), 0) AS sent_credits, COALESCE(SUM(CASE WHEN m.status = \'failed\' THEN m.parts ELSE 0 END), 0) AS failed_credits FROM sms_campaigns c LEFT JOIN sms_messages m ON m.campaign_id = c.id AND m.client_id = c.client_id WHERE c.client_id = ? AND c.channel = ? AND c.status <> ? GROUP BY c.id, c.campaign_name, c.status, c.created_at ORDER BY c.id DESC LIMIT 20');
     $stmt->bind_param('iss', $clientId, $channel, $draft);
     $stmt->execute();
     $rows = db_fetch_all($stmt);
@@ -807,10 +861,125 @@ function sms_load_send($conn, $clientId, $campaignId, $failedOnly)
     );
 }
 
-function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page, $perPage = 50)
+function sms_log_bounds($from, $to)
+{
+    $from = trim((string) $from);
+    $to = trim((string) $to);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
+        $from = '';
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+        $to = '';
+    }
+    if ($from !== '' && $to !== '' && $from > $to) {
+        $swap = $from;
+        $from = $to;
+        $to = $swap;
+    }
+    $nepal = new DateTimeZone('Asia/Kathmandu');
+    $store = new DateTimeZone(date_default_timezone_get());
+    $start = '';
+    $end = '';
+    if ($from !== '') {
+        $parsed = DateTime::createFromFormat('!Y-m-d', $from, $nepal);
+        if ($parsed) {
+            $parsed->setTimezone($store);
+            $start = $parsed->format('Y-m-d H:i:s');
+        } else {
+            $from = '';
+        }
+    }
+    if ($to !== '') {
+        $parsed = DateTime::createFromFormat('!Y-m-d', $to, $nepal);
+        if ($parsed) {
+            $parsed->modify('+1 day');
+            $parsed->setTimezone($store);
+            $end = $parsed->format('Y-m-d H:i:s');
+        } else {
+            $to = '';
+        }
+    }
+    return array('from' => $from, 'to' => $to, 'start' => $start, 'end' => $end);
+}
+
+function sms_log_where($clientId, $status, $search, $campaignId, $from, $to, $source = '')
 {
     $clientId = (int) $clientId;
     $campaignId = (int) $campaignId;
+    $allowed = array('sent', 'failed', 'queued', 'sending', 'scheduled');
+    if (!in_array($status, $allowed, true)) {
+        $status = '';
+    }
+    if ($source !== 'api' && $source !== 'dashboard') {
+        $source = '';
+    }
+    $raw = preg_replace('/\D+/', '', (string) $search);
+    if (!is_string($raw)) {
+        $raw = '';
+    }
+    $number = auth_mobile_number($raw);
+    if (!preg_match('/^9[78]\d{8}$/', $number)) {
+        $number = '';
+    }
+    $bounds = sms_log_bounds($from, $to);
+    $where = array('client_id = ?');
+    $types = 'i';
+    $params = array($clientId);
+    if ($status !== '') {
+        $where[] = 'status = ?';
+        $types .= 's';
+        $params[] = $status;
+    }
+    if ($number !== '') {
+        $where[] = 'recipient IN (?, ?, ?)';
+        $types .= 'sss';
+        $params[] = $number;
+        $params[] = '977' . $number;
+        $params[] = '0' . $number;
+        $search = $number;
+    } elseif (strlen($raw) >= 4 && strlen($raw) <= 13) {
+        $where[] = 'recipient LIKE ?';
+        $types .= 's';
+        $params[] = '%' . $raw . '%';
+        $search = $raw;
+    } else {
+        $search = '';
+    }
+    if ($bounds['start'] !== '') {
+        $where[] = 'created_at >= ?';
+        $types .= 's';
+        $params[] = $bounds['start'];
+    }
+    if ($bounds['end'] !== '') {
+        $where[] = 'created_at < ?';
+        $types .= 's';
+        $params[] = $bounds['end'];
+    }
+    if ($campaignId > 0) {
+        $where[] = 'campaign_id = ?';
+        $types .= 'i';
+        $params[] = $campaignId;
+    }
+    if ($source !== '') {
+        $where[] = 'source = ?';
+        $types .= 's';
+        $params[] = $source;
+    }
+    return array(
+        'where' => $where,
+        'types' => $types,
+        'params' => $params,
+        'status' => $status,
+        'search' => $search,
+        'from' => $bounds['from'],
+        'to' => $bounds['to'],
+        'number' => $number,
+        'source' => $source
+    );
+}
+
+function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page, $perPage = 50, $from = '', $to = '', $source = '')
+{
     $page = (int) $page;
     $perPage = (int) $perPage;
     if ($page < 1) {
@@ -822,37 +991,22 @@ function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page
     if ($perPage < 1) {
         $perPage = 50;
     }
-    if ($perPage > 2000) {
-        $perPage = 2000;
+    if ($perPage > 8000) {
+        $perPage = 8000;
     }
-    $allowed = array('sent', 'failed', 'queued', 'sending', 'scheduled');
-    if (!in_array($status, $allowed, true)) {
-        $status = '';
-    }
-    $search = preg_replace('/\D+/', '', (string) $search);
-    if (!is_string($search) || strlen($search) > 10) {
-        $search = '';
-    }
+    $filter = sms_log_where($clientId, $status, $search, $campaignId, $from, $to, $source);
+    $where = $filter['where'];
+    $types = $filter['types'];
+    $params = $filter['params'];
+    $status = $filter['status'];
+    $search = $filter['search'];
+    $source = $filter['source'];
     $offset = ($page - 1) * $perPage;
-    $where = array('client_id = ?');
-    $types = 'i';
-    $params = array($clientId);
-    if ($status !== '') {
-        $where[] = 'status = ?';
-        $types .= 's';
-        $params[] = $status;
+    $aliased = array();
+    foreach ($where as $piece) {
+        $aliased[] = 'm.' . $piece;
     }
-    if ($search !== '') {
-        $where[] = 'recipient LIKE ?';
-        $types .= 's';
-        $params[] = '%' . $search . '%';
-    }
-    if ($campaignId > 0) {
-        $where[] = 'campaign_id = ?';
-        $types .= 'i';
-        $params[] = $campaignId;
-    }
-    $stmt = $conn->prepare('SELECT id, recipient, sender_id, message_text, parts, status, source, error_text, created_at, sent_at FROM sms_messages WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC, id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
+    $stmt = $conn->prepare('SELECT m.id, m.recipient, m.sender_id, m.message_text, m.parts, m.status, m.source, m.error_text, m.created_at, m.sent_at, c.campaign_name FROM sms_messages m LEFT JOIN sms_campaigns c ON c.id = m.campaign_id WHERE ' . implode(' AND ', $aliased) . ' ORDER BY m.created_at DESC, m.id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
     $bind = array($types);
     foreach ($params as $key => $unused) {
         $bind[] = &$params[$key];
@@ -865,7 +1019,47 @@ function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page
     if ($hasMore) {
         $rows = array_slice($rows, 0, $perPage);
     }
-    return array('rows' => $rows, 'page' => $page, 'has_more' => $hasMore, 'status' => $status, 'search' => $search);
+    return array(
+        'rows' => $rows,
+        'page' => $page,
+        'has_more' => $hasMore,
+        'status' => $status,
+        'search' => $search,
+        'from' => $filter['from'],
+        'to' => $filter['to'],
+        'number' => $filter['number'],
+        'source' => $source
+    );
+}
+
+function sms_log_totals($conn, $clientId, $status, $search, $campaignId, $from = '', $to = '', $source = '')
+{
+    $filter = sms_log_where($clientId, $status, $search, $campaignId, $from, $to, $source);
+    $where = $filter['where'];
+    $types = $filter['types'];
+    $params = $filter['params'];
+    $empty = array('sent' => 0, 'failed' => 0, 'sent_credits' => 0, 'failed_credits' => 0);
+    $stmt = $conn->prepare('SELECT COALESCE(SUM(CASE WHEN status = \'sent\' THEN 1 ELSE 0 END), 0) AS sent_count, COALESCE(SUM(CASE WHEN status = \'failed\' THEN 1 ELSE 0 END), 0) AS failed_count, COALESCE(SUM(CASE WHEN status = \'sent\' THEN parts ELSE 0 END), 0) AS sent_credits, COALESCE(SUM(CASE WHEN status = \'failed\' THEN parts ELSE 0 END), 0) AS failed_credits FROM sms_messages WHERE ' . implode(' AND ', $where));
+    if (!$stmt) {
+        return $empty;
+    }
+    $bind = array($types);
+    foreach ($params as $key => $unused) {
+        $bind[] = &$params[$key];
+    }
+    call_user_func_array(array($stmt, 'bind_param'), $bind);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return $empty;
+    }
+    return array(
+        'sent' => (int) $row['sent_count'],
+        'failed' => (int) $row['failed_count'],
+        'sent_credits' => (int) $row['sent_credits'],
+        'failed_credits' => (int) $row['failed_credits']
+    );
 }
 
 function sms_take_credits($conn, $clientId, $credits)
@@ -909,8 +1103,8 @@ function sms_http_form($url, $fields, $timeout = 25)
     if (!is_string($body)) {
         $body = '';
     }
-    if (strlen($body) > 4000) {
-        $body = substr($body, 0, 4000);
+    if (strlen($body) > 262144) {
+        $body = substr($body, 0, 262144);
     }
     return array(
         'ok' => $status >= 200 && $status < 300,
@@ -950,8 +1144,8 @@ function sms_http_json($url, $payload, $headers, $timeout = 25)
     if (!is_string($body)) {
         $body = '';
     }
-    if (strlen($body) > 4000) {
-        $body = substr($body, 0, 4000);
+    if (strlen($body) > 262144) {
+        $body = substr($body, 0, 262144);
     }
     return array(
         'ok' => $status >= 200 && $status < 300,
@@ -1418,8 +1612,7 @@ function sms_save_line($conn, $post)
 function sms_admin_usage($conn, $find = '')
 {
     $find = function_exists('admin_find_text') ? admin_find_text($find) : trim((string) $find);
-    $sql = 'SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left, COALESCE(sent.used_credits, 0) AS sms_used
-        FROM client_users c
+    $from = 'FROM client_users c
         LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = \'sms\'
         LEFT JOIN (
             SELECT client_id, SUM(parts) AS used_credits
@@ -1428,25 +1621,47 @@ function sms_admin_usage($conn, $find = '')
             GROUP BY client_id
         ) sent ON sent.client_id = c.id
         WHERE (COALESCE(u.balance, 0) > 0 OR COALESCE(sent.used_credits, 0) > 0)';
+    $types = '';
+    $params = array();
     if ($find !== '') {
-        $sql .= ' AND (c.name LIKE ? OR c.email LIKE ?)';
-    }
-    $sql .= ' ORDER BY sms_used DESC, c.id DESC LIMIT 100';
-    $stmt = $conn->prepare($sql);
-    if ($find !== '') {
+        $from .= ' AND (c.name LIKE ? OR c.email LIKE ? OR EXISTS (SELECT 1 FROM sms_messages m WHERE m.client_id = c.id AND (m.recipient LIKE ? OR m.message_text LIKE ?)))';
         $like = '%' . $find . '%';
-        $stmt->bind_param('ss', $like, $like);
+        $types = 'ssss';
+        $params = array($like, $like, $like, $like);
+    }
+    $sum = $conn->prepare('SELECT COUNT(*) AS clients, COALESCE(SUM(COALESCE(u.balance, 0)), 0) AS sms_left, COALESCE(SUM(COALESCE(sent.used_credits, 0)), 0) AS sms_used ' . $from);
+    $used = 0;
+    $left = 0;
+    $clients = 0;
+    if ($sum) {
+        if ($types !== '') {
+            $bind = array($types);
+            foreach ($params as $index => $unused) {
+                $bind[] = &$params[$index];
+            }
+            call_user_func_array(array($sum, 'bind_param'), $bind);
+        }
+        $sum->execute();
+        $sumRow = db_fetch_assoc($sum);
+        $sum->close();
+        if ($sumRow) {
+            $clients = (int) $sumRow['clients'];
+            $used = (int) $sumRow['sms_used'];
+            $left = (int) $sumRow['sms_left'];
+        }
+    }
+    $stmt = $conn->prepare('SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left, COALESCE(sent.used_credits, 0) AS sms_used ' . $from . ' ORDER BY sms_used DESC, c.id DESC LIMIT 100');
+    if ($types !== '') {
+        $bind = array($types);
+        foreach ($params as $index => $unused) {
+            $bind[] = &$params[$index];
+        }
+        call_user_func_array(array($stmt, 'bind_param'), $bind);
     }
     $stmt->execute();
     $rows = db_fetch_all($stmt);
     $stmt->close();
-    $used = 0;
-    $left = 0;
-    foreach ($rows as $row) {
-        $used += (int) $row['sms_used'];
-        $left += (int) $row['sms_left'];
-    }
-    return array('rows' => $rows, 'clients' => count($rows), 'used' => $used, 'left' => $left);
+    return array('rows' => $rows, 'clients' => $clients, 'used' => $used, 'left' => $left);
 }
 
 function sms_admin_grant($conn, $clientId, $credits, $note)
@@ -1487,7 +1702,7 @@ function sms_admin_history($conn, $clientId, $find, $status)
     if (!in_array($status, $allowed, true)) {
         $status = '';
     }
-    $sql = 'SELECT m.id, m.client_id, m.recipient, m.message_text, m.parts, m.status, m.source, m.created_at, c.name, c.email
+    $sql = 'SELECT m.id, m.client_id, m.recipient, m.message_text, m.parts, m.status, m.source, m.error_text, m.created_at, c.name, c.email
         FROM sms_messages m
         JOIN client_users c ON c.id = m.client_id
         WHERE 1 = 1';
@@ -1824,6 +2039,7 @@ function sms_deliver_campaign($conn, $campaignId)
     return sms_result(true, '', array(
         'message' => $message,
         'count' => $total - $failedNumbers,
+        'failed' => $failedNumbers,
         'credits' => $creditsSent,
         'balance' => (int) $balance['sms'],
         'campaign_id' => $campaignId
@@ -1834,7 +2050,7 @@ function sms_send($conn, $clientId, $job)
 {
     $clientId = (int) $clientId;
     $source = (isset($job['source']) && $job['source'] === 'api') ? 'api' : 'dashboard';
-    $gate = sms_client_gate($conn, $clientId, $source === 'api');
+    $gate = sms_client_gate($conn, $clientId, false);
     if ($gate !== '') {
         return sms_result(false, $gate);
     }
@@ -1883,21 +2099,24 @@ function sms_send($conn, $clientId, $job)
     }
     $parts = sms_message_parts($text);
     $credits = (int) $rendered['credits'];
-    if ($source !== 'api') {
-        $identityBlock = sms_unverified_block($conn, $clientId, $credits);
-        if ($identityBlock !== '') {
-            return sms_result(false, $identityBlock);
-        }
+    $identityBlock = sms_unverified_block($conn, $clientId, $credits);
+    if ($identityBlock !== '') {
+        return sms_result(false, $identityBlock);
     }
     $list = sms_store_contacts($parsed['contacts']);
     if ($future) {
-        $balances = billing_unit_balances($conn, $clientId);
-        if ((int) $balances['sms'] < $credits) {
+        if (!sms_take_credits($conn, $clientId, $credits)) {
             return sms_result(false, 'There are not enough SMS credits for this message.');
         }
         $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'scheduled', $when, $audience, $purpose, $list);
+        if ($campaignId < 1) {
+            billing_add_units($conn, $clientId, 'sms', $credits);
+            return sms_result(false, 'That SMS could not be scheduled.');
+        }
+        sms_insert_rendered($conn, $clientId, $campaignId, 0, $source, $sender['sender'], $rendered['messages']);
+        $balances = billing_unit_balances($conn, $clientId);
         return sms_result(true, '', array(
-            'message' => 'Scheduled for ' . $schedule['label'] . ' Nepal time. Credits are used when it sends.',
+            'message' => 'Scheduled for ' . $schedule['label'] . ' Nepal time. ' . number_format($credits) . ' credits are held until it sends. Cancel returns them.',
             'count' => count($numbers),
             'credits' => $credits,
             'balance' => (int) $balances['sms'],
@@ -1935,7 +2154,29 @@ function sms_cancel_scheduled($conn, $clientId, $campaignId)
     $stmt->execute();
     $changed = (int) $conn->affected_rows > 0;
     $stmt->close();
-    return $changed;
+    if (!$changed) {
+        return '';
+    }
+    $queued = 'queued';
+    $rows = $conn->prepare('SELECT id, parts FROM sms_messages WHERE campaign_id = ? AND client_id = ? AND status = ?');
+    $rows->bind_param('iis', $campaignId, $clientId, $queued);
+    $rows->execute();
+    $held = db_fetch_all($rows);
+    $rows->close();
+    if (!$held) {
+        return 'released';
+    }
+    $ids = array();
+    $credits = 0;
+    foreach ($held as $heldRow) {
+        $ids[] = (int) $heldRow['id'];
+        $credits += (int) $heldRow['parts'];
+    }
+    sms_mark_messages($conn, $ids, 'failed', 'cancelled');
+    if ($credits > 0) {
+        billing_add_units($conn, $clientId, 'sms', $credits);
+    }
+    return 'refunded';
 }
 
 function sms_run_queue($conn, $limit)
@@ -1956,16 +2197,46 @@ function sms_run_queue($conn, $limit)
     $due = db_fetch_all($stmt);
     $stmt->close();
     $sending = 'sending';
-    $claim = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND status = ?');
+    $claim = $conn->prepare('UPDATE sms_campaigns SET status = ?, updated_at = ? WHERE id = ? AND status = ?');
     foreach ($due as $row) {
         $id = (int) $row['id'];
-        $claim->bind_param('sis', $sending, $id, $scheduled);
+        $claimedAt = date('Y-m-d H:i:s');
+        $claim->bind_param('ssis', $sending, $claimedAt, $id, $scheduled);
         $claim->execute();
         if ((int) $conn->affected_rows > 0) {
             sms_deliver_campaign($conn, $id);
         }
     }
     $claim->close();
+    $cutoff = date('Y-m-d H:i:s', time() - 600);
+    $stuck = $conn->prepare('SELECT c.id, c.scheduled_at FROM sms_campaigns c WHERE c.channel = ? AND c.status = ? AND c.updated_at <= ? AND NOT EXISTS (SELECT 1 FROM sms_messages m WHERE m.campaign_id = c.id) LIMIT 20');
+    if ($stuck) {
+        $stuck->bind_param('sss', $channel, $sending, $cutoff);
+        $stuck->execute();
+        $abandoned = db_fetch_all($stuck);
+        $stuck->close();
+        $back = 'scheduled';
+        $failed = 'failed';
+        $restore = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND status = ?');
+        foreach ($abandoned as $abandonedRow) {
+            $abandonedId = (int) $abandonedRow['id'];
+            $next = trim((string) $abandonedRow['scheduled_at']) !== '' ? $back : $failed;
+            $restore->bind_param('sis', $next, $abandonedId, $sending);
+            $restore->execute();
+        }
+        $restore->close();
+    }
+    $retry = $conn->prepare('SELECT DISTINCT c.id FROM sms_campaigns c JOIN sms_messages m ON m.campaign_id = c.id WHERE c.channel = ? AND c.status = ? AND m.status = ? AND c.updated_at <= ? LIMIT 5');
+    if ($retry) {
+        $queued = 'queued';
+        $retry->bind_param('ssss', $channel, $sending, $queued, $cutoff);
+        $retry->execute();
+        $resume = db_fetch_all($retry);
+        $retry->close();
+        foreach ($resume as $resumeRow) {
+            sms_deliver_campaign($conn, (int) $resumeRow['id']);
+        }
+    }
 }
 
 function sms_api_origin()
@@ -1978,12 +2249,16 @@ function sms_api_origin()
     return ($https ? 'https' : 'http') . '://' . $host;
 }
 
-function sms_create_token($conn, $clientId, $label, $allowedIps)
+function sms_create_token($conn, $clientId, $label, $allowedIps, $code)
 {
     $clientId = (int) $clientId;
-    $gate = sms_client_gate($conn, $clientId, true);
+    $gate = sms_client_gate($conn, $clientId, false);
     if ($gate !== '') {
         return array('ok' => false, 'error' => $gate, 'token' => '');
+    }
+    $balance = billing_unit_balances($conn, $clientId);
+    if ((int) $balance['sms'] < 1 && !billing_kyc_approved($conn, $clientId)) {
+        return array('ok' => false, 'error' => 'Buy SMS credit before creating a token. The API spends the credit on this account.', 'token' => '');
     }
     $label = billing_plain_line($label, 60);
     if ($label === '') {
@@ -2012,6 +2287,18 @@ function sms_create_token($conn, $clientId, $label, $allowedIps)
     if (strlen($allowed) > 255) {
         return array('ok' => false, 'error' => 'The allowed address list is too long.', 'token' => '');
     }
+    $account = totp_account($conn, 'client', $clientId);
+    if (!$account || trim((string) $account['totp_secret']) === '') {
+        return array('ok' => false, 'error' => 'Set up Google Authenticator before a token can be created.', 'token' => '');
+    }
+    $match = totp_match($account['totp_secret'], $code, (int) $account['totp_last_step']);
+    if (!empty($match['replay'])) {
+        return array('ok' => false, 'error' => 'That authenticator code was already used. Wait for the next code.', 'token' => '');
+    }
+    if (empty($match['ok'])) {
+        return array('ok' => false, 'error' => 'Enter the current 6-digit code from Google Authenticator.', 'token' => '');
+    }
+    totp_set_step($conn, 'client', $clientId, $match['step']);
     $token = 'at_' . bin2hex(random_bytes(20));
     $hash = hash('sha256', $token);
     $prefix = substr($token, 0, 10);
@@ -2104,9 +2391,11 @@ function sms_api_input()
             $input = $json;
         }
     }
-    foreach ($_POST as $key => $value) {
-        if (!isset($input[$key])) {
-            $input[$key] = $value;
+    foreach (array($_POST, $_GET) as $bag) {
+        foreach ($bag as $key => $value) {
+            if (!isset($input[$key])) {
+                $input[$key] = $value;
+            }
         }
     }
     $header = '';
@@ -2117,6 +2406,18 @@ function sms_api_input()
     }
     if ($header !== '' && preg_match('/Bearer\s+(\S+)/i', $header, $match) && empty($input['auth_token'])) {
         $input['auth_token'] = $match[1];
+    }
+    if (empty($input['auth_token']) && !empty($_SERVER['HTTP_AUTH_TOKEN'])) {
+        $input['auth_token'] = (string) $_SERVER['HTTP_AUTH_TOKEN'];
+    }
+    if (empty($input['auth_token']) && isset($input['token'])) {
+        $input['auth_token'] = (string) $input['token'];
+    }
+    if (empty($input['text']) && isset($input['message'])) {
+        $input['text'] = $input['message'];
+    }
+    if (empty($input['to']) && isset($input['mobile'])) {
+        $input['to'] = $input['mobile'];
     }
     return $input;
 }
@@ -2130,61 +2431,333 @@ function sms_api_json($status, $payload)
     exit;
 }
 
-function sms_api_send($conn)
+function sms_api_texts($value)
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        sms_api_json(405, array('error' => true, 'message' => 'Use POST.'));
+    if (is_array($value)) {
+        $texts = array();
+        foreach ($value as $item) {
+            if (!is_array($item)) {
+                $texts[] = trim((string) $item);
+            }
+        }
+        return $texts;
+    }
+    if (!is_scalar($value)) {
+        return array();
+    }
+    return array(trim((string) $value));
+}
+
+function sms_api_mobiles($value)
+{
+    $chunks = array();
+    if (is_array($value)) {
+        foreach ($value as $item) {
+            if (!is_array($item)) {
+                $chunks[] = (string) $item;
+            }
+        }
+    } elseif (is_scalar($value)) {
+        $chunks[] = (string) $value;
+    }
+    $pieces = array();
+    foreach ($chunks as $chunk) {
+        $split = preg_split('/[\s,;]+/', trim($chunk));
+        if (!is_array($split)) {
+            continue;
+        }
+        foreach ($split as $piece) {
+            if ($piece !== '') {
+                $pieces[] = $piece;
+            }
+        }
+    }
+    return $pieces;
+}
+
+function sms_api_balance_message($error)
+{
+    $error = (string) $error;
+    if (stripos($error, 'not enough') !== false) {
+        return 'Not enough balance.';
+    }
+    return $error;
+}
+
+function sms_api_receipt($conn, $clientId, $campaignId)
+{
+    $valid = array();
+    $invalid = array();
+    $credits = 0;
+    $clientId = (int) $clientId;
+    $campaignId = (int) $campaignId;
+    if ($campaignId < 1) {
+        return array('valid' => $valid, 'invalid' => $invalid, 'credits' => 0);
+    }
+    $stmt = $conn->prepare('SELECT id, recipient, message_text, parts, status FROM sms_messages WHERE campaign_id = ? AND client_id = ? ORDER BY id ASC');
+    $stmt->bind_param('ii', $campaignId, $clientId);
+    $stmt->execute();
+    $rows = db_fetch_all($stmt);
+    $stmt->close();
+    foreach ($rows as $row) {
+        $failed = (string) $row['status'] === 'failed';
+        $item = array(
+            'id' => (int) $row['id'],
+            'mobile' => (string) $row['recipient'],
+            'text' => (string) $row['message_text'],
+            'credit' => $failed ? 0 : (int) $row['parts'],
+            'status' => (string) $row['status']
+        );
+        if ($failed) {
+            $invalid[] = $item;
+        } else {
+            $valid[] = $item;
+            $credits += (int) $row['parts'];
+        }
+    }
+    return array('valid' => $valid, 'invalid' => $invalid, 'credits' => $credits);
+}
+
+function sms_api_token_row($conn)
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+        sms_api_json(405, array('error' => true, 'message' => 'Use POST or GET.', 'data' => array()));
     }
     $input = sms_api_input();
-    $token = isset($input['auth_token']) ? (string) $input['auth_token'] : '';
+    $token = isset($input['auth_token']) ? trim((string) $input['auth_token']) : '';
+    if ($token === '') {
+        sms_api_json(400, array('error' => true, 'message' => 'The auth token field is required.', 'data' => array()));
+    }
     $row = sms_find_token($conn, $token);
     if (!$row) {
-        sms_api_json(401, array('error' => true, 'message' => 'The token is not valid.'));
+        sms_api_json(401, array('error' => true, 'message' => 'The provided auth token is not valid.', 'data' => array()));
     }
+    return array($row, $input);
+}
+
+function sms_api_send($conn)
+{
+    list($row, $input) = sms_api_token_row($conn);
     $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
     $limited = sms_api_allow($conn, $row, $ip);
     if ($limited !== '') {
-        sms_api_json(429, array('error' => true, 'message' => $limited));
+        sms_api_json(429, array('error' => true, 'message' => $limited, 'data' => array()));
+    }
+    $mobiles = sms_api_mobiles(isset($input['to']) ? $input['to'] : '');
+    $texts = sms_api_texts(isset($input['text']) ? $input['text'] : '');
+    if (!$mobiles) {
+        sms_api_json(400, array('error' => true, 'message' => 'The to field is required.', 'data' => array()));
+    }
+    $filled = array();
+    foreach ($texts as $text) {
+        if ($text !== '') {
+            $filled[] = $text;
+        }
+    }
+    if (!$filled) {
+        sms_api_json(400, array('error' => true, 'message' => 'The text field is required.', 'data' => array()));
+    }
+    if (count($texts) > 1 && count($filled) !== count($texts)) {
+        sms_api_json(400, array('error' => true, 'message' => 'Each number needs a message.', 'data' => array()));
+    }
+    if (count($texts) === 1) {
+        $texts = $filled;
+    }
+    $paired = count($texts) > 1;
+    if ($paired) {
+        $sameText = true;
+        foreach ($texts as $text) {
+            if ($text !== $texts[0]) {
+                $sameText = false;
+                break;
+            }
+        }
+        if ($sameText) {
+            $texts = array($texts[0]);
+            $paired = false;
+        }
+    }
+    if ($paired && count($texts) !== count($mobiles)) {
+        sms_api_json(400, array('error' => true, 'message' => 'Use one message for every number, or one message for each number.', 'data' => array()));
+    }
+    if ($paired && count($texts) > 20) {
+        sms_api_json(400, array('error' => true, 'message' => 'One call can send 20 different messages. One message can still go to 500 numbers.', 'data' => array()));
+    }
+    $jobs = array();
+    $invalid = array();
+    if (!$paired) {
+        $accepted = array();
+        foreach ($mobiles as $mobile) {
+            $digits = auth_mobile_number($mobile);
+            if (!preg_match('/^9[78]\d{8}$/', $digits)) {
+                $invalid[] = array('mobile' => $mobile, 'text' => $texts[0], 'credit' => 0, 'status' => 'invalid');
+                continue;
+            }
+            $accepted[$digits] = $digits;
+        }
+        if ($accepted) {
+            $jobs[] = array('text' => $texts[0], 'numbers' => implode("\n", array_values($accepted)));
+        }
+    } else {
+        foreach ($mobiles as $index => $mobile) {
+            $digits = auth_mobile_number($mobile);
+            $text = $texts[$index];
+            if (!preg_match('/^9[78]\d{8}$/', $digits)) {
+                $invalid[] = array('mobile' => $mobile, 'text' => $text, 'credit' => 0, 'status' => 'invalid');
+                continue;
+            }
+            $jobs[] = array('text' => $text, 'numbers' => $digits);
+        }
+    }
+    if (!$jobs) {
+        sms_api_json(400, array(
+            'error' => true,
+            'message' => 'No valid recipients.',
+            'data' => array('valid' => array(), 'invalid' => $invalid)
+        ));
     }
     $clientId = (int) $row['client_id'];
-    $result = sms_send($conn, $clientId, array(
-        'name' => 'API',
-        'text' => isset($input['text']) ? $input['text'] : '',
-        'numbers' => isset($input['to']) ? $input['to'] : '',
-        'sender' => isset($input['from']) ? $input['from'] : '',
-        'source' => 'api',
-        'token_id' => (int) $row['id']
-    ));
-    if (empty($result['ok'])) {
-        sms_api_json(400, array('error' => true, 'message' => $result['error']));
+    $tokenId = (int) $row['id'];
+    $name = (isset($input['name']) && trim((string) $input['name']) !== '') ? (string) $input['name'] : 'API';
+    $sender = isset($input['from']) ? (string) $input['from'] : '';
+    $valid = array();
+    $credits = 0;
+    $balance = billing_unit_balances($conn, $clientId);
+    $balance = (int) $balance['sms'];
+    $lastError = '';
+    $stopped = false;
+    foreach ($jobs as $job) {
+        $jobNumbers = preg_split('/\n/', (string) $job['numbers']);
+        if (!is_array($jobNumbers)) {
+            $jobNumbers = array();
+        }
+        if ($stopped) {
+            foreach ($jobNumbers as $jobNumber) {
+                if ($jobNumber !== '') {
+                    $invalid[] = array('mobile' => $jobNumber, 'text' => $job['text'], 'credit' => 0, 'status' => 'not-sent');
+                }
+            }
+            continue;
+        }
+        $result = sms_send($conn, $clientId, array(
+            'name' => $name,
+            'text' => $job['text'],
+            'numbers' => $job['numbers'],
+            'sender' => $sender,
+            'source' => 'api',
+            'token_id' => $tokenId
+        ));
+        if (isset($result['balance'])) {
+            $balance = (int) $result['balance'];
+        }
+        if (!empty($result['campaign_id'])) {
+            $receipt = sms_api_receipt($conn, $clientId, (int) $result['campaign_id']);
+            $valid = array_merge($valid, $receipt['valid']);
+            $invalid = array_merge($invalid, $receipt['invalid']);
+            $credits += (int) $receipt['credits'];
+        } elseif (empty($result['ok'])) {
+            foreach ($jobNumbers as $jobNumber) {
+                if ($jobNumber !== '') {
+                    $invalid[] = array('mobile' => $jobNumber, 'text' => $job['text'], 'credit' => 0, 'status' => 'not-sent');
+                }
+            }
+        }
+        if (empty($result['ok'])) {
+            $lastError = sms_api_balance_message($result['error']);
+            $stopped = true;
+        }
     }
-    sms_api_json(200, array(
-        'error' => false,
-        'message' => $result['message'],
-        'data' => array(
-            'count' => (int) $result['count'],
-            'credits_used' => (int) $result['credits'],
-            'balance' => (int) $result['balance']
-        )
+    $data = array(
+        'count' => count($valid),
+        'failed' => count($invalid),
+        'credits_used' => $credits,
+        'balance' => $balance,
+        'available_credit' => $balance,
+        'valid' => $valid,
+        'invalid' => $invalid
+    );
+    if ($valid) {
+        $message = count($valid) === 1 ? '1 SMS sent.' : number_format(count($valid)) . ' SMS sent.';
+        if ($invalid) {
+            $message .= ' Some numbers were not accepted. Those credits were returned.';
+        }
+        sms_api_json(200, array('error' => false, 'message' => $message, 'data' => $data));
+    }
+    sms_api_json(400, array(
+        'error' => true,
+        'message' => $lastError !== '' ? $lastError : 'The message could not be sent.',
+        'data' => $lastError === 'Not enough balance.' ? array() : $data
     ));
 }
 
 function sms_api_credit($conn)
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        sms_api_json(405, array('error' => true, 'message' => 'Use POST.'));
-    }
-    $input = sms_api_input();
-    $token = isset($input['auth_token']) ? (string) $input['auth_token'] : '';
-    $row = sms_find_token($conn, $token);
-    if (!$row) {
-        sms_api_json(401, array('error' => true, 'message' => 'The token is not valid.'));
-    }
-    $balance = billing_unit_balances($conn, (int) $row['client_id']);
+    list($row) = sms_api_token_row($conn);
+    $clientId = (int) $row['client_id'];
+    $balance = billing_unit_balances($conn, $clientId);
+    $sent = 'sent';
+    $stmt = $conn->prepare('SELECT COUNT(*) AS sent_count, MAX(sent_at) AS last_sent FROM sms_messages WHERE client_id = ? AND status = ?');
+    $stmt->bind_param('is', $clientId, $sent);
+    $stmt->execute();
+    $stats = db_fetch_assoc($stmt);
+    $stmt->close();
+    $available = (int) $balance['sms'];
     sms_api_json(200, array(
         'error' => false,
         'message' => 'SMS credit balance.',
-        'data' => array('balance' => (int) $balance['sms'])
+        'data' => array(
+            'available_credit' => $available,
+            'balance' => $available,
+            'total_sms_sent' => $stats ? (int) $stats['sent_count'] : 0,
+            'last_sent' => ($stats && $stats['last_sent']) ? sms_format_time($stats['last_sent']) : ''
+        )
+    ));
+}
+
+function sms_api_report($conn)
+{
+    list($row, $input) = sms_api_token_row($conn);
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+    $limited = sms_api_allow($conn, $row, $ip);
+    if ($limited !== '') {
+        sms_api_json(429, array('error' => true, 'message' => $limited, 'data' => array()));
+    }
+    $start = isset($input['start_date']) ? trim((string) $input['start_date']) : '';
+    $end = isset($input['end_date']) ? trim((string) $input['end_date']) : '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
+        sms_api_json(400, array('error' => true, 'message' => 'The start date field is required. Use Y-m-d.', 'data' => array()));
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
+        sms_api_json(400, array('error' => true, 'message' => 'The end date field is required. Use Y-m-d.', 'data' => array()));
+    }
+    if (abs(strtotime($end) - strtotime($start)) > 62 * 86400) {
+        sms_api_json(400, array('error' => true, 'message' => 'Use a date range of 62 days or less.', 'data' => array()));
+    }
+    $page = isset($input['page']) ? (int) $input['page'] : 1;
+    $source = isset($input['source']) ? (string) $input['source'] : '';
+    $log = sms_message_page($conn, (int) $row['client_id'], '', '', 0, $page, 100, $start, $end, $source);
+    $rows = array();
+    foreach ($log['rows'] as $item) {
+        $rows[] = array(
+            'id' => (int) $item['id'],
+            'mobile' => (string) $item['recipient'],
+            'text' => (string) $item['message_text'],
+            'credit' => (int) $item['parts'],
+            'status' => (string) $item['status'],
+            'source' => (string) $item['source'] === 'api' ? 'api' : 'dashboard',
+            'at' => sms_format_time($item['created_at'])
+        );
+    }
+    sms_api_json(200, array(
+        'error' => false,
+        'message' => 'SMS report.',
+        'data' => array(
+            'page' => (int) $log['page'],
+            'has_more' => !empty($log['has_more']),
+            'start_date' => $log['from'],
+            'end_date' => $log['to'],
+            'rows' => $rows
+        )
     ));
 }
 

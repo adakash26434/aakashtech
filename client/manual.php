@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 $origin = sms_api_origin();
 $sendUrl = ($origin !== '' ? $origin : '') . '/api/sms/send';
 $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
+$reportUrl = ($origin !== '' ? $origin : '') . '/api/sms/report';
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">ग्राहक मार्गदर्शन</h1>
@@ -46,7 +47,7 @@ $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
 <section id="kyc" class="dash-panel mb-6">
     <div class="dash-panel-header"><h2 class="font-heading font-semibold text-white">३. पहिचान</h2></div>
     <div class="p-5 space-y-2 text-sm text-slate-300">
-        <p>Identity मा व्यक्ति वा संस्थाको विवरण र कागज पठाउनुहोस्। स्वीकृत नभएसम्म SMS, आवाज काम, र API टोकन बन्द रहन्छ। क्रेडिट भने पहिले किन्न सकिन्छ।</p>
+        <p>Identity मा व्यक्ति वा संस्थाको विवरण र कागज पठाउनुहोस्। क्रेडिट पहिले किन्न सकिन्छ। पहिचान नभएसम्म जम्मा १०० SMS जान्छ। त्योभन्दा बढी, र वेबसाइटको OTP टोकनबाट पनि बढी, Update KYC पछि मात्र जान्छ।</p>
         <p>फिर्ता आएमा कारण पढेर कागज अपडेट गर्नुहोस्। स्वीकृत भएपछि SMS ड्यासबोर्ड खुल्छ।</p>
     </div>
 </section>
@@ -60,7 +61,7 @@ $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
         <li>सन्देशमा <code class="text-brand-300">{name}</code> लेखे र हरेक लाइनमा <code class="text-brand-300">राम, 9800000001</code> राखे त्यो व्यक्तिको नाम जान्छ। नाम नभएको लाइनमा खाली नाम हट्छ।</li>
         <li>घोषणा स्वीकार गरेर पठाउनुहोस्। पठाइएको सन्देशको क्रेडिट काटिन्छ।</li>
         <li>नेपाल कानुनले नमिल्ने ढाँचा रोकिन्छ र क्रेडिट काटिँदैन। बैठक, चाड, र आफ्नै OTP जस्तो सूचना जान्छ।</li>
-        <li>पछि पठाउन समय राख्न सकिन्छ। समय नेपालको हो। रद्द गरे क्रेडिट लाग्दैन।</li>
+        <li>पछि पठाउन समय राख्न सकिन्छ। समय नेपालको हो। क्रेडिट त्यतिबेलै छुट्याइन्छ। रद्द गरे त्यो क्रेडिट फर्किन्छ।</li>
         <li>SMS logs मा पठाइएको, असफल, र बाँकी हेर्नुहोस्। Send again ले त्यही पाठ फेरि भर्छ।</li>
         <li>क्रेडिट १०० भन्दा कम हुँदा ड्यासबोर्ड र SMS पृष्ठमा किन्नु भन्ने सूचना आउँछ। टोलीले थपेको वा वालेटबाट किनेको क्रेडिट Credits added मा देखिन्छ।</li>
     </ol>
@@ -69,15 +70,16 @@ $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
 <section id="api" class="dash-panel mb-6">
     <div class="dash-panel-header"><h2 class="font-heading font-semibold text-white">५. API सेटअप</h2></div>
     <div class="p-5 space-y-3 text-sm text-slate-300">
-        <p>वेबसाइट वा एपबाट SMS पठाउन SMS API मा टोकन बनाउनुहोस्। पहिचान स्वीकृत भएको हुनुपर्छ।</p>
+        <p>आफैं SMS क्रेडिट थपेपछि वेबसाइटको OTP वा अरू सूचनाका लागि SMS API मा टोकन बनाउनुहोस्। टोकन बनाउँदा Google Authenticator को ताजा ६ अंक चाहिन्छ। त्यो कोड फेरि चल्दैन।</p>
+        <p>पहिचान नभएको खाताले जम्मा १०० SMS पठाउन सक्छ। त्यो सीमा पोर्टल र API दुवैमा लाग्छ। बढी पठाउन Update KYC गर्नुहोस्।</p>
         <ol class="list-decimal pl-5 space-y-2">
             <li>टोकनको नाम राख्नुहोस्, जस्तै Website OTP।</li>
             <li>सर्भरको IP राख्न चाहनुहुन्छ भने लेख्नुहोस्। खाली छाडे कुनै ठेगानाबाट चल्छ।</li>
-            <li>घोषणामा ठीक चिन्ह लगाएर Create token थिच्नुहोस्।</li>
+            <li>Authenticator को ६ अंक हाल्नुहोस्। घोषणामा ठीक चिन्ह लगाएर Create token थिच्नुहोस्।</li>
             <li>देखिएको टोकन तुरुन्त कपी गर्नुहोस्। फेरि देखिँदैन। सक्रिय टोकन बढीमा ५ वटा हुन्छ।</li>
             <li>टोकन चाहिँदैन भने Revoke थिच्नुहोस्। त्यो टोकनको कल बन्द हुन्छ।</li>
         </ol>
-        <p>पठाउने ठेगाना POST हो। फारम वा JSON दुवै चल्छ। एक मिनेटमा ३० पटकसम्म।</p>
+        <p>पठाउन तीन कुरा मात्र: auth_token, to, र text। POST वा GET दुवै चल्छ। JSON पनि चल्छ। एउटा नमिल्ने नम्बरले बाँकी नम्बर रोक्दैन। एक मिनेटमा ३० पटकसम्म। curl, PHP, Python, र C# उदाहरण SMS API पृष्ठमा छन्।</p>
         <p class="break-all text-slate-400"><?= e($sendUrl) ?></p>
         <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">curl -X POST <?= e($sendUrl) ?> \
   -d auth_token=तपाईंको_टोकन \
@@ -88,14 +90,15 @@ $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
             <li><code class="text-brand-300">to</code> — एउटा नम्बर, वा अल्पविरामले छुट्याएका नम्बर। बढीमा ५००।</li>
             <li><code class="text-brand-300">text</code> — पठाउने सन्देश।</li>
         </ul>
-        <p>सफल जवाफमा <code class="text-brand-300">error: false</code>, पठाइएको गन्ती, लागेको क्रेडिट, र बाँकी क्रेडिट आउँछ।</p>
+        <p>सफल जवाफमा <code class="text-brand-300">error: false</code> आउँछ। <code class="text-brand-300">valid</code> मा गएका नम्बर र <code class="text-brand-300">invalid</code> मा नगएका नम्बर हुन्छन्। क्रेडिट नमिल्दा जवाफ <code class="text-brand-300">Not enough balance.</code> हुन्छ। टोकन खाली भए, नम्बर खाली भए, वा सन्देश खाली भए कुन चिज छुट्यो भनेर लेखिन्छ।</p>
         <ul class="list-disc pl-5 space-y-1">
             <li>४०१ — टोकन मिलेन।</li>
             <li>४०० — सन्देश स्वीकार भएन। ती नम्बरको क्रेडिट फर्किन्छ। कानुनले नमिल्ने पाठ पनि ४०० हो र काटिँदैन।</li>
             <li>४२९ — एक मिनेटमा ३० पटकभन्दा बढी भयो।</li>
-            <li>४०५ — POST बाहेकको विधि।</li>
+            <li>४०५ — POST र GET बाहेकको विधि।</li>
         </ul>
-        <p class="break-all text-slate-400">बाँकी क्रेडिट: POST <?= e($creditUrl) ?> मा उही <code class="text-brand-300">auth_token</code> पठाउनुहोस्।</p>
+        <p class="break-all text-slate-400">बाँकी क्रेडिट: POST <?= e($creditUrl) ?> मा उही <code class="text-brand-300">auth_token</code>। जवाफमा <code class="text-brand-300">available_credit</code> र पठाइसकेको गन्ती आउँछ।</p>
+        <p class="break-all text-slate-400">मिति अनुसार रिपोर्ट: POST <?= e($reportUrl) ?> मा <code class="text-brand-300">start_date</code> र <code class="text-brand-300">end_date</code> (Y-m-d)। एक पटकमा ६२ दिन र १०० हरफ। अर्को पाना <code class="text-brand-300">page=2</code>।</p>
     </div>
 </section>
 

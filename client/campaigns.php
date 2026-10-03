@@ -14,8 +14,11 @@ $purposes = billing_purposes();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_campaign'])) {
     verify_csrf();
     $cancelId = isset($_POST['campaign_id']) ? (int) $_POST['campaign_id'] : 0;
-    if (sms_cancel_scheduled($conn, $cid, $cancelId)) {
-        $msg = 'Scheduled SMS cancelled. No credits were used.';
+    $cancelled = sms_cancel_scheduled($conn, $cid, $cancelId);
+    if ($cancelled === 'refunded') {
+        $msg = 'Scheduled SMS cancelled. The held credits are back on this account.';
+    } elseif ($cancelled === 'released') {
+        $msg = 'Scheduled SMS cancelled. No credits were held.';
     } elseif (voice_cancel_job($conn, $cid, $cancelId)) {
         $msg = 'Voice job cancelled. No voice credits were used.';
     } else {

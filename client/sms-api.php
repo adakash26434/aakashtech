@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
@@ -6,6 +7,7 @@ $cid = (int) get_client_id();
 $msg = '';
 $err = '';
 $plainToken = '';
+$tokenDraft = array('label' => '', 'allowed_ips' => '');
 if (!empty($_SESSION['sms_plain_token'])) {
     $plainToken = (string) $_SESSION['sms_plain_token'];
     unset($_SESSION['sms_plain_token']);
@@ -13,21 +15,60 @@ if (!empty($_SESSION['sms_plain_token'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_token'])) {
     verify_csrf();
+    $tokenDraft = array(
+        'label' => isset($_POST['label']) ? (string) $_POST['label'] : '',
+        'allowed_ips' => isset($_POST['allowed_ips']) ? (string) $_POST['allowed_ips'] : ''
+    );
     if (billing_posted($_POST, 'legal_accept') !== '1') {
         $err = 'Accept the declaration before a token can be created.';
     } else {
-        $created = sms_create_token(
-            $conn,
-            $cid,
-            isset($_POST['label']) ? $_POST['label'] : '',
-            isset($_POST['allowed_ips']) ? $_POST['allowed_ips'] : ''
-        );
-        if (!empty($created['ok'])) {
-            $_SESSION['sms_plain_token'] = $created['token'];
-            header('Location: sms-api.php');
-            exit;
+        if (function_exists('client_office_view') && client_office_view()) {
+            $err = 'The client creates this token and enters their own authenticator code.';
+        } else {
+            $created = sms_create_token(
+                $conn,
+                $cid,
+                $tokenDraft['label'],
+                $tokenDraft['allowed_ips'],
+                isset($_POST['authenticator_code']) ? $_POST['authenticator_code'] : ''
+            );
+            if (!empty($created['ok'])) {
+                $_SESSION['sms_plain_token'] = $created['token'];
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                header('Location: sms-api.php');
+                exit;
+            }
+            $err = $created['error'];
         }
-        $err = $created['error'];
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_sms'])) {
+    verify_csrf();
+    $phoneStmt = $conn->prepare('SELECT phone FROM client_users WHERE id = ?');
+    $phoneStmt->bind_param('i', $cid);
+    $phoneStmt->execute();
+    $phoneRow = db_fetch_assoc($phoneStmt);
+    $phoneStmt->close();
+    $ownMobile = $phoneRow ? auth_mobile_number((string) $phoneRow['phone']) : '';
+    if (!preg_match('/^9[78]\d{8}$/', $ownMobile)) {
+        $err = 'This account has no Nepal mobile for a test SMS.';
+    } else {
+        $tested = sms_send($conn, $cid, array(
+            'name' => 'API test',
+            'text' => 'Your test code is 482193. Do not share this code.',
+            'numbers' => $ownMobile,
+            'audience' => 'personal',
+            'purpose' => 'otp',
+            'source' => 'dashboard'
+        ));
+        if (!empty($tested['ok'])) {
+            $msg = 'A test code was sent to ' . $ownMobile . '. One credit was used. Check SMS logs if it does not arrive.';
+        } else {
+            $err = $tested['error'];
+        }
     }
 }
 
@@ -50,12 +91,13 @@ $kycReady = billing_kyc_approved($conn, $cid);
 $origin = sms_api_origin();
 $sendUrl = ($origin !== '' ? $origin : '') . '/api/sms/send';
 $creditUrl = ($origin !== '' ? $origin : '') . '/api/sms/credit';
+$reportUrl = ($origin !== '' ? $origin : '') . '/api/sms/report';
 $route = sms_client_route($conn, $cid);
 $apiBalance = billing_unit_balances($conn, $cid);
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">SMS API</h1>
-    <p class="text-slate-500 text-sm">Create a token and call it from your website or app. People receive the SMS from Aakash Technologies. Your credits fall on each accepted message. <?= number_format((int) $apiBalance['sms']) ?> credits left. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
+    <p class="text-slate-500 text-sm">After you add SMS credit, create a token here for OTP or any other message from your own website. <?= number_format((int) $apiBalance['sms']) ?> credits left. The steps are on this page. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
 </div>
 
 <?php if ($msg): ?>
@@ -72,18 +114,28 @@ $apiBalance = billing_unit_balances($conn, $cid);
             <code id="sms-new-token" class="block text-brand-300 text-sm break-all"><?= e($plainToken) ?></code>
             <button type="button" class="shrink-0 px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-white text-xs rounded-lg" onclick="navigator.clipboard.writeText(document.getElementById('sms-new-token').textContent)">Copy token</button>
         </div>
+        <p class="text-slate-400 text-xs mt-3">Paste it as auth_token. Three fields send an OTP: token, mobile, and text.</p>
+        <pre id="sms-ready-call" class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4 mt-3">curl -X POST <?= e($sendUrl) ?> \
+  -d auth_token=<?= e($plainToken) ?> \
+  -d to=98XXXXXXXX \
+  -d text='Your code is 482193'</pre>
+        <button type="button" class="mt-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-lg" onclick="navigator.clipboard.writeText(document.getElementById('sms-ready-call').textContent)">Copy this call</button>
     </div>
 <?php endif; ?>
 
-<?php if (!$kycReady): ?>
+<?php $canToken = $kycReady || (int) $apiBalance['sms'] > 0; ?>
+<?php if (!$kycReady && $canToken): ?>
+    <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">This token spends the SMS credit you added. More than 100 SMS in total needs KYC. <a class="text-brand-300" href="kyc.php">Update KYC</a></div>
+<?php endif; ?>
+<?php if (!$canToken): ?>
     <div class="dash-panel mb-6">
         <div class="p-6">
-            <p class="text-slate-300 text-sm mb-4">A token can be created after identity is approved.</p>
-            <a href="kyc.php" class="inline-block px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit identity</a>
+            <p class="text-slate-300 text-sm mb-4">Buy SMS credit first. The token sends from that credit, for an OTP or any other message on your website.</p>
+            <a href="shop.php?service=bulk-sms" class="inline-block px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Buy SMS credit</a>
         </div>
     </div>
 <?php else: ?>
-    <div x-data="{ tab: 'list' }">
+    <div x-data="{ tab: '<?= ($err !== '' && isset($_POST['create_token'])) ? 'work' : 'list' ?>' }">
     <div class="portal-tabs" role="tablist">
         <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Your tokens</button>
         <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New token</button>
@@ -96,11 +148,16 @@ $apiBalance = billing_unit_balances($conn, $cid);
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div>
                     <label class="block text-slate-400 text-xs font-medium mb-1.5">Name</label>
-                    <input type="text" name="label" required maxlength="60" class="form-input" placeholder="Website OTP">
+                    <input type="text" name="label" required maxlength="60" class="form-input" placeholder="Website OTP" value="<?= e($tokenDraft['label']) ?>">
                 </div>
+                <details class="text-sm text-slate-400">
+                    <summary class="cursor-pointer">Optional: allow only one server</summary>
+                    <textarea name="allowed_ips" rows="2" class="form-input mt-2" placeholder="Leave empty. Any server can use the token."><?= e($tokenDraft['allowed_ips']) ?></textarea>
+                </details>
                 <div>
-                    <label class="block text-slate-400 text-xs font-medium mb-1.5">Allowed IP addresses, optional</label>
-                    <textarea name="allowed_ips" rows="3" class="form-input" placeholder="Leave empty to allow any server"></textarea>
+                    <label class="block text-slate-400 text-xs font-medium mb-1.5" for="authenticator_code">Authenticator code</label>
+                    <input id="authenticator_code" name="authenticator_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required class="form-input" placeholder="6-digit code">
+                    <p class="text-slate-500 text-xs mt-1">Enter the current code from Google Authenticator. The same code cannot be used again.</p>
                 </div>
                 <label class="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
                     <input type="checkbox" name="legal_accept" value="1" required class="mt-1">
@@ -144,36 +201,156 @@ $apiBalance = billing_unit_balances($conn, $cid);
     </div>
 <?php endif; ?>
 
-<div class="dash-panel">
-    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Call</h3></div>
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Send SMS</h3></div>
     <div class="p-5 space-y-4 text-sm text-slate-300">
-        <p>Send with POST. <code class="text-brand-300">auth_token</code>, <code class="text-brand-300">to</code>, and <code class="text-brand-300">text</code> can be form fields or JSON. <code class="text-brand-300">to</code> is one number or several separated by commas. At most 500 numbers. A token accepts 30 calls a minute.</p>
-        <?php if ($route['choose_sender']): ?>
-            <p>Add <code class="text-brand-300">from</code> with an approved sender name.</p>
-        <?php endif; ?>
-        <p class="text-slate-400 break-all">POST <?= e($sendUrl) ?></p>
+        <p>Put this token in a website, app, or office software. Three fields send the SMS. POST and GET both work. A JSON body works too. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
+        <p class="text-slate-400 break-all">URL <?= e($sendUrl) ?></p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase">
+                        <th class="py-2 pr-4">Field</th>
+                        <th class="py-2 pr-4">Type</th>
+                        <th class="py-2">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    <tr>
+                        <td class="py-2 pr-4 text-white">auth_token</td>
+                        <td class="py-2 pr-4">string</td>
+                        <td class="py-2">Token from this page. The header <code class="text-brand-300">auth-token</code> or <code class="text-brand-300">Authorization: Bearer</code> also works.</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 text-white">to</td>
+                        <td class="py-2 pr-4">string or list</td>
+                        <td class="py-2">10-digit Nepal mobiles, separated by commas, or a list. One message can go to 500 numbers. A number that is not valid is skipped. The others still send.</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 text-white">text</td>
+                        <td class="py-2 pr-4">string or list</td>
+                        <td class="py-2">The message. One text goes to every number. A list with one text per number sends a different message, up to 20.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-white">cURL</p>
         <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">curl -X POST <?= e($sendUrl) ?> \
   -d auth_token=YOUR_TOKEN \
-  -d to=98XXXXXXXX \
+  -d to=9800000001,9800000002 \
   -d text='Your code is 482193'</pre>
-        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4"><?php
-        $sample = '$args = http_build_query(array(' . "\n"
-            . "    'auth_token' => 'YOUR_TOKEN',\n"
-            . "    'to' => '98XXXXXXXX',\n"
-            . "    'text' => 'Your code is 482193'\n"
-            . "));\n"
-            . '$ch = curl_init(' . var_export($sendUrl, true) . ");\n"
-            . "curl_setopt(\$ch, CURLOPT_POST, true);\n"
-            . "curl_setopt(\$ch, CURLOPT_POSTFIELDS, \$args);\n"
-            . "curl_setopt(\$ch, CURLOPT_RETURNTRANSFER, true);\n"
-            . 'echo curl_exec($ch);';
-        echo e($sample);
-        ?></pre>
-        <p>A sent message looks like this. <code class="text-brand-300">balance</code> is the SMS credit left on this account.</p>
-        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{ "error": false, "message": "1 SMS sent.", "data": { "count": 1, "credits_used": 1, "balance": 4999 } }</pre>
-        <p>A bad token returns 401. A message that was not accepted returns 400 and the credits for those numbers come back. A message Nepal law does not allow also returns 400 and is not charged. More than 30 calls in a minute returns 429.</p>
-        <p class="text-slate-400 break-all">Credit check: POST <?= e($creditUrl) ?> with the same <code class="text-brand-300">auth_token</code>.</p>
-        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{ "error": false, "message": "SMS credit balance.", "data": { "balance": <?= (int) $apiBalance['sms'] ?> } }</pre>
+        <p class="text-white">PHP</p>
+        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">$args = http_build_query(array(
+    'auth_token' => 'YOUR_TOKEN',
+    'to' => '9800000001,9800000002',
+    'text' => 'Your code is 482193'
+));
+$ch = curl_init(<?= json_encode($sendUrl) ?>);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $args);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$response = curl_exec($ch);
+curl_close($ch);</pre>
+        <p class="text-white">Python</p>
+        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">import requests
+r = requests.post(
+    <?= json_encode($sendUrl) ?>,
+    data={
+        'auth_token': 'YOUR_TOKEN',
+        'to': '9800000001,9800000002',
+        'text': 'Your code is 482193'
+    })
+print(r.status_code)
+print(r.json())</pre>
+        <p class="text-white">C#</p>
+        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">using (var client = new WebClient()) {
+    var values = new NameValueCollection();
+    values["auth_token"] = "YOUR_TOKEN";
+    values["to"] = "9800000001,9800000002";
+    values["text"] = "Your code is 482193";
+    var response = client.UploadValues(<?= json_encode($sendUrl) ?>, "POST", values);
+    var responseString = Encoding.UTF8.GetString(response);
+}</pre>
+        <p class="text-white">Different message for each number</p>
+        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">curl -X POST <?= e($sendUrl) ?> \
+  -H 'Content-Type: application/json' \
+  -H 'auth-token: YOUR_TOKEN' \
+  -d '{"to":["9800000001","9800000002"],"text":["Your code is 482193","Your code is 771520"]}'</pre>
+        <p>Success</p>
+        <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{
+  "error": false,
+  "message": "1 SMS sent.",
+  "data": {
+    "count": 1,
+    "failed": 1,
+    "credits_used": 1,
+    "balance": 4999,
+    "available_credit": 4999,
+    "valid": [{ "id": 12, "mobile": "9800000001", "text": "Your code is 482193", "credit": 1, "status": "sent" }],
+    "invalid": [{ "mobile": "988585584", "text": "Your code is 482193", "credit": 0, "status": "invalid" }]
+  }
+}</pre>
+        <p>Failure</p>
+        <ul class="list-disc pl-5 space-y-1">
+            <li>400 — <code class="text-brand-300">The auth token field is required.</code> The same shape is used when <code class="text-brand-300">to</code> or <code class="text-brand-300">text</code> is missing.</li>
+            <li>401 — <code class="text-brand-300">The provided auth token is not valid.</code></li>
+            <li>400 — <code class="text-brand-300">Not enough balance.</code> Nothing is sent.</li>
+            <li>400 — <code class="text-brand-300">No valid recipients.</code> The <code class="text-brand-300">invalid</code> list shows the numbers.</li>
+            <li>429 — more than 30 calls in a minute. 405 — use POST or GET.</li>
+        </ul>
+        <?php if ((int) $apiBalance['sms'] > 0): ?>
+        <form method="POST" class="pt-2">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <button type="submit" name="test_sms" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl">Send a test code to my mobile</button>
+            <p class="text-slate-500 text-xs mt-2">Uses 1 credit and sends to the mobile on this account. A website OTP later shows in <a class="text-brand-400" href="sms-logs.php?source=api">SMS logs under API / OTP</a>.</p>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+    <div class="dash-panel">
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Credit</h3></div>
+        <div class="p-5 space-y-3 text-sm text-slate-300">
+            <p>Check the credits left before a send. POST or GET. Same <code class="text-brand-300">auth_token</code>.</p>
+            <p class="text-slate-400 break-all"><?= e($creditUrl) ?></p>
+            <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">curl -X POST <?= e($creditUrl) ?> \
+  -d auth_token=YOUR_TOKEN</pre>
+            <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{
+  "error": false,
+  "message": "SMS credit balance.",
+  "data": {
+    "available_credit": 1200,
+    "balance": 1200,
+    "total_sms_sent": 40,
+    "last_sent": "3 Oct 2026, 2:10 PM"
+  }
+}</pre>
+            <p>You have <?= number_format((int) $apiBalance['sms']) ?> credits now. <code class="text-brand-300">total_sms_sent</code> is how many messages this account has already sent.</p>
+        </div>
+    </div>
+    <div class="dash-panel">
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Report</h3></div>
+        <div class="p-5 space-y-3 text-sm text-slate-300">
+            <p>Pull a date range into your own software. Dates are Nepal dates, <code class="text-brand-300">Y-m-d</code>. One call covers up to 62 days, 100 rows per page.</p>
+            <p class="text-slate-400 break-all"><?= e($reportUrl) ?></p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-slate-800">
+                        <tr><td class="py-2 pr-4 text-white">auth_token</td><td class="py-2">Token from this page</td></tr>
+                        <tr><td class="py-2 pr-4 text-white">start_date</td><td class="py-2">2026-10-01</td></tr>
+                        <tr><td class="py-2 pr-4 text-white">end_date</td><td class="py-2">2026-10-03</td></tr>
+                        <tr><td class="py-2 pr-4 text-white">page</td><td class="py-2">Optional. Starts at 1. <code class="text-brand-300">has_more</code> says when to ask for the next page.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">curl -X POST <?= e($reportUrl) ?> \
+  -d auth_token=YOUR_TOKEN \
+  -d start_date=2026-10-01 \
+  -d end_date=2026-10-03 \
+  -d page=1</pre>
+            <p>Each row has <code class="text-brand-300">mobile</code>, <code class="text-brand-300">text</code>, <code class="text-brand-300">credit</code>, <code class="text-brand-300">status</code>, and <code class="text-brand-300">at</code>. Add <code class="text-brand-300">source=api</code> to see only website and OTP sends.</p>
+        </div>
     </div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

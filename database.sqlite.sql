@@ -400,6 +400,7 @@ CREATE TABLE IF NOT EXISTS sms_number_lists (
     client_id INTEGER NOT NULL,
     label TEXT NOT NULL,
     numbers_text TEXT NOT NULL,
+    list_kind TEXT DEFAULT 'program',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

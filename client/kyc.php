@@ -15,6 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $locked = $kyc['status'] === 'approved';
     if ($err === '') {
         $msg = 'Identity submitted. Please wait for approval. More than 100 SMS stays closed until KYC is approved.';
+    } else {
+        $kyc['account_kind'] = (isset($_POST['account_kind']) && $_POST['account_kind'] === 'organization') ? 'organization' : 'individual';
+        $kyc['full_name'] = billing_plain_line(isset($_POST['full_name']) ? $_POST['full_name'] : '', 160);
+        $kyc['id_number'] = billing_kyc_reference(isset($_POST['id_number']) ? $_POST['id_number'] : '', 40);
+        $kyc['org_name'] = billing_plain_line(isset($_POST['org_name']) ? $_POST['org_name'] : '', 200);
+        $kyc['registration_number'] = billing_kyc_reference(isset($_POST['registration_number']) ? $_POST['registration_number'] : '', 40);
+        $kyc['tax_number'] = billing_kyc_reference(isset($_POST['tax_number']) ? $_POST['tax_number'] : '', 40);
+        $kyc['address'] = billing_plain_block(isset($_POST['address']) ? $_POST['address'] : '', 300);
+        $kyc['purpose'] = billing_plain_block(isset($_POST['purpose']) ? $_POST['purpose'] : '', 500);
     }
 }
 
@@ -35,7 +44,7 @@ $statusLabel = array(
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
 <?php endif; ?>
 <?php if ($err): ?>
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
+    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?> The details you typed are still in the form. Choose again only a document that is still missing. A document already saved stays.</div>
 <?php endif; ?>
 <?php if ($kyc['status'] === 'rejected' && $kyc['admin_note'] !== ''): ?>
     <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm"><?= e($kyc['admin_note']) ?></div>

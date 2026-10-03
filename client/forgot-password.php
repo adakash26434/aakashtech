@@ -81,7 +81,7 @@ $mathPrompt = auth_math_prompt('forgot-password');
                 </div>
                 <div>
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="email">Email</label>
-                    <input id="email" type="email" name="email" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
+                    <input id="email" type="email" name="email" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com" value="<?= e(isset($_POST['email']) ? (string) $_POST['email'] : '') ?>">
                 </div>
                 <div>
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e($mathPrompt) ?>?</label>
