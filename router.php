@@ -35,6 +35,8 @@ $basename = basename($requestPath);
 $blockedFiles = array(
     'config.php',
     'cpanel-config.php',
+    'cpanel-config.local.php',
+    'cpanel-config.sample.php',
     'database.sql',
     'database.sqlite.sql',
     'README.md'

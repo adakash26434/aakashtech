@@ -2,14 +2,7 @@
 
 function site_request_origin()
 {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
-        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
-    $host = isset($_SERVER['HTTP_HOST']) ? strtolower(trim((string) $_SERVER['HTTP_HOST'])) : '';
-    if (!preg_match('/^[a-z0-9.-]+(?::\d+)?$/', $host)) {
-        return 'http://aakashtechnologies.com.np';
-    }
-    return ($https ? 'https' : 'http') . '://' . $host;
+    return site_canonical_origin();
 }
 
 function site_absolute_url($path)

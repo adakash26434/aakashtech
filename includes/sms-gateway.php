@@ -2801,12 +2801,7 @@ function sms_run_queue($conn, $limit, $budgetSeconds = 40)
 
 function sms_api_origin()
 {
-    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-    $host = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
-    if (!preg_match('/^[A-Za-z0-9.-]+(?::\d+)?$/', $host)) {
-        return '';
-    }
-    return ($https ? 'https' : 'http') . '://' . $host;
+    return site_canonical_origin();
 }
 
 function sms_create_token($conn, $clientId, $label, $allowedIps, $code)

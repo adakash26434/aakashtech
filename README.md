@@ -63,6 +63,9 @@ Contact email, eSewa, Khalti, and bank text are in the same file. The browser ca
 
 After the first save in **Admin → Settings**, the public site uses the email, footer text, and the chat links from that screen. WhatsApp, Viber, and Messenger appear only after a real number or an https://m.me/ link is saved. Those numbers are not printed on the site, and the site does not publish a call number.
 
+### Keep passwords out of Git (recommended)
+Do not type real passwords into `cpanel-config.php`. Copy `cpanel-config.sample.php` to `cpanel-config.local.php` on the server and fill that file in. It is ignored by Git and its values win over `cpanel-config.php`. Set `site_url` to your public address: password-reset e-mails use it and no longer trust the request Host header.
+
 ### Step 4: Visit the site
 Open the domain. Clients register from the client login page.
 

@@ -25,14 +25,7 @@ function auth_ensure_resets($conn)
 
 function password_reset_link($token)
 {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
-        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
-    $host = isset($_SERVER['HTTP_HOST']) ? strtolower(trim((string) $_SERVER['HTTP_HOST'])) : '';
-    if (!preg_match('/^[a-z0-9.-]+(?::\d+)?$/', $host)) {
-        return '';
-    }
-    return ($https ? 'https' : 'http') . '://' . $host . '/client/reset-password.php?token=' . rawurlencode($token);
+    return rtrim(site_canonical_origin(), '/') . '/client/reset-password.php?token=' . rawurlencode($token);
 }
 
 function password_reset_clear($conn, $clientId)

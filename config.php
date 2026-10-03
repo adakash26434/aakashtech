@@ -13,6 +13,15 @@ if (is_file($cpanelFile)) {
         $cpanel = $loadedCpanel;
     }
 }
+// Optional private overrides. cpanel-config.local.php is ignored by Git, so real
+// passwords can live on the server only. Values here win over cpanel-config.php.
+$cpanelLocalFile = __DIR__ . '/cpanel-config.local.php';
+if (is_file($cpanelLocalFile)) {
+    $loadedLocal = require $cpanelLocalFile;
+    if (is_array($loadedLocal)) {
+        $cpanel = array_merge($cpanel, $loadedLocal);
+    }
+}
 
 function cpanel_setting($cpanel, $key, $envName, $fallback)
 {
@@ -112,6 +121,8 @@ define('ESEWA_ID', cpanel_setting($cpanel, 'esewa_id', 'ESEWA_ID', ''));
 define('KHALTI_ID', cpanel_setting($cpanel, 'khalti_id', 'KHALTI_ID', ''));
 define('BANK_DETAILS', cpanel_setting($cpanel, 'bank_details', 'BANK_DETAILS', ''));
 define('CRON_KEY', cpanel_setting($cpanel, 'cron_key', 'CRON_KEY', ''));
+define('SITE_URL', rtrim(cpanel_setting($cpanel, 'site_url', 'SITE_URL', ''), '/'));
+define('PANEL_CIPHER_KEY', strtolower(cpanel_setting($cpanel, 'cipher_key', 'PANEL_CIPHER_KEY', '')));
 define('ADMIN_EMAIL', cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''));
 
 require_once __DIR__ . '/includes/session.php';
@@ -293,6 +304,26 @@ function get_client_name() {
 
 function get_client_id() {
     return (int) ($_SESSION['client_id'] ?? 0);
+}
+
+/**
+ * The public address of this site, used in e-mailed links and SEO URLs.
+ * It never trusts the request Host header, so a forged Host cannot point a
+ * password-reset link at another domain. Set site_url in cpanel-config.php
+ * (for example https://aakashtechnologies.com.np). Local development hosts
+ * (localhost, 127.0.0.1) are the only exception.
+ */
+function site_canonical_origin() {
+    if (defined('SITE_URL') && SITE_URL !== '' && preg_match('#^https?://[a-z0-9.-]+(:\d+)?$#i', SITE_URL)) {
+        return SITE_URL;
+    }
+    $host = isset($_SERVER['HTTP_HOST']) ? strtolower(trim((string) $_SERVER['HTTP_HOST'])) : '';
+    $hostOnly = preg_replace('/:\d+$/', '', $host);
+    if (in_array($hostOnly, array('localhost', '127.0.0.1'), true) && preg_match('/^[a-z0-9.-]+(:\d+)?$/', $host)) {
+        $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        return ($https ? 'https' : 'http') . '://' . $host;
+    }
+    return 'https://aakashtechnologies.com.np';
 }
 
 function csrf_token() {

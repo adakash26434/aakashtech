@@ -15,6 +15,9 @@ return array(
     'admin_email' => 'admin@aakashtechnologies.com',
     'admin_password' => '',
 
+    // Public address of the site. Used in password-reset e-mails and SEO links.
+    'site_url' => 'https://aakashtechnologies.com.np',
+
     'site_email' => 'info@aakashtechnologies.com.np',
     'site_phone' => '',
     'site_location' => 'Kathmandu, Nepal',

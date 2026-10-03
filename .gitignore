@@ -3,3 +3,9 @@
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Private server settings (use cpanel-config.sample.php as the template)
+cpanel-config.local.php
+.env
+*.bak
+*.old

@@ -10,16 +10,18 @@ RewriteRule ^api/sms/report/?$ api/sms-report.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 RewriteRule ^robots\.txt$ robots.php [L]
 
-# Force HTTPS (uncomment after SSL is set up)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Force HTTPS (skips localhost and proxies that already terminated TLS)
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Default to index.php
 DirectoryIndex index.php
 ErrorDocument 404 /404.php
 
 # Hide config and the cPanel settings file. PHP can still read them.
-<FilesMatch "^(config\.php|cpanel-config\.php|router\.php|README\.md)$">
+<FilesMatch "^(config\.php|cpanel-config\.php|cpanel-config\.local\.php|cpanel-config\.sample\.php|router\.php|README\.md)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -86,7 +88,6 @@ RewriteRule ^uploads/domains/ - [F,L]
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 

@@ -2,6 +2,13 @@
 
 function panel_cipher_key($conn)
 {
+    // Preferred: keep the key outside the database (cipher_key in
+    // cpanel-config.local.php or the PANEL_CIPHER_KEY environment variable).
+    // To migrate, copy the existing key from the settings table first.
+    if (defined('PANEL_CIPHER_KEY') && preg_match('/^[a-f0-9]{64}$/', PANEL_CIPHER_KEY)) {
+        $fixed = hex2bin(PANEL_CIPHER_KEY);
+        return is_string($fixed) ? $fixed : '';
+    }
     $key = (string) billing_setting($conn, 'panel_cipher_key');
     if (!preg_match('/^[a-f0-9]{64}$/', $key)) {
         $key = bin2hex(random_bytes(32));
