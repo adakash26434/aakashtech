@@ -250,7 +250,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">SMS and voice volume rates</h3>
-        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Leave Offer blank to keep the regular rate. A lower offer is shown with the regular rate crossed out, and checkout charges the offer until you clear it. Choose Starts from on the row that should appear on the homepage.</p>
+        <p class="text-slate-500 text-xs mt-1">A quantity inside a row uses that row’s rate. Leave Offer blank to keep the regular rate. The same prices are on <a class="text-brand-400" href="services.php">Services</a>. Choose Starts from on the row that should appear on the homepage.</p>
     </div>
     <form method="POST" class="p-5 space-y-6">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
