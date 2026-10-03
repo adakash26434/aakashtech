@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_voice'])) {
 }
 
 $find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
-$campaignSql = 'SELECT sc.*, cu.name as client_name FROM sms_campaigns sc JOIN client_users cu ON sc.client_id = cu.id ';
+$campaignSql = 'SELECT sc.*, cu.name as client_name, cu.email AS client_email, cu.phone AS client_phone FROM sms_campaigns sc JOIN client_users cu ON sc.client_id = cu.id ';
 $campaignRows = array();
 $campaignSeen = array();
 if ($find !== '') {
@@ -90,7 +90,11 @@ if ($find !== '') {
                                     <p class="text-slate-400 text-xs mt-1 max-w-xs max-h-16 overflow-auto whitespace-pre-wrap"><?= e($c['declaration_text']) ?></p>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 hidden md:table-cell"><span class="text-slate-300 text-sm"><?= e($c['client_name']) ?></span></td>
+                            <td class="px-4 py-3 hidden md:table-cell">
+                                <a class="text-slate-300 text-sm hover:text-brand-300" href="client.php?id=<?= (int) $c['client_id'] ?>"><?= e($c['client_name']) ?></a>
+                                <?php $campaignEmail = filter_var($c['client_email'], FILTER_VALIDATE_EMAIL) ? (string) $c['client_email'] : ''; ?>
+                                <?php if ($campaignEmail !== ''): ?><a class="block text-slate-500 text-xs hover:text-brand-300" href="mailto:<?= e($campaignEmail) ?>"><?= e($campaignEmail) ?></a><?php endif; ?>
+                            </td>
                             <td class="px-4 py-3 hidden lg:table-cell"><span class="text-slate-300 text-sm"><?= number_format($c['recipients_count']) ?></span></td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 text-[10px] font-medium rounded-full <?=

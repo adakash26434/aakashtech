@@ -72,8 +72,10 @@ function sms_ensure_tables($conn)
             client_id INTEGER NOT NULL,
             credits INTEGER NOT NULL,
             note TEXT DEFAULT '',
+            reversed_at TEXT DEFAULT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
+        sms_credit_columns($conn);
         return;
     }
 
@@ -144,9 +146,21 @@ function sms_ensure_tables($conn)
         client_id INT NOT NULL,
         credits INT NOT NULL,
         note VARCHAR(160) DEFAULT '',
+        reversed_at DATETIME DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_sms_credit_client (client_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    sms_credit_columns($conn);
+}
+
+function sms_credit_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'sms_credit_notes'));
+    if (!$present || isset($present['reversed_at'])) {
+        return;
+    }
+    $definition = DB_DRIVER === 'sqlite' ? 'TEXT DEFAULT NULL' : 'DATETIME DEFAULT NULL';
+    billing_exec($conn, 'ALTER TABLE sms_credit_notes ADD COLUMN reversed_at ' . $definition);
 }
 
 function sms_templates($conn, $clientId)
@@ -1199,15 +1213,80 @@ function sms_remember_credit($conn, $clientId, $credits, $note)
     $credits = (int) $credits;
     $note = billing_plain_line($note, 160);
     if ($clientId < 1 || $credits < 1 || $note === '') {
-        return;
+        return 0;
     }
     $insert = $conn->prepare('INSERT INTO sms_credit_notes (client_id, credits, note) VALUES (?, ?, ?)');
     if (!$insert) {
-        return;
+        return 0;
     }
     $insert->bind_param('iis', $clientId, $credits, $note);
     $insert->execute();
+    $id = (int) $conn->insert_id;
     $insert->close();
+    return $id;
+}
+
+function sms_admin_reverse($conn, $clientId, $noteId)
+{
+    sms_credit_columns($conn);
+    $clientId = (int) $clientId;
+    $noteId = (int) $noteId;
+    $empty = array('error' => 'That SMS top-up was not found.', 'message' => '');
+    if ($clientId < 1 || $noteId < 1) {
+        return $empty;
+    }
+    $stmt = $conn->prepare('SELECT id, credits, reversed_at FROM sms_credit_notes WHERE id = ? AND client_id = ?');
+    if (!$stmt) {
+        return $empty;
+    }
+    $stmt->bind_param('ii', $noteId, $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return $empty;
+    }
+    if (trim((string) $row['reversed_at']) !== '') {
+        return array('error' => 'That SMS top-up was already taken back.', 'message' => '');
+    }
+    $credits = (int) $row['credits'];
+    if ($credits < 1) {
+        return array('error' => 'That row is not an SMS top-up.', 'message' => '');
+    }
+    $left = (int) billing_unit_balances($conn, $clientId)['sms'];
+    $take = $left < $credits ? $left : $credits;
+    if ($take < 1) {
+        return array('error' => 'Those SMS were already sent. Nothing is left to take back.', 'message' => '');
+    }
+    $now = date('Y-m-d H:i:s');
+    $mark = $conn->prepare('UPDATE sms_credit_notes SET reversed_at = ? WHERE id = ? AND client_id = ? AND (reversed_at IS NULL OR reversed_at = \'\')');
+    if (!$mark) {
+        return array('error' => 'That SMS top-up could not be taken back.', 'message' => '');
+    }
+    $mark->bind_param('sii', $now, $noteId, $clientId);
+    $mark->execute();
+    $marked = billing_affected($conn) === 1;
+    $mark->close();
+    if (!$marked) {
+        return array('error' => 'That SMS top-up was already taken back.', 'message' => '');
+    }
+    if (!billing_take_units($conn, $clientId, 'sms', $take)) {
+        $blank = null;
+        $undo = $conn->prepare('UPDATE sms_credit_notes SET reversed_at = ? WHERE id = ? AND client_id = ?');
+        if ($undo) {
+            $undo->bind_param('sii', $blank, $noteId, $clientId);
+            $undo->execute();
+            $undo->close();
+        }
+        return array('error' => 'Those SMS could not be taken back. The balance changed while this was saving.', 'message' => '');
+    }
+    if ($take < $credits) {
+        return array(
+            'error' => '',
+            'message' => number_format($credits) . ' SMS were added. ' . number_format($credits - $take) . ' were already sent, so ' . number_format($take) . ' were taken back.'
+        );
+    }
+    return array('error' => '', 'message' => number_format($take) . ' SMS taken back. The client can no longer send them.');
 }
 
 function sms_line_test($conn, $number)
@@ -1338,7 +1417,7 @@ function sms_admin_history($conn, $clientId, $find, $status)
     if (!in_array($status, $allowed, true)) {
         $status = '';
     }
-    $sql = 'SELECT m.id, m.recipient, m.message_text, m.parts, m.status, m.source, m.created_at, c.name, c.email
+    $sql = 'SELECT m.id, m.client_id, m.recipient, m.message_text, m.parts, m.status, m.source, m.created_at, c.name, c.email
         FROM sms_messages m
         JOIN client_users c ON c.id = m.client_id
         WHERE 1 = 1';

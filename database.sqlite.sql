@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     priority TEXT DEFAULT 'medium',
     status TEXT DEFAULT 'open',
     admin_reply TEXT DEFAULT NULL,
+    client_followup TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE
@@ -386,6 +387,7 @@ CREATE TABLE IF NOT EXISTS sms_credit_notes (
     client_id INTEGER NOT NULL,
     credits INTEGER NOT NULL,
     note TEXT DEFAULT '',
+    reversed_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

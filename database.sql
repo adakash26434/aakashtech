@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     priority    ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     status      ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
     admin_reply TEXT DEFAULT NULL,
+    client_followup TEXT DEFAULT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE,
@@ -413,6 +414,7 @@ CREATE TABLE IF NOT EXISTS sms_credit_notes (
     client_id   INT NOT NULL,
     credits     INT NOT NULL,
     note        VARCHAR(180) DEFAULT '',
+    reversed_at DATETIME DEFAULT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_sms_credit_client (client_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

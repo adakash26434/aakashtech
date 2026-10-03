@@ -98,7 +98,7 @@ try {
                     }
                 ?></span>
             </div>
-            <p class="text-slate-300 text-sm mb-2"><?= e($row['account_name']) ?> · <?= e($row['email']) ?><?php if (!empty($row['phone'])): ?> · <?= e($row['phone']) ?><?php endif; ?></p>
+            <p class="text-slate-300 text-sm mb-2"><a class="text-white hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['account_name']) ?></a> · <?php $domainEmail = filter_var($row['email'], FILTER_VALIDATE_EMAIL) ? (string) $row['email'] : ''; ?><?php if ($domainEmail !== ''): ?><a class="text-brand-400 hover:text-brand-300" href="mailto:<?= e($domainEmail) ?>"><?= e($domainEmail) ?></a><?php else: ?><?= e($row['email']) ?><?php endif; ?><?php if (!empty($row['phone'])): ?> · <?php $domainPhone = preg_replace('/[^0-9+]/', '', (string) $row['phone']); ?><?php if ($domainPhone !== ''): ?><a class="text-brand-400 hover:text-brand-300" href="tel:<?= e($domainPhone) ?>"><?= e($row['phone']) ?></a><?php else: ?><?= e($row['phone']) ?><?php endif; ?><?php endif; ?></p>
             <p class="text-slate-400 text-sm mb-2"><?= (isset($row['holder_kind']) && $row['holder_kind'] === 'organization') ? 'Organization' : 'Individual' ?> · <?= e($row['holder_name']) ?></p>
             <?php if (!empty($row['holder_address'])): ?>
                 <p class="text-slate-400 text-sm mb-2"><?= e($row['holder_address']) ?></p>

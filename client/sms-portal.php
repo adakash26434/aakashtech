@@ -184,7 +184,7 @@ $recentStmt->execute();
 $recent = db_fetch_all($recentStmt);
 $recentStmt->close();
 
-$creditNoteStmt = $conn->prepare('SELECT credits, note, created_at FROM sms_credit_notes WHERE client_id = ? ORDER BY id DESC LIMIT 8');
+$creditNoteStmt = $conn->prepare('SELECT credits, note, created_at, reversed_at FROM sms_credit_notes WHERE client_id = ? ORDER BY id DESC LIMIT 8');
 $creditNoteStmt->bind_param('i', $cid);
 $creditNoteStmt->execute();
 $creditNotes = db_fetch_all($creditNoteStmt);
@@ -272,7 +272,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
             <?php foreach ($creditNotes as $creditNote): ?>
                 <div class="p-4 flex flex-wrap items-baseline justify-between gap-2">
                     <p class="text-slate-300 text-sm"><?= e($creditNote['note']) ?></p>
-                    <p class="text-white text-sm"><?= number_format((int) $creditNote['credits']) ?> SMS · <?= e(sms_format_time($creditNote['created_at'])) ?></p>
+                    <p class="text-white text-sm"><?= number_format((int) $creditNote['credits']) ?> SMS<?= trim((string) $creditNote['reversed_at']) !== '' ? ' · Taken back' : '' ?> · <?= e(sms_format_time($creditNote['created_at'])) ?></p>
                 </div>
             <?php endforeach; ?>
         </div>

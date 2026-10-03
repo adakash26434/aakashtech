@@ -15,6 +15,7 @@ $mail_logins = 0;
 $paid_domains = 0;
 $pending_kyc = 0;
 $waiting_voice = 0;
+$pending_senders = 0;
 $sms_stock_short = 0;
 $sms_clients_holding = 0;
 $renewing_soon = 0;
@@ -33,12 +34,13 @@ try {
     $new_inquiries = $dashCount("SELECT COUNT(*) as c FROM inquiries WHERE status='new'");
     $total_clients = $dashCount("SELECT COUNT(*) as c FROM client_users");
     $active_services = $dashCount("SELECT COUNT(*) as c FROM client_services WHERE status='active'");
-    $open_tickets = $dashCount("SELECT COUNT(*) as c FROM support_tickets WHERE status='open'");
+    $open_tickets = $dashCount("SELECT COUNT(*) as c FROM support_tickets WHERE status IN ('open','in_progress')");
     $total_campaigns = $dashCount("SELECT COUNT(*) as c FROM sms_campaigns");
     $pending_topups = $dashCount("SELECT COUNT(*) as c FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'");
     $paid_domains = $dashCount("SELECT COUNT(*) as c FROM domain_requests WHERE status = 'paid'");
     $pending_kyc = $dashCount("SELECT COUNT(*) as c FROM client_kyc WHERE status = 'pending'");
     $waiting_voice = $dashCount("SELECT COUNT(*) as c FROM sms_campaigns WHERE channel = 'voice' AND status IN ('draft','scheduled')");
+    $pending_senders = $dashCount("SELECT COUNT(*) as c FROM sms_sender_names WHERE status = 'pending'");
     $smsSaved = sms_vendor_stock_saved($conn);
     $sms_clients_holding = sms_clients_holding($conn);
     if ($smsSaved['balance'] !== null && (int) $smsSaved['balance'] < $sms_clients_holding) {
@@ -87,23 +89,23 @@ try {
 </div>
 
 <?php if ((int) $pending_topups > 0): ?>
-    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
+    <a href="billing.php?tab=wallet" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
         <?= (int) $pending_topups ?> wallet top-up<?= (int) $pending_topups === 1 ? '' : 's' ?> waiting for confirmation. Renewals after that are automatic.
     </a>
 <?php endif; ?>
 <?php if ((int) $booked_orders > 0): ?>
-    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $booked_orders ?> website or training booking<?= (int) $booked_orders === 1 ? '' : 's' ?> waiting. The brief is on the billing page.
+    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
+        <?= (int) $booked_orders ?> website or training booking<?= (int) $booked_orders === 1 ? '' : 's' ?> waiting. The brief is under Billing → Delivery.
     </a>
 <?php endif; ?>
 <?php if ((int) $hosting_logins > 0): ?>
-    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $hosting_logins ?> hosting plan<?= (int) $hosting_logins === 1 ? ' needs' : 's need' ?> a cPanel login. Add it on the billing page.
+    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
+        <?= (int) $hosting_logins ?> hosting plan<?= (int) $hosting_logins === 1 ? ' needs' : 's need' ?> a cPanel login. Add it under Billing → Delivery.
     </a>
 <?php endif; ?>
 <?php if ((int) $mail_logins > 0): ?>
-    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $mail_logins ?> mailbox plan<?= (int) $mail_logins === 1 ? ' needs' : 's need' ?> the login shown to the client. Add it on the billing page.
+    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
+        <?= (int) $mail_logins ?> mailbox plan<?= (int) $mail_logins === 1 ? ' needs' : 's need' ?> the login shown to the client. Add it under Billing → Delivery.
     </a>
 <?php endif; ?>
 <?php if ((int) $new_inquiries > 0): ?>
@@ -113,7 +115,7 @@ try {
 <?php endif; ?>
 <?php if ((int) $open_tickets > 0): ?>
     <a href="tickets.php" class="mb-6 block p-4 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-200 text-sm">
-        <?= (int) $open_tickets ?> open support ticket<?= (int) $open_tickets === 1 ? '' : 's' ?> waiting.
+        <?= (int) $open_tickets ?> support ticket<?= (int) $open_tickets === 1 ? '' : 's' ?> waiting.
     </a>
 <?php endif; ?>
 <?php if ((int) $paid_domains > 0): ?>
@@ -122,18 +124,23 @@ try {
     </a>
 <?php endif; ?>
 <?php if ((int) $sms_stock_short > 0): ?>
-    <a href="sms-line.php" class="mb-6 block p-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+    <a href="sms-line.php?tab=line" class="mb-6 block p-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
         Clients still hold <?= number_format((int) $sms_clients_holding) ?> SMS, and the bulk line has less. Buy more from the vendor before those sends fail.
     </a>
 <?php endif; ?>
 <?php if ((int) $renewing_soon > 0): ?>
-    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
+    <a href="billing.php?tab=records" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
         <?= (int) $renewing_soon ?> hosting, domain, or mailbox year<?= (int) $renewing_soon === 1 ? '' : 's' ?> renew within 14 days. The wallet must cover them.
     </a>
 <?php endif; ?>
 <?php if ((int) $waiting_voice > 0): ?>
     <a href="campaigns.php" class="mb-6 block p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-200 text-sm">
         <?= (int) $waiting_voice ?> voice job<?= (int) $waiting_voice === 1 ? '' : 's' ?> waiting. Place the call, then mark it placed.
+    </a>
+<?php endif; ?>
+<?php if ((int) $pending_senders > 0): ?>
+    <a href="sms-line.php?tab=names" class="mb-6 block p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-200 text-sm">
+        <?= (int) $pending_senders ?> sender name<?= (int) $pending_senders === 1 ? '' : 's' ?> waiting for approval.
     </a>
 <?php endif; ?>
 <?php if ((int) $pending_kyc > 0): ?>
@@ -162,7 +169,7 @@ try {
     <a href="tickets.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-orange-500/20"><svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
         <div class="dash-stat-value"><?= $open_tickets ?></div>
-        <div class="dash-stat-label">Open Tickets</div>
+        <div class="dash-stat-label">Tickets waiting</div>
     </a>
     <a href="campaigns.php" class="dash-stat-card">
         <div class="dash-stat-icon bg-purple-500/20"><svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
@@ -190,7 +197,7 @@ try {
                     <div class="p-4 hover:bg-slate-800/50 transition">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-white font-medium text-sm"><?= e($inq['name']) ?></p>
+                                <a href="inquiries.php?id=<?= (int) $inq['id'] ?>" class="text-white font-medium text-sm hover:text-brand-300"><?= e($inq['name']) ?></a>
                                 <p class="text-slate-500 text-xs"><?= e($inq['email']) ?> · <?= e($inq['phone']) ?></p>
                                 <p class="text-slate-400 text-xs mt-1"><?= e($inq['service'] ?: 'General') ?></p>
                             </div>

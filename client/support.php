@@ -39,6 +39,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_ticket'])) {
+    verify_csrf();
+    $ticketId = isset($_POST['ticket_id']) ? (int) $_POST['ticket_id'] : 0;
+    $follow = billing_plain_block(isset($_POST['client_followup']) ? $_POST['client_followup'] : '', 2000);
+    if ($ticketId < 1 || $follow === '') {
+        $err = 'Write the follow-up before saving.';
+    } else {
+        $lookup = $conn->prepare('SELECT subject, status FROM support_tickets WHERE id = ? AND client_id = ? LIMIT 1');
+        $lookup->bind_param('ii', $ticketId, $cid);
+        $lookup->execute();
+        $ticketRow = db_fetch_assoc($lookup);
+        $lookup->close();
+        if (!$ticketRow) {
+            $err = 'That ticket is not on this account.';
+        } else {
+            $open = 'open';
+            $now = date('Y-m-d H:i:s');
+            $save = $conn->prepare('UPDATE support_tickets SET client_followup = ?, status = ?, updated_at = ? WHERE id = ? AND client_id = ?');
+            $save->bind_param('sssii', $follow, $open, $now, $ticketId, $cid);
+            if ($save->execute()) {
+                billing_notify($conn, 'Follow-up on ticket: ' . $ticketRow['subject'], array(
+                    'A client added a follow-up on a support ticket.',
+                    'Subject: ' . $ticketRow['subject'],
+                    'Follow-up: ' . billing_notify_clip($follow, 800),
+                    'Client: ' . billing_notify_client_label($conn, $cid),
+                    'Open Admin → Support Tickets.'
+                ));
+                $msg = 'Follow-up saved. The team can read it on this ticket.';
+            } else {
+                $err = 'The follow-up could not be saved.';
+            }
+            $save->close();
+        }
+    }
+}
+
 $find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $cid = (int) $cid;
 $ticketRows = array();
@@ -82,7 +118,7 @@ if ($find !== '') {
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
-<div x-data="{ tab: '<?= $err !== '' ? 'work' : 'list' ?>' }">
+<div x-data="{ tab: '<?= ($err !== '' && isset($_POST['create_ticket'])) ? 'work' : 'list' ?>' }">
 <div class="portal-tabs" role="tablist">
     <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Tickets</button>
     <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New ticket</button>
@@ -143,10 +179,25 @@ if ($find !== '') {
                     </div>
                     <p class="text-slate-300 text-sm mb-3"><?= e($t['description']) ?></p>
                     <?php if (!empty($t['admin_reply'])): ?>
-                        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl">
+                        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl mb-3">
                             <p class="text-brand-400 text-xs font-medium mb-1">Support Team Reply:</p>
-                            <p class="text-slate-300 text-sm"><?= e($t['admin_reply']) ?></p>
+                            <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['admin_reply']) ?></p>
                         </div>
+                    <?php endif; ?>
+                    <?php if (!empty($t['client_followup'])): ?>
+                        <div class="p-3 bg-slate-800/50 rounded-xl mb-3">
+                            <p class="text-slate-400 text-xs mb-1">Your follow-up</p>
+                            <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['client_followup']) ?></p>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($t['status'] !== 'closed'): ?>
+                        <form method="POST" class="space-y-2">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
+                            <label class="block text-slate-400 text-xs font-medium" for="follow-<?= (int) $t['id'] ?>">Add a follow-up</label>
+                            <textarea id="follow-<?= (int) $t['id'] ?>" name="client_followup" rows="3" maxlength="2000" class="form-input" placeholder="What changed, or what you still need"><?= e(isset($t['client_followup']) ? $t['client_followup'] : '') ?></textarea>
+                            <button type="submit" name="follow_ticket" value="1" class="px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save follow-up</button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>

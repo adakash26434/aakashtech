@@ -117,7 +117,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Clients</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 accounts.' : 'Matches for “' . e($find) . '”.' ?> Create an account here when the person did not register on the website. SMS use and message history stay on <a class="text-brand-400" href="sms-line.php">SMS line</a>.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 accounts.' : 'Matches for “' . e($find) . '”.' ?> Open a name to add SMS or a service for that client. The bulk API key stays on <a class="text-brand-400" href="sms-line.php">SMS line</a>.</p>
 </div>
 <?php if ($clientNotice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
@@ -221,12 +221,13 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                                     <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color']) ?>"><?= strtoupper(substr($cl['name'], 0, 1)) ?></div>
                                     <div>
                                         <a href="client.php?id=<?= (int) $cl['id'] ?>" class="text-white text-sm font-medium hover:text-brand-300"><?= e($cl['name']) ?></a>
-                                        <p class="text-slate-500 text-xs"><?= e($cl['email']) ?></p>
+                                        <?php $clientEmail = filter_var($cl['email'], FILTER_VALIDATE_EMAIL) ? (string) $cl['email'] : ''; ?>
+                                        <?php if ($clientEmail !== ''): ?><a class="text-slate-500 text-xs hover:text-brand-300" href="mailto:<?= e($clientEmail) ?>"><?= e($clientEmail) ?></a><?php else: ?><p class="text-slate-500 text-xs"><?= e($cl['email']) ?></p><?php endif; ?>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-4 py-3 hidden md:table-cell"><span class="text-slate-300 text-sm"><?= e($cl['company'] ?: '—') ?></span></td>
-                            <td class="px-4 py-3 hidden lg:table-cell"><span class="text-slate-300 text-sm"><?= e($cl['phone'] ?: '—') ?></span></td>
+                            <td class="px-4 py-3 hidden lg:table-cell"><?php $clientPhone = preg_replace('/[^0-9+]/', '', (string) $cl['phone']); ?><?php if ($clientPhone !== ''): ?><a class="text-slate-300 text-sm hover:text-brand-300" href="tel:<?= e($clientPhone) ?>"><?= e($cl['phone']) ?></a><?php else: ?><span class="text-slate-300 text-sm"><?= e($cl['phone'] ?: '—') ?></span><?php endif; ?></td>
                             <td class="px-4 py-3 hidden lg:table-cell"><span class="text-slate-500 text-sm"><?= date('M d, Y', strtotime($cl['created_at'])) ?></span></td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $cl['status'] === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>"><?= ucfirst($cl['status']) ?></span>

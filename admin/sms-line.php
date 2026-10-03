@@ -80,7 +80,7 @@ $history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
 $vendorStock = sms_vendor_stock($conn, false);
 $clientsHolding = sms_clients_holding($conn);
 $grantClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
-$creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
+$creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">SMS line</h1>
@@ -117,14 +117,19 @@ $creditNotes = $conn->query('SELECT n.credits, n.note, n.created_at, c.name, c.e
 
 <?php
 $smsTab = 'clients';
-if ($historyClient > 0 || $historyStatus !== '') {
-    $smsTab = 'history';
-} elseif (!$line['connected'] || isset($_POST['save_line']) || isset($_POST['check_balance']) || isset($_POST['test_line'])) {
+$smsTabs = array('clients', 'credits', 'line', 'names', 'history');
+if (isset($_POST['save_line']) || isset($_POST['check_balance']) || isset($_POST['test_line'])) {
     $smsTab = 'line';
 } elseif (isset($_POST['grant_sms'])) {
     $smsTab = 'credits';
 } elseif (isset($_POST['decision'])) {
     $smsTab = 'names';
+} elseif ($historyClient > 0 || $historyStatus !== '') {
+    $smsTab = 'history';
+} elseif (isset($_GET['tab']) && in_array($_GET['tab'], $smsTabs, true)) {
+    $smsTab = (string) $_GET['tab'];
+} elseif (!$line['connected']) {
+    $smsTab = 'line';
 }
 $aakashRoute = 'v4';
 if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sms/v4/') === false) {
@@ -162,8 +167,9 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     <?php foreach ($usage['rows'] as $usageRow): ?>
                         <tr>
                             <td class="px-4 py-3">
-                                <p class="text-white text-sm"><?= e($usageRow['name']) ?></p>
-                                <p class="text-slate-500 text-xs"><?= e($usageRow['email']) ?></p>
+                                <a class="text-white text-sm hover:text-brand-300" href="client.php?id=<?= (int) $usageRow['id'] ?>"><?= e($usageRow['name']) ?></a>
+                                <?php $usageEmail = filter_var($usageRow['email'], FILTER_VALIDATE_EMAIL) ? (string) $usageRow['email'] : ''; ?>
+                                <?php if ($usageEmail !== ''): ?><a class="block text-slate-500 text-xs hover:text-brand-300" href="mailto:<?= e($usageEmail) ?>"><?= e($usageEmail) ?></a><?php else: ?><p class="text-slate-500 text-xs"><?= e($usageRow['email']) ?></p><?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_used']) ?></td>
                             <td class="px-4 py-3 text-white text-sm"><?= number_format((int) $usageRow['sms_left']) ?></td>
@@ -213,10 +219,10 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
             <?php while ($noteRow = $creditNotes->fetch_assoc()): ?>
                 <div class="p-4 flex flex-wrap items-baseline justify-between gap-2">
                     <div>
-                        <p class="text-white text-sm"><?= e($noteRow['name']) ?> <span class="text-slate-500"><?= e($noteRow['email']) ?></span></p>
+                        <p class="text-white text-sm"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $noteRow['client_id'] ?>"><?= e($noteRow['name']) ?></a> <?php $noteEmail = filter_var($noteRow['email'], FILTER_VALIDATE_EMAIL) ? (string) $noteRow['email'] : ''; ?><?php if ($noteEmail !== ''): ?><a class="text-slate-500 hover:text-brand-300" href="mailto:<?= e($noteEmail) ?>"><?= e($noteEmail) ?></a><?php else: ?><span class="text-slate-500"><?= e($noteRow['email']) ?></span><?php endif; ?></p>
                         <p class="text-slate-400 text-xs mt-1"><?= e($noteRow['note']) ?></p>
                     </div>
-                    <p class="text-white text-sm"><?= number_format((int) $noteRow['credits']) ?> SMS · <?= e(sms_format_time($noteRow['created_at'])) ?></p>
+                    <p class="text-white text-sm"><?= number_format((int) $noteRow['credits']) ?> SMS<?= trim((string) $noteRow['reversed_at']) !== '' ? ' · Taken back' : '' ?> · <?= e(sms_format_time($noteRow['created_at'])) ?></p>
                 </div>
             <?php endwhile; ?>
         </div>
@@ -328,7 +334,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     <input type="hidden" name="sender_id" value="<?= (int) $row['id'] ?>">
                     <div class="min-w-[180px]">
                         <p class="text-white text-sm"><?= e($row['sender_name']) ?></p>
-                        <p class="text-slate-500 text-xs"><?= e($row['client_name']) ?> · <?= e($row['status']) ?></p>
+                        <p class="text-slate-500 text-xs"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['client_name']) ?></a> · <?= e($row['status']) ?></p>
                     </div>
                     <input type="text" name="admin_note" value="<?= e($row['admin_note']) ?>" class="form-input max-w-xs" placeholder="Note">
                     <button type="submit" name="decision" value="approved" class="text-green-400 text-sm bg-transparent border-0 cursor-pointer">Approve</button>
@@ -363,10 +369,11 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
             <?php foreach ($history as $row): ?>
                 <article class="p-4">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
-                        <p class="text-white text-sm"><?= e($row['name']) ?> <span class="text-slate-500"><?= e($row['email']) ?></span></p>
+                        <p class="text-white text-sm"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['name']) ?></a> <?php $historyEmail = filter_var($row['email'], FILTER_VALIDATE_EMAIL) ? (string) $row['email'] : ''; ?><?php if ($historyEmail !== ''): ?><a class="text-slate-500 hover:text-brand-300" href="mailto:<?= e($historyEmail) ?>"><?= e($historyEmail) ?></a><?php else: ?><span class="text-slate-500"><?= e($row['email']) ?></span><?php endif; ?></p>
                         <p class="text-slate-500 text-xs"><?= e(sms_format_time($row['created_at'])) ?> · <?= e(ucfirst($row['status'])) ?> · <?= (int) $row['parts'] ?> credit<?= (int) $row['parts'] === 1 ? '' : 's' ?> · <?= e($row['source']) ?></p>
                     </div>
-                    <p class="text-slate-300 text-sm mt-1">To <?= e($row['recipient']) ?></p>
+                    <?php $historyPhone = preg_replace('/[^0-9+]/', '', (string) $row['recipient']); ?>
+                    <p class="text-slate-300 text-sm mt-1">To <?php if ($historyPhone !== ''): ?><a class="hover:text-brand-300" href="tel:<?= e($historyPhone) ?>"><?= e($row['recipient']) ?></a><?php else: ?><?= e($row['recipient']) ?><?php endif; ?></p>
                     <p class="text-slate-200 text-sm mt-2 whitespace-pre-wrap"><?= e($row['message_text']) ?></p>
                 </article>
             <?php endforeach; ?>

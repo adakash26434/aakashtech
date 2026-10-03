@@ -14,9 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     if (!in_array($status, $statuses, true)) {
         $status = 'resolved';
     }
-    $lookup = $conn->prepare('SELECT t.subject, t.client_id FROM support_tickets t WHERE t.id = ? LIMIT 1');
+    $lookup = $conn->prepare('SELECT t.subject, t.client_id, t.admin_reply FROM support_tickets t WHERE t.id = ? LIMIT 1');
     $ticketClient = 0;
     $ticketSubject = '';
+    $previousReply = '';
     if ($lookup) {
         $lookup->bind_param('i', $id);
         $lookup->execute();
@@ -25,13 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
         if ($ticketRow) {
             $ticketClient = (int) $ticketRow['client_id'];
             $ticketSubject = (string) $ticketRow['subject'];
+            $previousReply = (string) $ticketRow['admin_reply'];
+            if ($reply === '') {
+                $reply = $previousReply;
+            }
         }
     }
     $stmt = $conn->prepare("UPDATE support_tickets SET admin_reply = ?, status = ? WHERE id = ?");
     $stmt->bind_param("ssi", $reply, $status, $id);
     $stmt->execute();
     $stmt->close();
-    if ($reply !== '' && $ticketClient > 0) {
+    if ($reply !== '' && $reply !== $previousReply && $ticketClient > 0) {
         billing_mail_client_event($conn, $ticketClient, 'ticket-reply', array(
             'subject' => billing_notify_clip($ticketSubject, 160),
             'reply' => str_replace("\r", '', $reply)
@@ -95,7 +100,7 @@ if ($find !== '') {
                                     ($t['priority'] === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'))
                                 ?>"><?= ucfirst($t['priority']) ?></span>
                             </div>
-                            <p class="text-slate-500 text-xs">From <?= e($t['client_name']) ?> · <?= e($t['client_email']) ?> · <?= date('M d, Y', strtotime($t['created_at'])) ?></p>
+                            <p class="text-slate-500 text-xs">From <a class="text-brand-400 hover:text-brand-300" href="client.php?id=<?= (int) $t['client_id'] ?>"><?= e($t['client_name']) ?></a> · <?php $ticketEmail = filter_var($t['client_email'], FILTER_VALIDATE_EMAIL) ? (string) $t['client_email'] : ''; ?><?php if ($ticketEmail !== ''): ?><a class="text-brand-400 hover:text-brand-300" href="mailto:<?= e($ticketEmail) ?>"><?= e($ticketEmail) ?></a><?php else: ?><?= e($t['client_email']) ?><?php endif; ?> · <?= date('M d, Y', strtotime($t['created_at'])) ?></p>
                         </div>
                         <span class="px-2 py-1 text-[10px] font-medium rounded-full <?=
                             $t['status'] === 'open' ? 'bg-green-500/20 text-green-400' :
@@ -105,25 +110,28 @@ if ($find !== '') {
                     </div>
                     <p class="text-slate-300 text-sm mb-4"><?= e($t['description']) ?></p>
 
-                    <?php if (!empty($t['admin_reply'])): ?>
+                    <?php if (!empty($t['client_followup'])): ?>
                         <div class="p-3 bg-slate-800/50 rounded-xl mb-3">
-                            <p class="text-slate-400 text-xs mb-1">Admin Reply:</p>
-                            <p class="text-slate-300 text-sm"><?= e($t['admin_reply']) ?></p>
+                            <p class="text-slate-400 text-xs mb-1">Client follow-up</p>
+                            <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['client_followup']) ?></p>
                         </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="" class="flex gap-2 flex-wrap">
+                    <form method="POST" action="" class="space-y-3">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                         <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
                         <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
-                        <input type="text" name="admin_reply" placeholder="Type a reply..." class="form-input flex-1 min-w-[200px]">
+                        <label class="block text-slate-400 text-xs font-medium" for="reply-<?= (int) $t['id'] ?>">Reply</label>
+                        <textarea id="reply-<?= (int) $t['id'] ?>" name="admin_reply" rows="3" maxlength="4000" class="form-input" placeholder="Write the reply the client will see"><?= e(isset($t['admin_reply']) ? $t['admin_reply'] : '') ?></textarea>
+                        <div class="flex gap-2 flex-wrap">
                         <select name="status" class="form-input w-auto">
                             <option value="open" <?= $t['status'] === 'open' ? 'selected' : '' ?>>Open</option>
                             <option value="in_progress" <?= $t['status'] === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                             <option value="resolved" <?= $t['status'] === 'resolved' ? 'selected' : '' ?>>Resolved</option>
                             <option value="closed" <?= $t['status'] === 'closed' ? 'selected' : '' ?>>Closed</option>
                         </select>
-                        <button type="submit" name="reply_ticket" class="px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Reply</button>
+                        <button type="submit" name="reply_ticket" class="px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save reply</button>
+                        </div>
                     </form>
                 </div>
             </div>

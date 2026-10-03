@@ -1537,6 +1537,7 @@ function billing_ensure_portal_tables($conn)
             priority TEXT DEFAULT 'medium',
             status TEXT DEFAULT 'open',
             admin_reply TEXT DEFAULT NULL,
+            client_followup TEXT DEFAULT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
@@ -1606,6 +1607,7 @@ function billing_ensure_portal_tables($conn)
         priority VARCHAR(20) DEFAULT 'medium',
         status VARCHAR(20) DEFAULT 'open',
         admin_reply TEXT DEFAULT NULL,
+        client_followup TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_client (client_id),
@@ -1640,6 +1642,7 @@ function billing_ensure($conn)
         billing_set_setting($conn, 'billing_schema_version', '3');
     }
     billing_add_campaign_columns($conn);
+    billing_add_ticket_columns($conn);
     billing_drop_portal_columns($conn);
     billing_ensure_kyc_table($conn);
     billing_ensure_domain_requests($conn);
@@ -2146,6 +2149,16 @@ function billing_add_campaign_columns($conn)
         }
         billing_exec($conn, 'ALTER TABLE sms_campaigns ADD COLUMN ' . $name . ' ' . $definition);
     }
+}
+
+function billing_add_ticket_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'support_tickets'));
+    if (isset($present['client_followup'])) {
+        return;
+    }
+    $definition = DB_DRIVER === 'sqlite' ? 'TEXT DEFAULT NULL' : 'TEXT DEFAULT NULL';
+    billing_exec($conn, 'ALTER TABLE support_tickets ADD COLUMN client_followup ' . $definition);
 }
 
 function billing_drop_portal_columns($conn)
@@ -3341,6 +3354,24 @@ function billing_add_units($conn, $clientId, $kind, $quantity)
     $stmt->close();
 }
 
+function billing_take_units($conn, $clientId, $kind, $quantity)
+{
+    if (($kind !== 'sms' && $kind !== 'voice_minutes' && $kind !== 'voice_calls') || (int) $quantity < 1) {
+        return false;
+    }
+    $clientId = (int) $clientId;
+    $quantity = (int) $quantity;
+    $stmt = $conn->prepare('UPDATE client_units SET balance = balance - ? WHERE client_id = ? AND unit_kind = ? AND balance >= ?');
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('iisi', $quantity, $clientId, $kind, $quantity);
+    $stmt->execute();
+    $ok = billing_affected($conn) === 1;
+    $stmt->close();
+    return $ok;
+}
+
 function billing_unit_balances($conn, $clientId)
 {
     $balances = array('sms' => 0, 'voice_minutes' => 0, 'voice_calls' => 0);
@@ -4096,14 +4127,27 @@ function billing_admin_add_service($conn, $clientId, $planCode, $quantity, $deta
     $stmt = $conn->prepare('INSERT INTO client_services (client_id, service_name, description, status, start_date, end_date, price, plan_code, billing_cycle, auto_renew, next_renewal, detail_label, order_brief, unit_kind, unit_quantity) VALUES (?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?)');
     $stmt->bind_param('issssssssissssi', $clientId, $name, $description, $status, $today, $nextRenewal, $price, $planCode, $cycle, $autoRenew, $nextRenewal, $detail, $briefJson, $unitKind, $unitQuantity);
     $ok = $stmt->execute();
+    $serviceId = (int) $conn->insert_id;
     $stmt->close();
-    if (!$ok) {
+    if (!$ok || $serviceId < 1) {
         return 'The service could not be added.';
     }
     if ($unitKind === 'sms' && $unitQuantity > 0) {
         billing_add_units($conn, $clientId, 'sms', $unitQuantity);
         if (function_exists('sms_remember_credit')) {
-            sms_remember_credit($conn, $clientId, $unitQuantity, 'Added by the team');
+            $noteId = (int) sms_remember_credit($conn, $clientId, $unitQuantity, 'Added by the team');
+            if ($noteId > 0) {
+                $brief['Credit note'] = (string) $noteId;
+                $linked = json_encode($brief, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (is_string($linked) && $linked !== '') {
+                    $link = $conn->prepare('UPDATE client_services SET order_brief = ? WHERE id = ? AND client_id = ?');
+                    if ($link) {
+                        $link->bind_param('sii', $linked, $serviceId, $clientId);
+                        $link->execute();
+                        $link->close();
+                    }
+                }
+            }
         }
     } elseif ($unitKind === 'voice_calls' && $unitQuantity > 0) {
         billing_add_units($conn, $clientId, 'voice_calls', $unitQuantity);
@@ -4320,6 +4364,118 @@ function billing_admin_wallet_credit($conn, $clientId, $amount, $note)
         'note' => $note
     ));
     return '';
+}
+
+function billing_admin_wallet_reverse($conn, $clientId, $entryId)
+{
+    $clientId = (int) $clientId;
+    $entryId = (int) $entryId;
+    if ($clientId < 1 || $entryId < 1) {
+        return 'That payment was not found.';
+    }
+    $stmt = $conn->prepare('SELECT id, amount, direction, kind, status, method FROM wallet_entries WHERE id = ? AND client_id = ?');
+    if (!$stmt) {
+        return 'That payment could not be read.';
+    }
+    $stmt->bind_param('ii', $entryId, $clientId);
+    $stmt->execute();
+    $entry = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$entry || $entry['kind'] !== 'topup' || $entry['method'] !== 'office' || $entry['direction'] !== 'credit' || $entry['status'] !== 'completed') {
+        return 'Only an office payment that is still in the wallet can be taken back.';
+    }
+    $amount = billing_money($entry['amount']);
+    if ((float) $amount <= 0) {
+        return 'That payment has no amount to take back.';
+    }
+    $reversed = 'reversed';
+    $completed = 'completed';
+    $mark = $conn->prepare('UPDATE wallet_entries SET status = ? WHERE id = ? AND client_id = ? AND status = ?');
+    if (!$mark) {
+        return 'That payment could not be taken back.';
+    }
+    $mark->bind_param('siis', $reversed, $entryId, $clientId, $completed);
+    $mark->execute();
+    $marked = billing_affected($conn) === 1;
+    $mark->close();
+    if (!$marked) {
+        return 'That payment was already taken back.';
+    }
+    if (!billing_wallet_debit($conn, $clientId, $amount)) {
+        $restore = $conn->prepare('UPDATE wallet_entries SET status = ? WHERE id = ? AND client_id = ?');
+        if ($restore) {
+            $restore->bind_param('sii', $completed, $entryId, $clientId);
+            $restore->execute();
+            $restore->close();
+        }
+        $left = billing_balance($conn, $clientId);
+        return 'The wallet has NPR ' . number_format((float) $left, 2) . ' left. This payment is NPR ' . number_format((float) $amount, 2) . ', and some of it was already spent, so it cannot be taken back.';
+    }
+    return '';
+}
+
+function billing_admin_take_service($conn, $clientId, $serviceId)
+{
+    $clientId = (int) $clientId;
+    $serviceId = (int) $serviceId;
+    if ($clientId < 1 || $serviceId < 1) {
+        return array('error' => 'That service was not found.', 'message' => '');
+    }
+    $stmt = $conn->prepare('SELECT id, status, order_brief, unit_kind, unit_quantity FROM client_services WHERE id = ? AND client_id = ?');
+    if (!$stmt) {
+        return array('error' => 'That service could not be read.', 'message' => '');
+    }
+    $stmt->bind_param('ii', $serviceId, $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return array('error' => 'That service was not found.', 'message' => '');
+    }
+    if ($row['status'] !== 'active' && $row['status'] !== 'booked') {
+        return array('error' => 'That service is already closed.', 'message' => '');
+    }
+    $brief = json_decode((string) $row['order_brief'], true);
+    if (!is_array($brief) || !isset($brief['Added by']) || $brief['Added by'] !== 'the team') {
+        return array('error' => 'This service was paid from the wallet. It is not an office add, so it stays.', 'message' => '');
+    }
+    $extra = '';
+    $creditNote = isset($brief['Credit note']) ? (int) $brief['Credit note'] : 0;
+    $kind = (string) $row['unit_kind'];
+    $quantity = (int) $row['unit_quantity'];
+    if ($creditNote > 0 && function_exists('sms_admin_reverse')) {
+        $reversed = sms_admin_reverse($conn, $clientId, $creditNote);
+        if ($reversed['error'] !== '' && strpos($reversed['error'], 'already sent') === false && strpos($reversed['error'], 'already taken') === false) {
+            return array('error' => $reversed['error'], 'message' => '');
+        }
+        $extra = $reversed['error'] !== '' ? $reversed['error'] : $reversed['message'];
+    } elseif (($kind === 'sms' || $kind === 'voice_calls') && $quantity > 0) {
+        $left = (int) billing_unit_balances($conn, $clientId)[$kind];
+        $take = $left < $quantity ? $left : $quantity;
+        if ($take > 0 && !billing_take_units($conn, $clientId, $kind, $take)) {
+            return array('error' => 'The credits could not be taken back. The balance changed while this was saving.', 'message' => '');
+        }
+        if ($take < $quantity) {
+            $extra = number_format($quantity - $take) . ' were already used, so ' . number_format($take) . ' were taken back.';
+        }
+    }
+    $closed = 'expired';
+    $update = $conn->prepare('UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND client_id = ? AND status IN (\'active\', \'booked\')');
+    if (!$update) {
+        return array('error' => 'The service could not be closed.', 'message' => '');
+    }
+    $update->bind_param('sii', $closed, $serviceId, $clientId);
+    $update->execute();
+    $closedOk = billing_affected($conn) === 1;
+    $update->close();
+    if (!$closedOk) {
+        return array('error' => 'That service is already closed.', 'message' => '');
+    }
+    $message = 'Service taken back. It will not renew.';
+    if ($extra !== '') {
+        $message .= ' ' . $extra;
+    }
+    return array('error' => '', 'message' => $message);
 }
 
 function billing_reject_topup($conn, $entryId)

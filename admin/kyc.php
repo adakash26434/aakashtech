@@ -50,8 +50,8 @@ try {
         <div class="p-6">
             <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
-                    <h2 class="font-heading font-semibold text-white text-lg"><?= e($row['account_name']) ?></h2>
-                    <p class="text-slate-500 text-sm"><?= e($row['email']) ?><?php if (!empty($row['phone'])): ?> · <?= e($row['phone']) ?><?php endif; ?></p>
+                    <h2 class="font-heading font-semibold text-white text-lg"><a class="hover:text-brand-300" href="client.php?id=<?= $clientId ?>"><?= e($row['account_name']) ?></a></h2>
+                    <p class="text-slate-500 text-sm"><?php $kycEmail = filter_var($row['email'], FILTER_VALIDATE_EMAIL) ? (string) $row['email'] : ''; ?><?php if ($kycEmail !== ''): ?><a class="text-brand-400 hover:text-brand-300" href="mailto:<?= e($kycEmail) ?>"><?= e($kycEmail) ?></a><?php else: ?><?= e($row['email']) ?><?php endif; ?><?php if (!empty($row['phone'])): ?> · <?php $kycPhone = preg_replace('/[^0-9+]/', '', (string) $row['phone']); ?><?php if ($kycPhone !== ''): ?><a class="text-brand-400 hover:text-brand-300" href="tel:<?= e($kycPhone) ?>"><?= e($row['phone']) ?></a><?php else: ?><?= e($row['phone']) ?><?php endif; ?><?php endif; ?></p>
                 </div>
                 <span class="text-sm <?= $status === 'approved' ? 'text-green-400' : ($status === 'pending' ? 'text-yellow-300' : 'text-red-300') ?>"><?= e(ucfirst($status)) ?></span>
             </div>

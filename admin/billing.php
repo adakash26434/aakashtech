@@ -113,7 +113,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 
 $pending = $conn->query("SELECT w.*, c.name, c.email FROM wallet_entries w JOIN client_users c ON c.id = w.client_id WHERE w.kind = 'topup' AND w.status = 'pending' ORDER BY w.id ASC");
 $walletClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
-$officePayments = $conn->query("SELECT w.amount, w.reference_note, w.created_at, c.name, c.email FROM wallet_entries w JOIN client_users c ON c.id = w.client_id WHERE w.kind = 'topup' AND w.method = 'office' AND w.status = 'completed' ORDER BY w.id DESC LIMIT 20");
+$officePayments = $conn->query("SELECT w.amount, w.reference_note, w.created_at, w.client_id, c.name, c.email FROM wallet_entries w JOIN client_users c ON c.id = w.client_id WHERE w.kind = 'topup' AND w.method = 'office' AND w.status = 'completed' ORDER BY w.id DESC LIMIT 20");
 $plans = billing_load_plans($conn);
 $smsSlabs = billing_load_slabs($conn, 'bulk-sms');
 $voiceSlabs = billing_load_slabs($conn, 'bulk-voice');
@@ -139,12 +139,15 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 
 <?php
 $billTab = 'wallet';
+$billTabs = array('wallet', 'rates', 'delivery', 'records');
 if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
     $billTab = 'rates';
 } elseif (isset($_POST['save_panel']) || isset($_POST['clear_panel']) || isset($_POST['save_mail']) || isset($_POST['clear_mail']) || isset($_POST['save_website']) || isset($_POST['clear_website']) || isset($_POST['save_training']) || isset($_POST['clear_training'])) {
     $billTab = 'delivery';
 } elseif (isset($_POST['refund_domain'])) {
     $billTab = 'records';
+} elseif (isset($_GET['tab']) && in_array($_GET['tab'], $billTabs, true)) {
+    $billTab = (string) $_GET['tab'];
 }
 ?>
 <div x-data="{ tab: '<?= e($billTab) ?>' }">
@@ -174,7 +177,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <?php if ($pending && $pending->num_rows > 0): ?>
                     <?php while ($row = $pending->fetch_assoc()): ?>
                         <tr>
-                            <td class="px-4 py-3"><p class="text-white text-sm"><?= e($row['name']) ?></p><p class="text-slate-500 text-xs"><?= e($row['email']) ?></p></td>
+                            <td class="px-4 py-3"><a class="text-white text-sm hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['name']) ?></a><?php $topupEmail = filter_var($row['email'], FILTER_VALIDATE_EMAIL) ? (string) $row['email'] : ''; ?><?php if ($topupEmail !== ''): ?><a class="block text-slate-500 text-xs hover:text-brand-300" href="mailto:<?= e($topupEmail) ?>"><?= e($topupEmail) ?></a><?php else: ?><p class="text-slate-500 text-xs"><?= e($row['email']) ?></p><?php endif; ?></td>
                             <td class="px-4 py-3 text-white text-sm"><?= e(billing_money_label($row['amount'])) ?></td>
                             <td class="px-4 py-3 text-slate-400 text-sm"><?= e(ucfirst($row['method'])) ?></td>
                             <td class="px-4 py-3 text-slate-300 text-sm"><?= e($row['reference_note']) ?></td>
@@ -231,7 +234,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
             <?php while ($officeRow = $officePayments->fetch_assoc()): ?>
                 <div class="p-4 flex flex-wrap items-baseline justify-between gap-2">
                     <div>
-                        <p class="text-white text-sm"><?= e($officeRow['name']) ?> <span class="text-slate-500"><?= e($officeRow['email']) ?></span></p>
+                        <p class="text-white text-sm"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $officeRow['client_id'] ?>"><?= e($officeRow['name']) ?></a> <?php $officeEmail = filter_var($officeRow['email'], FILTER_VALIDATE_EMAIL) ? (string) $officeRow['email'] : ''; ?><?php if ($officeEmail !== ''): ?><a class="text-slate-500 hover:text-brand-300" href="mailto:<?= e($officeEmail) ?>"><?= e($officeEmail) ?></a><?php else: ?><span class="text-slate-500"><?= e($officeRow['email']) ?></span><?php endif; ?></p>
                         <p class="text-slate-400 text-xs mt-1"><?= e($officeRow['reference_note']) ?></p>
                     </div>
                     <p class="text-white text-sm"><?= e(billing_money_label($officeRow['amount'])) ?> · <?= e(date('M j, Y', strtotime($officeRow['created_at']))) ?></p>
@@ -312,6 +315,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
 </div>
 <div x-show="tab==='delivery'" x-cloak>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="hidden" name="tab" value="delivery">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or service in the sections below">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
 </form>
@@ -450,7 +454,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <?php if ($subscriptions && $subscriptions->num_rows > 0): ?>
                     <?php while ($row = $subscriptions->fetch_assoc()): ?>
                         <tr>
-                            <td class="px-4 py-3 text-sm text-white"><?= e($row['name']) ?></td>
+                            <td class="px-4 py-3 text-sm text-white"><a class="hover:text-brand-300" href="client.php?id=<?= (int) $row['client_id'] ?>"><?= e($row['name']) ?></a></td>
                             <td class="px-4 py-3 text-sm text-slate-300">
                                 <?= e($row['service_name']) ?><?= !empty($row['detail_label']) ? ' · ' . e($row['detail_label']) : '' ?>
                                 <?php
