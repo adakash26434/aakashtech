@@ -18,6 +18,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     document.querySelectorAll("form[method='POST'], form[method='post']").forEach(function (form) {
         form.addEventListener("submit", function (event) {
+            if (form.id === "sms-send") {
+                // The SMS composer has its own guard (Alpine) and must keep its button enabled.
+                dirty = false;
+                return;
+            }
             if (form.dataset.submitted === "1") {
                 event.preventDefault();
                 return;

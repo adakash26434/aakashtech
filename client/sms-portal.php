@@ -305,7 +305,8 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
     <div class="grid lg:grid-cols-5 gap-6 mb-6">
         <div class="dash-panel lg:col-span-5 min-w-0">
             <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">New SMS</h3></div>
-            <form id="sms-send" method="POST" autocomplete="off" class="p-5 space-y-5" x-data='smsComposer(<?= json_encode($composer, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) ?>)' @submit="if (sending) { $event.preventDefault() } else { sending = true }">
+            <form id="sms-send" method="POST" autocomplete="off" class="p-5 space-y-5" x-data='smsComposer(<?= json_encode($composer, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS) ?>)' @submit="if (sending || !reviewing) { $event.preventDefault() } else { sending = true }">
+                <input type="hidden" name="send_sms" value="1" :disabled="!reviewing">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <?php
                 $audiencePick = $values['audience'] !== '' ? $values['audience'] : 'cooperative';
@@ -494,7 +495,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" class="px-4 py-3 text-slate-400 text-sm" x-show="reviewing" x-cloak @click="reviewing = false">Back</button>
                         <button type="button" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl" x-show="!reviewing" @click="openReview()">Review</button>
-                        <button type="submit" name="send_sms" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="sending || !reviewing" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
+                        <button type="submit" name="send_sms" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="!reviewing" :aria-busy="sending" :class="sending ? 'opacity-60 cursor-progress' : ''" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
                     </div>
                 </div>
             </form>

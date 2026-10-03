@@ -46,3 +46,9 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 @media (max-width: 720px) { .portal-shell main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 @media print { .portal-shell aside, .portal-shell .sms-actionbar, .portal-shell button { display: none !important; } }
+
+/* Declaration box: readable on the light portal (was dark grey with low contrast) */
+.portal-shell .use-declaration { background: #f1f7f5; border: 1px solid #a8dfd0; }
+.portal-shell .use-declaration-title { color: #102b35; font-size: 15px; font-weight: 700; }
+.portal-shell .use-declaration-text { color: #25434b; font-size: 15px; line-height: 1.7; }
+.portal-shell .use-declaration input[type="checkbox"] { width: 22px; height: 22px; accent-color: #0b8b7a; flex: none; }
