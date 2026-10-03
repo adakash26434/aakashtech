@@ -259,7 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/site.css">
-    <script defer src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="assets/css/polish.css">
+    <script defer src="https://unpkg.com/lucide@0.383.0"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="assets/js/site.js"></script>
 </head>

@@ -123,4 +123,7 @@ $aiReady = isset($conn) && $conn && function_exists('site_ai_ready') && site_ai_
 if ($aiReady) {
     include __DIR__ . '/site-ask.php';
 }
-?>
+?><nav class="mobile-cta" aria-label="Quick actions">
+    <a class="button button--outline" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/index.php#contact">Ask a question</a>
+    <a class="button button--primary" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/client/shop.php">Buy or book</a>
+</nav>

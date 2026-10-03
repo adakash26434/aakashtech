@@ -1,0 +1,76 @@
+/* Aakash Technologies — UI polish layer. Loaded after site.css; only refines, never replaces. */
+:root {
+    --ui-radius: 16px;
+    --ui-ring: 0 0 0 3px rgba(11, 139, 122, 0.35);
+    --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --header-h: 72px;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 12px); -webkit-text-size-adjust: 100%; }
+body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+::selection { background: var(--site-teal); color: #fff; }
+
+/* Typography: fluid sizes, balanced headings, readable line length */
+.site-public h1 { font-size: clamp(2.1rem, 1.4rem + 3.4vw, 4rem); line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; }
+.site-public h2 { font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.6rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+.site-public h3 { text-wrap: balance; }
+.site-public p, .site-public li { text-wrap: pretty; }
+.hero-lede { max-width: 60ch; font-size: clamp(1rem, 0.95rem + 0.3vw, 1.2rem); line-height: 1.65; }
+
+/* Header: frosted glass, stays readable on scroll */
+.site-header { backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px); }
+.site-header--scrolled { box-shadow: 0 8px 30px rgba(16, 43, 53, 0.08); }
+
+/* Buttons and links: 44px touch targets, tactile press, clear focus */
+.button, .button--small { min-height: 44px; transition: transform 0.25s var(--ui-ease), box-shadow 0.25s var(--ui-ease), background-color 0.2s; }
+.button:hover { transform: translateY(-2px); }
+.button:active { transform: translateY(0) scale(0.98); }
+.button--primary { box-shadow: 0 10px 24px rgba(11, 139, 122, 0.28); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--site-teal-dark); outline-offset: 3px; box-shadow: var(--ui-ring); border-radius: 8px;
+}
+
+/* Cards and rows: depth and a calm hover */
+.solution-row, .service-card, .faq-item, details {
+    border-radius: var(--ui-radius);
+    transition: transform 0.3s var(--ui-ease), box-shadow 0.3s var(--ui-ease), border-color 0.2s;
+}
+a.solution-row:hover, .service-card:hover { transform: translateY(-3px); box-shadow: var(--site-shadow); border-color: var(--site-teal); }
+
+/* Forms: bigger fields, 16px text (no iOS zoom), friendly validation */
+.site-public input:not([type=checkbox]):not([type=radio]), .site-public select, .site-public textarea {
+    min-height: 48px; font-size: 16px; border-radius: 12px; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.site-public input:focus, .site-public select:focus, .site-public textarea:focus { border-color: var(--site-teal); box-shadow: var(--ui-ring); outline: none; }
+.site-public input:user-invalid, .site-public textarea:user-invalid { border-color: #c0392b; }
+.site-public label { font-weight: 600; }
+
+/* Tables (rate slabs) scroll instead of breaking the page */
+.site-public table { width: 100%; border-collapse: collapse; }
+.site-public td, .site-public th { padding: 12px 14px; }
+@media (max-width: 720px) { .site-public table { display: block; overflow-x: auto; white-space: nowrap; } }
+
+/* Performance: skip rendering far-off sections until needed */
+#about, #process, #contact, .site-footer { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+img { max-width: 100%; height: auto; }
+
+/* Mobile sticky action bar */
+.mobile-cta { display: none; }
+@media (max-width: 720px) {
+    .mobile-cta {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: rgba(251, 253, 252, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border-top: 1px solid var(--site-line); box-shadow: 0 -10px 30px rgba(16, 43, 53, 0.08);
+    }
+    .mobile-cta .button { width: 100%; justify-content: center; }
+    body.site-public { padding-bottom: 76px; }
+}
+
+/* Respect user settings */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+@media (prefers-contrast: more) { :root { --site-line: #9fb5b0; --site-muted: #2f464d; } }
+@media print { .site-header, .mobile-cta, .site-notice { display: none !important; } }
