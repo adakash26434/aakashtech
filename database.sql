@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS client_users (
     avatar_color VARCHAR(20) DEFAULT '#06b6d4',
     totp_secret VARCHAR(64) NOT NULL DEFAULT '',
     totp_last_step INT NOT NULL DEFAULT 0,
+    login_notice_at DATETIME DEFAULT NULL,
+    login_notice_ip VARCHAR(45) DEFAULT '',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
@@ -93,6 +95,7 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
     purpose         VARCHAR(40) DEFAULT '',
     recipients_list TEXT,
     declaration_text TEXT,
+    language        VARCHAR(20) DEFAULT '',
     status          ENUM('draft', 'pending', 'scheduled', 'sending', 'sent', 'failed') DEFAULT 'draft',
     scheduled_at    DATETIME DEFAULT NULL,
     sent_at         DATETIME DEFAULT NULL,
@@ -126,6 +129,9 @@ CREATE TABLE IF NOT EXISTS client_services (
     unit_quantity INT DEFAULT 0,
     grace_until DATE DEFAULT NULL,
     last_attempt_on DATE DEFAULT NULL,
+    panel_user  VARCHAR(32) DEFAULT NULL,
+    panel_pass  TEXT DEFAULT NULL,
+    panel_host  VARCHAR(253) DEFAULT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE,
     INDEX idx_client (client_id),
@@ -209,7 +215,9 @@ INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('logo_path', ''),
 ('esewa_id', ''),
 ('khalti_id', ''),
-('bank_details', '');
+('bank_details', ''),
+('privacy_policy', ''),
+('cookie_policy', '');
 
 -- ====== Login attempts ======
 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -400,6 +408,15 @@ CREATE TABLE IF NOT EXISTS sms_templates (
     message_text TEXT NOT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_sms_template_client (client_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sms_credit_notes (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    credits     INT NOT NULL,
+    note        VARCHAR(180) DEFAULT '',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_credit_client (client_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sms_number_lists (

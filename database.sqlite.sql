@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS client_users (
     avatar_color TEXT DEFAULT '#0b8b7a',
     totp_secret TEXT DEFAULT '',
     totp_last_step INTEGER DEFAULT 0,
+    login_notice_at TEXT DEFAULT NULL,
+    login_notice_ip TEXT DEFAULT '',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
     purpose TEXT DEFAULT '',
     recipients_list TEXT DEFAULT '',
     declaration_text TEXT DEFAULT '',
+    language TEXT DEFAULT '',
     status TEXT DEFAULT 'draft',
     scheduled_at TEXT DEFAULT NULL,
     sent_at TEXT DEFAULT NULL,
@@ -93,6 +96,9 @@ CREATE TABLE IF NOT EXISTS client_services (
     unit_quantity INTEGER DEFAULT 0,
     grace_until TEXT DEFAULT NULL,
     last_attempt_on TEXT DEFAULT NULL,
+    panel_user TEXT DEFAULT NULL,
+    panel_pass TEXT DEFAULT NULL,
+    panel_host TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE
 );
@@ -297,7 +303,9 @@ INSERT OR IGNORE INTO site_settings (setting_key, setting_value) VALUES
 ('logo_path', ''),
 ('esewa_id', ''),
 ('khalti_id', ''),
-('bank_details', '');
+('bank_details', ''),
+('privacy_policy', ''),
+('cookie_policy', '');
 
 CREATE INDEX IF NOT EXISTS idx_domain_client ON domain_requests(client_id);
 CREATE INDEX IF NOT EXISTS idx_domain_status ON domain_requests(status);
@@ -372,6 +380,16 @@ CREATE TABLE IF NOT EXISTS sms_templates (
     message_text TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS sms_credit_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    credits INTEGER NOT NULL,
+    note TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sms_credit_client ON sms_credit_notes(client_id, created_at);
 
 CREATE TABLE IF NOT EXISTS sms_number_lists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

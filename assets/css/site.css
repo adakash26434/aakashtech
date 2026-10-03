@@ -2217,6 +2217,38 @@ a.contact-method:hover strong {
     line-height: 1.5;
 }
 
+.footer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.footer-legal a {
+    color: #8ce0c4;
+    font-weight: 600;
+}
+
+.legal-copy {
+    max-width: 44rem;
+}
+
+.legal-copy h1 {
+    margin: 0 0 8px;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.1;
+}
+
+.legal-copy p {
+    margin: 16px 0 0;
+    color: var(--site-ink-soft);
+    line-height: 1.7;
+}
+
+.legal-related a {
+    color: var(--site-teal-dark);
+    font-weight: 600;
+}
+
 .reveal {
     opacity: 0;
     transform: translateY(16px);

@@ -31,7 +31,7 @@ if ($error === '' && $flashError !== '') {
 $loginNotice = flash('login_notice');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    $email = trim($_POST['email'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
     $password = $_POST['password'] ?? '';
     if (!csrf_is_valid()) {
         $error = 'The form expired. Refresh the page and try again.';
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         $error = 'Please fill in all fields.';
     } else {
         try {
-            $stmt = $conn->prepare("SELECT id, name, email, password, status FROM client_users WHERE email = ? LIMIT 1");
+            $stmt = $conn->prepare("SELECT id, name, email, password, status FROM client_users WHERE LOWER(email) = ? LIMIT 1");
             if (!$stmt) {
                 throw new RuntimeException('Client lookup failed.');
             }
@@ -78,10 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $showRegister = true;
     $name = substr(trim((string) ($_POST['name'] ?? '')), 0, 80);
-    $email = substr(trim((string) ($_POST['email'] ?? '')), 0, 120);
+    $email = strtolower(substr(trim((string) ($_POST['email'] ?? '')), 0, 120));
     $phoneInput = trim((string) ($_POST['phone'] ?? ''));
     $phone = auth_mobile_number($phoneInput);
-    $company = substr(trim((string) ($_POST['company'] ?? '')), 0, 120);
+    $company = billing_plain_line(isset($_POST['company']) ? $_POST['company'] : '', 120);
     $password = (string) ($_POST['password'] ?? '');
     $confirm = (string) ($_POST['confirm_password'] ?? '');
     $honeypot = trim((string) ($_POST['website'] ?? ''));
@@ -114,17 +114,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Passwords do not match.';
     } else {
         try {
-            $check = $conn->prepare("SELECT id FROM client_users WHERE email = ? LIMIT 1");
-            if (!$check) {
-                throw new RuntimeException('Client lookup failed.');
-            }
-            $check->bind_param("s", $email);
-            $check->execute();
-            $existing = db_fetch_assoc($check);
-            $check->close();
-            if ($existing) {
+            $taken = billing_client_taken($conn, $email, $phone, $company, 0);
+            if ($taken !== '') {
                 auth_note_attempt($conn, 'register');
-                $error = 'An account with this email already exists.';
+                $error = $taken;
             } else {
                 $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
                 $avatar_color = $colors[array_rand($colors)];
@@ -287,6 +280,7 @@ try {
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e(auth_math_prompt('register')) ?>? *</label>
                     <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" class="form-input" placeholder="Answer">
                 </div>
+                <p class="text-slate-500 text-xs">Creating the account is your consent to keep the name, email, and mobile for this account. Read the <a href="../privacy.php" class="text-brand-400">privacy policy</a>.</p>
                 <button type="submit" name="register" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Create Account
                 </button>

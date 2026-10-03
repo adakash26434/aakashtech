@@ -99,6 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_legal'])) {
+    verify_csrf();
+    $privacy = !empty($_POST['restore_privacy']) ? '' : site_legal_plain(isset($_POST['privacy_policy']) ? $_POST['privacy_policy'] : '', 12000);
+    $cookies = !empty($_POST['restore_cookies']) ? '' : site_legal_plain(isset($_POST['cookie_policy']) ? $_POST['cookie_policy'] : '', 12000);
+    billing_set_setting($conn, 'privacy_policy', $privacy);
+    billing_set_setting($conn, 'cookie_policy', $cookies);
+    $msg = 'Privacy policy and cookie notice saved. They appear in the public footer.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     verify_csrf();
     $current = $_POST['current_pass'] ?? '';
@@ -251,6 +260,29 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
             </div>
         <?php endforeach; ?>
     </div>
+</div>
+
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Privacy and cookies</h3></div>
+    <form method="POST" action="" class="p-5 space-y-4">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <p class="text-slate-400 text-sm">These pages are linked from the public footer. The prepared text follows the Individual Privacy Act, 2075 and the Individual Privacy Regulation, 2077, and it describes the one sign-in cookie this site sets. Edit the wording here. Tick restore to put the prepared text back.</p>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="privacy_policy">Privacy policy</label>
+            <textarea id="privacy_policy" name="privacy_policy" maxlength="12000" rows="12" class="form-input"><?= e(site_legal_text($settings, 'privacy_policy')) ?></textarea>
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="restore_privacy" value="1"> Restore the prepared privacy policy
+            </label>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="cookie_policy">Cookie notice</label>
+            <textarea id="cookie_policy" name="cookie_policy" maxlength="12000" rows="8" class="form-input"><?= e(site_legal_text($settings, 'cookie_policy')) ?></textarea>
+            <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" name="restore_cookies" value="1"> Restore the prepared cookie notice
+            </label>
+        </div>
+        <button type="submit" name="save_legal" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save privacy and cookies</button>
+    </form>
 </div>
 
 <div class="dash-panel mb-6">

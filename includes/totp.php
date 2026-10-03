@@ -467,6 +467,11 @@ function totp_complete($conn)
         $_SESSION['client_name'] = $account['name'];
         $_SESSION['client_email'] = $account['email'];
         $dest = client_safe_next($gate['next']);
+        try {
+            billing_client_login_notice($conn, (int) $account['id']);
+        } catch (Throwable $exception) {
+            error_log('Sign-in notice could not be sent.');
+        }
     }
     if (isset($account['password'])) {
         auth_remember_password($kind, $account['password']);

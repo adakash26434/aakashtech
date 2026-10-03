@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/billing.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
-$paths = array('/', 'domain.php', 'whois.php');
+$paths = array('/', 'domain.php', 'whois.php', 'privacy.php', 'cookies.php');
 foreach (array_keys(billing_service_definitions()) as $slug) {
     $paths[] = 'service.php?slug=' . rawurlencode($slug);
 }

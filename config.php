@@ -64,6 +64,7 @@ if (DB_DRIVER === 'sqlite') {
 }
 
 require_once __DIR__ . '/includes/billing.php';
+require_once __DIR__ . '/includes/legal.php';
 require_once __DIR__ . '/includes/sms-gateway.php';
 require_once __DIR__ . '/includes/hosting-panel.php';
 require_once __DIR__ . '/includes/mail-login.php';
@@ -385,7 +386,9 @@ function auth_ensure_client_table($conn)
             'company' => 'TEXT DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "TEXT DEFAULT 'active'",
-            'avatar_color' => "TEXT DEFAULT '#06b6d4'"
+            'avatar_color' => "TEXT DEFAULT '#06b6d4'",
+            'login_notice_at' => 'TEXT DEFAULT NULL',
+            'login_notice_ip' => "TEXT DEFAULT ''"
         );
     } else {
         billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_users (
@@ -408,7 +411,9 @@ function auth_ensure_client_table($conn)
             'company' => 'VARCHAR(255) DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "VARCHAR(20) DEFAULT 'active'",
-            'avatar_color' => "VARCHAR(20) DEFAULT '#06b6d4'"
+            'avatar_color' => "VARCHAR(20) DEFAULT '#06b6d4'",
+            'login_notice_at' => 'DATETIME DEFAULT NULL',
+            'login_notice_ip' => "VARCHAR(45) DEFAULT ''"
         );
     }
 

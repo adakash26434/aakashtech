@@ -805,17 +805,24 @@ function sms_take_credits($conn, $clientId, $credits)
     return $taken;
 }
 
-function sms_http_form($url, $fields)
+function sms_http_form($url, $fields, $timeout = 25)
 {
     if (!function_exists('curl_init')) {
         return array('ok' => false, 'status' => 0, 'body' => '');
+    }
+    $timeout = (int) $timeout;
+    if ($timeout < 3) {
+        $timeout = 3;
+    }
+    if ($timeout > 25) {
+        $timeout = 25;
     }
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 25);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(8, $timeout));
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json'));
     $body = curl_exec($ch);
     $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -886,7 +893,7 @@ function sms_aakash_rejected($json, $numbers)
     return $out;
 }
 
-function sms_vendor_send($conn, $numbers, $text, $sender)
+function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
 {
     $line = sms_line_secret($conn);
     if ($line['provider'] === '' || $line['token'] === '') {
@@ -899,7 +906,7 @@ function sms_vendor_send($conn, $numbers, $text, $sender)
             'auth_token' => $line['token'],
             'to' => $to,
             'text' => $text
-        ));
+        ), $timeout);
         $json = json_decode($response['body'], true);
         if ($response['ok'] && is_array($json) && empty($json['error'])) {
             $rejected = sms_aakash_rejected($json, $numbers);
@@ -917,7 +924,7 @@ function sms_vendor_send($conn, $numbers, $text, $sender)
         'from' => $sender,
         'to' => $to,
         'text' => $text
-    ));
+    ), $timeout);
     $json = json_decode($response['body'], true);
     $code = is_array($json) && isset($json['response_code']) ? (int) $json['response_code'] : 0;
     if ($response['status'] === 200 && $code === 200) {

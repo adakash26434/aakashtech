@@ -573,7 +573,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             Send your message
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </button>
-                        <p class="form-note">Your name and email are used only to reply to this enquiry. A mobile number is not required.</p>
+                        <p class="form-note">Your name and email are used only to reply to this enquiry. A mobile number is not required. Sending the message is your consent for that use. Read the <a href="privacy.php">privacy policy</a> and the <a href="cookies.php">cookie notice</a>.</p>
                     </form>
                 </div>
             </div>

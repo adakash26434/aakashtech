@@ -107,17 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
         } elseif (strlen($password) < 8) {
             $error = 'Use a password of at least 8 characters.';
         } else {
-            $exists = $conn->prepare('SELECT id FROM client_users WHERE email = ? LIMIT 1');
-            $exists->bind_param('s', $email);
-            $exists->execute();
-            $found = db_fetch_assoc($exists);
-            $exists->close();
-            if ($found) {
-                $error = 'That email already has an account. Sign in, then send the domain request.';
+            $company = $holderKind === 'organization' ? $holderName : '';
+            $taken = billing_client_taken($conn, $email, $phone, $company, 0);
+            if ($taken !== '') {
+                $error = $taken . ' Sign in, then send the domain request.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $color = '#0b8b7a';
-                $company = $holderKind === 'organization' ? $holderName : '';
                 $insert = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
                 $insert->bind_param('ssssss', $accountName, $email, $hash, $phone, $company, $color);
                 $insert->execute();

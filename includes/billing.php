@@ -1128,6 +1128,18 @@ function billing_mail_catalog()
             'lines' => array(
                 'The team changed the mobile number on your account to {phone}.'
             )
+        ),
+        'login' => array(
+            'when' => 'The client finishes signing in',
+            'subject' => 'Sign-in on your account',
+            'lines' => array(
+                'A sign-in to your account was just completed.',
+                'User ID: {id}',
+                'Email: {email}',
+                'IP address: {ip}',
+                'Nepal time: {when}',
+                'If you did not sign in, contact {contact} or open a support ticket. This email does not contain the password.'
+            )
         )
     );
 }
@@ -1185,6 +1197,52 @@ function billing_mail_client_event($conn, $clientId, $key, $map = array())
         }
     }
     return billing_mail_to_client($conn, $clientId, billing_mail_fill($item['subject'], $map), $lines);
+}
+
+function billing_client_login_notice($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    if ($clientId < 1) {
+        return;
+    }
+    $stmt = $conn->prepare('SELECT id, email, login_notice_at, login_notice_ip FROM client_users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return;
+    }
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return;
+    }
+    $ip = function_exists('auth_client_ip') ? auth_client_ip() : '';
+    if ($ip === '') {
+        $ip = 'unknown';
+    }
+    $previousAt = isset($row['login_notice_at']) ? strtotime((string) $row['login_notice_at']) : false;
+    $previousIp = isset($row['login_notice_ip']) ? (string) $row['login_notice_ip'] : '';
+    if ($previousAt && $previousIp === $ip && (time() - $previousAt) < 1800) {
+        return;
+    }
+    $when = new DateTime('now', new DateTimeZone('Asia/Kathmandu'));
+    $stamp = $when->format('Y-m-d H:i');
+    $public = site_public_settings($conn);
+    $contact = isset($public['site_email']) && trim((string) $public['site_email']) !== '' ? trim((string) $public['site_email']) : site_official_email();
+    billing_mail_client_event($conn, $clientId, 'login', array(
+        'id' => (string) $clientId,
+        'email' => (string) $row['email'],
+        'ip' => $ip,
+        'when' => $stamp,
+        'contact' => $contact
+    ));
+    $savedAt = $when->format('Y-m-d H:i:s');
+    $update = $conn->prepare('UPDATE client_users SET login_notice_at = ?, login_notice_ip = ? WHERE id = ?');
+    if ($update) {
+        $update->bind_param('ssi', $savedAt, $ip, $clientId);
+        $update->execute();
+        $update->close();
+    }
 }
 
 function billing_mail_named_event($conn, $email, $name, $key, $map = array())
@@ -1634,6 +1692,8 @@ function site_public_defaults()
         'linkedin_url' => '',
         'footer_tagline' => 'Practical technology for businesses ready to grow.',
         'footer_text' => 'Designed and built in Nepal.',
+        'privacy_policy' => '',
+        'cookie_policy' => '',
         'logo_path' => '',
         'esewa_id' => defined('ESEWA_ID') ? ESEWA_ID : '',
         'khalti_id' => defined('KHALTI_ID') ? KHALTI_ID : '',
@@ -1705,6 +1765,11 @@ function site_public_settings($conn)
     if (!$managed) {
         if (!empty($stored['logo_path'])) {
             $settings['logo_path'] = $stored['logo_path'];
+        }
+        foreach (array('privacy_policy', 'cookie_policy') as $legalKey) {
+            if (isset($stored[$legalKey]) && trim($stored[$legalKey]) !== '') {
+                $settings[$legalKey] = $stored[$legalKey];
+            }
         }
         return $settings;
     }
@@ -3821,6 +3886,54 @@ function billing_save_slabs($conn, $posted, $starts = array())
     return '';
 }
 
+function billing_client_taken($conn, $email, $phone, $company, $exceptId = 0)
+{
+    $exceptId = (int) $exceptId;
+    $email = strtolower(trim((string) $email));
+    if ($email !== '') {
+        $stmt = $conn->prepare('SELECT id FROM client_users WHERE LOWER(email) = ? AND id != ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('si', $email, $exceptId);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            if ($row) {
+                return 'An account with this email already exists.';
+            }
+        }
+    }
+    $phone = function_exists('auth_mobile_number') ? auth_mobile_number($phone) : '';
+    if ($phone !== '') {
+        $withCountry = '977' . $phone;
+        $withZero = '0' . $phone;
+        $stmt = $conn->prepare('SELECT id FROM client_users WHERE id != ? AND phone IN (?, ?, ?) LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('isss', $exceptId, $phone, $withCountry, $withZero);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            if ($row) {
+                return 'An account with this mobile number already exists.';
+            }
+        }
+    }
+    $company = billing_plain_line($company, 120);
+    if ($company !== '') {
+        $key = strtolower($company);
+        $stmt = $conn->prepare('SELECT id FROM client_users WHERE id != ? AND LOWER(company) = ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('is', $exceptId, $key);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            if ($row) {
+                return 'An account with this company name already exists.';
+            }
+        }
+    }
+    return '';
+}
+
 function billing_admin_create_client($conn, $name, $email, $phone, $company, $password)
 {
     $name = billing_plain_line($name, 80);
@@ -3841,13 +3954,9 @@ function billing_admin_create_client($conn, $name, $email, $phone, $company, $pa
     if (strlen($password) < 8) {
         return array('ok' => false, 'error' => 'Password must be at least 8 characters.', 'id' => 0);
     }
-    $check = $conn->prepare('SELECT id FROM client_users WHERE email = ? LIMIT 1');
-    $check->bind_param('s', $email);
-    $check->execute();
-    $existing = db_fetch_assoc($check);
-    $check->close();
-    if ($existing) {
-        return array('ok' => false, 'error' => 'An account with this email already exists.', 'id' => 0);
+    $taken = billing_client_taken($conn, $email, $phone, $company, 0);
+    if ($taken !== '') {
+        return array('ok' => false, 'error' => $taken, 'id' => 0);
     }
     $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
     $avatar = $colors[array_rand($colors)];
@@ -3872,6 +3981,10 @@ function billing_client_save_profile($conn, $clientId, $name, $company, $address
     $address = billing_plain_block($address, 300);
     if ($clientId < 1 || $name === '') {
         return 'Name is required.';
+    }
+    $taken = billing_client_taken($conn, '', '', $company, $clientId);
+    if ($taken !== '') {
+        return $taken;
     }
     $stmt = $conn->prepare('UPDATE client_users SET name = ?, company = ?, address = ? WHERE id = ?');
     if (!$stmt) {
@@ -3906,13 +4019,9 @@ function billing_admin_set_contact($conn, $clientId, $email, $phone)
     if (!$row) {
         return 'That client was not found.';
     }
-    $check = $conn->prepare('SELECT id FROM client_users WHERE email = ? AND id != ? LIMIT 1');
-    $check->bind_param('si', $email, $clientId);
-    $check->execute();
-    $taken = db_fetch_assoc($check);
-    $check->close();
-    if ($taken) {
-        return 'An account with this email already exists.';
+    $taken = billing_client_taken($conn, $email, $phone, '', $clientId);
+    if ($taken !== '') {
+        return $taken;
     }
     $oldEmail = strtolower(trim((string) $row['email']));
     $oldPhone = (string) $row['phone'];
