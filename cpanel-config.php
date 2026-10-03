@@ -3,8 +3,8 @@
  * cPanel को public_html भित्र यो फाइल राख्नुहोस् र File Manager बाट खोलेर भर्नुहोस्।
  * Browser ले यो फाइल खोल्दैन। Database र admin login यहीँ लेखिन्छ।
  *
- * cPanel → MySQL Databases मा database र user बनाउनुहोस्, user लाई database मा All Privileges दिनुहोस्,
- * अनि phpMyAdmin बाट database.sql एक पटक import गर्नुहोस्।
+ * cPanel → MySQL Databases मा database र user बनाउनुहोस्, user लाई database मा All Privileges दिनुहोस्।
+ * phpMyAdmin मा त्यो डाटाबेस खोलेर database.sql import गर्नुहोस्। aakash_tech नाम आफैँ बन्दैन।
  */
 return array(
     'db_host' => 'localhost',

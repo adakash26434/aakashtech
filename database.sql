@@ -1,9 +1,7 @@
 -- ====== Aakash Technologies — Full Database Setup ======
 -- Compatible with MySQL 5.7+ and MariaDB 10.3+
--- Import via phpMyAdmin or: mysql -u root -p < database.sql
-
-CREATE DATABASE IF NOT EXISTS aakash_tech CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE aakash_tech;
+-- cPanel: phpMyAdmin मा आफ्नो डाटाबेस छानेर यो फाइल import गर्नुहोस्।
+-- नयाँ डाटाबेस बनाउने आदेश छैन। साझा होस्टिङले त्यो अनुमति दिँदैन।
 
 -- ====== Admin Users ======
 CREATE TABLE IF NOT EXISTS admin_users (
