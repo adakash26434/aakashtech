@@ -172,11 +172,71 @@ body.site-public textarea {
 }
 
 .desktop-nav a,
+.desktop-nav .nav-drop summary,
 .portal-link {
     color: var(--site-muted);
     font-size: var(--type-label);
     font-weight: 500;
     transition: color 160ms ease;
+}
+
+.nav-drop {
+    position: relative;
+}
+
+.nav-drop summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.nav-drop summary::-webkit-details-marker {
+    display: none;
+}
+
+.nav-drop summary::after {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 6px;
+    border: 4px solid transparent;
+    border-top-color: currentColor;
+    vertical-align: 2px;
+}
+
+.nav-drop-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    z-index: 40;
+    min-width: 220px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid var(--site-line);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(20, 55, 61, 0.08);
+}
+
+.nav-drop:hover .nav-drop-panel,
+.nav-drop:focus-within .nav-drop-panel,
+.nav-drop[open] .nav-drop-panel {
+    display: grid;
+}
+
+.desktop-nav .nav-drop-panel a,
+.mobile-nav .nav-drop-panel a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--site-ink);
+}
+
+.desktop-nav .nav-drop-panel a:hover,
+.desktop-nav .nav-drop-panel a[aria-current="page"],
+.mobile-nav .nav-drop-panel a:hover {
+    color: var(--site-teal-dark);
+    background: #f3faf7;
 }
 
 .desktop-nav a:hover,
@@ -1866,6 +1926,29 @@ a.contact-method:hover strong {
 .domain-result--free { color: #075e54; }
 .domain-result--taken { color: #8a3b2a; }
 
+.whois-record {
+    margin-top: 8px;
+}
+
+.whois-record div {
+    display: grid;
+    grid-template-columns: minmax(120px, 170px) 1fr;
+    gap: 8px 16px;
+    padding: 10px 0;
+    border-top: 1px solid var(--site-line);
+}
+
+.whois-record dt {
+    color: var(--site-muted);
+    font-size: var(--type-label);
+}
+
+.whois-record dd {
+    margin: 0;
+    color: var(--site-ink);
+    overflow-wrap: anywhere;
+}
+
 .domain-check .button,
 .domain-request .button { margin-top: 16px; }
 
@@ -2271,6 +2354,33 @@ a.contact-method:hover strong {
     .portal-link,
     .nav-cta {
         display: none;
+    }
+
+    .mobile-nav .nav-drop-panel {
+        position: static;
+        min-width: 0;
+        margin: 0 0 4px 12px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .mobile-nav .nav-drop:hover .nav-drop-panel,
+    .mobile-nav .nav-drop:focus-within .nav-drop-panel {
+        display: none;
+    }
+
+    .mobile-nav .nav-drop[open] .nav-drop-panel {
+        display: grid;
+    }
+
+    .mobile-nav .nav-drop summary {
+        padding: 13px 4px;
+        color: var(--site-ink-soft);
+        border-bottom: 1px solid var(--site-line);
+        font-size: 14px;
     }
 
     .menu-toggle {

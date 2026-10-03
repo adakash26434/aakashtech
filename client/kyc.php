@@ -28,7 +28,7 @@ $statusLabel = array(
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Identity</h1>
-    <p class="text-slate-500 text-sm">Who is sending, and what the messages are for. SMS sending stays closed until this is approved.</p>
+    <p class="text-slate-500 text-sm">Who is sending, and what the messages are for. SMS and a voice job stay closed until this is approved.</p>
 </div>
 
 <?php if ($msg): ?>

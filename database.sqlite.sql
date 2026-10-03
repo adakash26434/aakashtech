@@ -24,8 +24,6 @@ CREATE TABLE IF NOT EXISTS client_users (
     address TEXT DEFAULT NULL,
     status TEXT DEFAULT 'active',
     avatar_color TEXT DEFAULT '#0b8b7a',
-    sms_portal_username TEXT DEFAULT '',
-    sms_portal_password TEXT DEFAULT '',
     totp_secret TEXT DEFAULT '',
     totp_last_step INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -139,6 +137,15 @@ CREATE INDEX IF NOT EXISTS idx_inquiry_created ON inquiries(created_at);
 CREATE INDEX IF NOT EXISTS idx_campaign_client ON sms_campaigns(client_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_client ON support_tickets(client_id);
 CREATE INDEX IF NOT EXISTS idx_service_active ON services(is_active);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reset_hash ON password_resets(token_hash);
+CREATE INDEX IF NOT EXISTS idx_reset_client ON password_resets(client_id);
 
 CREATE TABLE IF NOT EXISTS login_attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -260,7 +267,7 @@ INSERT OR IGNORE INTO services (title, slug, description, icon, features, sort_o
 ('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
 ('Domain Registration', 'domain-registration', 'Register a .com name, or a Nepal name such as .com.np or .coop.np, and renew it from the wallet.', 'globe', '.com,.com.np,.coop.np,Auto-renew', 3),
 ('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
-('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
+('Professional Email', 'professional-email', 'Mailboxes on your own domain, managed in Nepal.', 'mail', 'Your domain,Mailboxes,Auto-renew', 5),
 ('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),
 ('Cyber Security Training', 'cyber-security', 'On-site training for directors, staff, and members.', 'shield-check', 'Directors,Staff,Members', 7);
 
@@ -344,6 +351,18 @@ CREATE INDEX IF NOT EXISTS idx_sms_token_client ON sms_api_tokens(client_id);
 CREATE INDEX IF NOT EXISTS idx_sms_hit_token ON sms_api_hits(token_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_sms_msg_client ON sms_messages(client_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_sms_msg_campaign ON sms_messages(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_sms_msg_client_status ON sms_messages(client_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_sms_msg_sent_day ON sms_messages(client_id, status, sent_at);
+CREATE INDEX IF NOT EXISTS idx_sms_campaign_due ON sms_campaigns(channel, status, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_sms_campaign_client_status ON sms_campaigns(client_id, channel, status);
+CREATE INDEX IF NOT EXISTS idx_sms_campaign_created ON sms_campaigns(created_at);
+CREATE INDEX IF NOT EXISTS idx_service_client_status ON client_services(client_id, status);
+CREATE INDEX IF NOT EXISTS idx_service_renew ON client_services(auto_renew, status, next_renewal);
+CREATE INDEX IF NOT EXISTS idx_wallet_kind_status ON wallet_entries(kind, status);
+CREATE INDEX IF NOT EXISTS idx_domain_open ON domain_requests(domain_name, status);
+CREATE INDEX IF NOT EXISTS idx_kyc_status ON client_kyc(status);
+CREATE INDEX IF NOT EXISTS idx_client_created ON client_users(created_at);
+CREATE INDEX IF NOT EXISTS idx_attempt_lookup ON login_attempts(scope, ip, attempted_at);
 CREATE INDEX IF NOT EXISTS idx_sms_sender_client ON sms_sender_names(client_id, status);
 
 CREATE TABLE IF NOT EXISTS sms_templates (

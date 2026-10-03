@@ -44,7 +44,8 @@ function site_ai_blocked_question($question)
     $needles = array(
         'admin password',
         'client password',
-        'cpanel',
+        'cpanel password',
+        'cpanel username',
         'database password',
         'db password',
         'api key',
@@ -80,7 +81,7 @@ function site_ai_public_notes($conn)
     $lines[] = $name . ' publishes its services, rates, and how to buy them on this website.';
     $lines[] = 'List prices below are before 13% VAT. The bill at checkout adds 13% VAT. SMS and voice prices are the rate for each message or call.';
     $lines[] = 'A visitor creates a client account, adds wallet funds, and pays from that wallet. The first wallet top-up is confirmed once by the team. Later checkout and renewals use the wallet.';
-    $lines[] = 'Domain, hosting, Zoho email, and managed server plans renew that same bill from the wallet. A domain year starts when the team marks the registration active. SMS sending opens in the client dashboard after identity is approved, including an API token for the client’s own website. This website records the order, the credits, and the SMS log.';
+    $lines[] = 'Domain, hosting, domain email, and managed server plans renew that same bill from the wallet. A domain year starts when the team marks the registration active. SMS sending opens in the client dashboard after identity is approved, including an API token for the client’s own website. This website records the order, the credits, and the SMS log.';
     $lines[] = 'Payment account numbers are shown only after sign-in, on the wallet page. Do not recite them.';
     $email = trim((string) $settings['site_email']);
     if ($email !== '') {
@@ -152,7 +153,7 @@ function site_ai_public_notes($conn)
         }
     }
     $lines[] = '';
-    $lines[] = 'A .com name is checked in the .com registry. Nepal endings such as .com.np and .coop.np are checked at register.com.np. A free name can be requested. The team registers it after the wallet payment, then marks it active. If it cannot be registered, the amount returns to the wallet. Hosting, email, and a website are separate.';
+    $lines[] = 'A .com name and Nepal endings such as .com.np and .coop.np are checked on this site. A free name can be requested. WHOIS check up shows the public record for a Nepal name or a .com name. The team registers it after the wallet payment, then marks it active. If it cannot be registered, the amount returns to the wallet. Hosting, email, and a website are separate. An active hosting plan can open cPanel from the client account, on the client domain. Email opens at mail.that-domain after the name is pointed. A forgotten client password is reset from the sign-in page. The client does not see where the server was bought.';
     return implode("\n", $lines);
 }
 

@@ -14,20 +14,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = $decision === 'active' ? 'Marked active. A paid year now shows in the client account and renews from the wallet.' : 'The request was declined. If it was already paid, that amount is back in the wallet.';
     }
 }
+$find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $rows = array();
 try {
-    $rows = domain_request_queue($conn);
+    $rows = domain_request_queue($conn, $find);
 } catch (Throwable $exception) {
     error_log('Domain requests could not be listed.');
 }
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Domain requests</h1>
-    <p class="text-slate-500 text-sm">Register a paid name yourself at the registry, then mark it active. That starts the year on the client account. Declining a paid request returns the amount to the wallet. The site does not register the name.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting requests stay in view. Older finished names are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Register a paid name yourself at the registry, then mark it active. Declining a paid request returns the amount to the wallet.</p>
 </div>
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Domain, client, or email">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
-<?php if (!$rows): ?><div class="dash-panel"><div class="p-6 text-slate-400 text-sm">No domain request yet.</div></div><?php endif; ?>
+<?php if (!$rows): ?><div class="dash-panel"><div class="p-6 text-slate-400 text-sm"><?= $find === '' ? 'No domain request yet.' : 'No domain matches that search.' ?></div></div><?php endif; ?>
 <?php foreach ($rows as $row): ?>
     <?php
     $price = isset($row['price']) ? (float) $row['price'] : 0;

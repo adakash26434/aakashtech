@@ -468,6 +468,9 @@ function totp_complete($conn)
         $_SESSION['client_email'] = $account['email'];
         $dest = client_safe_next($gate['next']);
     }
+    if (isset($account['password'])) {
+        auth_remember_password($kind, $account['password']);
+    }
     unset($_SESSION['totp_gate'], $_SESSION['totp_rekey']);
     if (isset($_SESSION['client_next'])) {
         unset($_SESSION['client_next']);

@@ -85,6 +85,11 @@ body.portal-shell.bg-dark-950,
     color: var(--portal-muted);
 }
 
+.portal-shell .text-yellow-100,
+.portal-shell .text-yellow-200 {
+    color: #92400e;
+}
+
 .portal-shell .text-brand-300,
 .portal-shell .text-brand-400,
 .portal-shell .text-brand-500,
@@ -307,6 +312,10 @@ body.portal-shell.bg-dark-950,
 .portal-shell .portal-menu-icon {
     width: 1.5rem;
     height: 1.5rem;
+}
+
+.portal-shell aside nav a {
+    min-height: 44px;
 }
 
 .portal-shell .portal-topbar {

@@ -26,7 +26,7 @@ $balance = billing_balance($conn, $cid);
 <div class="mb-8 flex items-end justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">My Services</h1>
-        <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($balance)) ?> · <?= number_format($units['sms']) ?> SMS · <?= number_format((int) $units['voice_calls'] + (int) $units['voice_minutes']) ?> voice calls</p>
+        <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($balance)) ?> · <?= number_format($units['sms']) ?> SMS · <?= number_format((int) $units['voice_calls']) ?> voice calls</p>
     </div>
     <a href="shop.php" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Buy a service</a>
 </div>
@@ -39,6 +39,9 @@ $balance = billing_balance($conn, $cid);
 <?php endif; ?>
 
 <?php if ($serviceRows): ?>
+    <?php $panelAnchor = false; ?>
+    <?php $mailAnchor = false; ?>
+    <?php $siteAnchor = false; ?>
     <div class="grid sm:grid-cols-2 gap-4">
         <?php foreach ($serviceRows as $s): ?>
             <?php
@@ -52,8 +55,21 @@ $balance = billing_balance($conn, $cid);
                     $brief = $decoded;
                 }
             }
+            $anchor = '';
+            if (!$panelAnchor && in_array((string) $s['plan_code'], hosting_panel_plans(), true)) {
+                $panelAnchor = true;
+                $anchor = ' id="hosting-panel"';
+            }
+            if ($anchor === '' && !$mailAnchor && in_array((string) $s['plan_code'], mail_login_plans(), true)) {
+                $mailAnchor = true;
+                $anchor = ' id="domain-email"';
+            }
+            if ($anchor === '' && !$siteAnchor && in_array((string) $s['plan_code'], website_plans(), true)) {
+                $siteAnchor = true;
+                $anchor = ' id="website"';
+            }
             ?>
-            <article class="dash-panel">
+            <article class="dash-panel"<?= $anchor ?>>
                 <div class="p-5">
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <h2 class="font-heading font-semibold text-white text-base"><?= e($s['service_name']) ?></h2>
@@ -76,10 +92,49 @@ $balance = billing_balance($conn, $cid);
                         <?php if (!empty($s['next_renewal'])): ?><span>Next renewal <?= e(date('M d, Y', strtotime($s['next_renewal']))) ?></span><?php endif; ?>
                         <?php if ((float) $s['price'] > 0): ?><span>Bill <?= e(billing_money_label($s['price'])) ?><?= e(billing_cycle_suffix($s['billing_cycle'] ?? '')) ?>, VAT included</span><?php endif; ?>
                     </div>
-                    <?php if ($status === 'booked'): ?>
+                    <?php if (hosting_panel_ready($s)): ?>
+                        <form method="POST" action="cpanel-open.php" target="_blank" class="mt-4">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
+                            <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">cPanel login</button>
+                        </form>
+                        <p class="text-slate-500 text-xs mt-2">Opens cPanel<?= hosting_panel_label($s) !== '' ? ' for ' . e(hosting_panel_label($s)) : '' ?>.</p>
+                    <?php elseif (in_array((string) $s['plan_code'], hosting_panel_plans(), true) && $status === 'active'): ?>
+                        <p class="text-slate-400 text-xs mt-3">cPanel login appears here after the team finishes this hosting.</p>
+                    <?php endif; ?>
+                    <?php if (mail_login_ready($s)): ?>
+                        <form method="POST" action="mail-open.php" target="_blank" class="mt-4">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
+                            <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open email<?= mail_login_domain($s) !== '' ? ' · ' . e(mail_login_domain($s)) : '' ?></button>
+                        </form>
+                        <p class="text-slate-500 text-xs mt-2">Opens the inbox<?= mail_login_domain($s) !== '' ? ' at mail.' . e(mail_login_domain($s)) : '' ?> after that name is pointed. Sign in with the mailbox name and the password the team sent.</p>
+                    <?php elseif (in_array((string) $s['plan_code'], mail_login_plans(), true) && $status === 'active'): ?>
+                        <p class="text-slate-400 text-xs mt-3">Email login appears here after the team finishes these mailboxes.</p>
+                    <?php endif; ?>
+                    <?php if (website_ready($s)): ?>
+                        <form method="POST" action="website-open.php" target="_blank" class="mt-4">
+                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
+                            <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open website<?= website_label($s) !== '' ? ' · ' . e(website_label($s)) : '' ?></button>
+                        </form>
+                        <p class="text-slate-500 text-xs mt-2">Opens the published website.</p>
+                    <?php elseif (in_array((string) $s['plan_code'], website_plans(), true) && ($status === 'booked' || $status === 'active')): ?>
+                        <p class="text-slate-400 text-xs mt-3">The website link appears here after the team publishes it.</p>
+                    <?php endif; ?>
+                    <?php if (in_array((string) $s['plan_code'], training_plans(), true) && (string) $s['panel_user'] === 'done' && training_date($s) !== ''): ?>
+                        <p class="text-green-300 text-xs mt-3">This visit is complete. It was on <?= e(date('M j, Y', strtotime(training_date($s)))) ?>.</p>
+                    <?php elseif (in_array((string) $s['plan_code'], training_plans(), true) && (string) $s['panel_user'] === 'confirmed' && training_date($s) !== ''): ?>
+                        <p class="text-brand-300 text-xs mt-3">Visit confirmed for <?= e(date('M j, Y', strtotime(training_date($s)))) ?>.</p>
+                    <?php elseif (in_array((string) $s['plan_code'], training_plans(), true) && $status === 'booked'): ?>
+                        <p class="text-slate-400 text-xs mt-3">The visit date appears here after the team confirms it.</p>
+                    <?php endif; ?>
+                    <?php if ($status === 'booked' && !in_array((string) $s['plan_code'], website_plans(), true) && !in_array((string) $s['plan_code'], training_plans(), true)): ?>
                         <p class="text-blue-300 text-xs mt-3">Booked. The team builds or delivers this from the details above.</p>
-                    <?php elseif (!empty($s['unit_kind']) && ($s['unit_kind'] === 'sms' || $s['unit_kind'] === 'voice_calls' || $s['unit_kind'] === 'voice_minutes')): ?>
+                    <?php elseif (!empty($s['unit_kind']) && $s['unit_kind'] === 'sms'): ?>
                         <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="sms-portal.php" class="text-brand-300">Send SMS from this account</a>. Credits fall when a message is sent.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before SMS can be sent.<?php endif; ?></p>
+                    <?php elseif (!empty($s['unit_kind']) && ($s['unit_kind'] === 'voice_calls' || $s['unit_kind'] === 'voice_minutes')): ?>
+                        <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="campaigns.php" class="text-brand-300">Save the voice job</a>. Credits are used when the team places the call.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before a voice job can be saved.<?php endif; ?></p>
                     <?php endif; ?>
                     <?php if ($status === 'past_due'): ?>
                         <p class="text-yellow-300 text-xs mt-3">Renewal is waiting for wallet funds. It retries on its own.</p>

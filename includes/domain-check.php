@@ -149,6 +149,221 @@ function domain_check_com($domain)
     return 'unknown';
 }
 
+function domain_whois_blank()
+{
+    return array('status' => 'invalid', 'domain' => '', 'tld' => '', 'rows' => array());
+}
+
+function domain_whois_split($raw)
+{
+    $raw = strtolower(trim((string) $raw));
+    $raw = preg_replace('#^https?://#', '', $raw);
+    $raw = preg_replace('#^www\.#', '', (string) $raw);
+    $raw = trim((string) $raw, ". \t\n\r\0\x0B");
+    $raw = preg_replace('~[/?#].*$~', '', (string) $raw);
+    if (!is_string($raw) || $raw === '') {
+        return null;
+    }
+    $endings = domain_np_tlds();
+    $endings[] = 'com';
+    usort($endings, function ($left, $right) {
+        return strlen($right) - strlen($left);
+    });
+    foreach ($endings as $ending) {
+        $suffix = '.' . $ending;
+        $suffixLength = strlen($suffix);
+        if (strlen($raw) <= $suffixLength || substr($raw, -$suffixLength) !== $suffix) {
+            continue;
+        }
+        $label = domain_label(substr($raw, 0, -$suffixLength));
+        if ($label === '' || strpos($label, '.') !== false) {
+            return null;
+        }
+        return array('label' => $label, 'tld' => $ending, 'domain' => $label . '.' . $ending);
+    }
+    return null;
+}
+
+function domain_whois_target($name, $selectedTld)
+{
+    $split = domain_whois_split($name);
+    if ($split) {
+        return $split;
+    }
+    $label = domain_label($name);
+    $tld = domain_tld($selectedTld);
+    if ($label === '' || $tld === '' || strpos((string) $name, '.') !== false) {
+        return null;
+    }
+    return array('label' => $label, 'tld' => $tld, 'domain' => $label . '.' . $tld);
+}
+
+function domain_whois_cell($value)
+{
+    $value = html_entity_decode(strip_tags((string) $value), ENT_QUOTES, 'UTF-8');
+    $value = trim(preg_replace('/\s+/', ' ', $value));
+    if ($value === '' || strlen($value) > 180) {
+        return '';
+    }
+    if (preg_match('#https?://|www\.|register\.com\.np|rdap\.|verisign#i', $value)) {
+        return '';
+    }
+    return $value;
+}
+
+function domain_whois_date($value)
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+    try {
+        $date = new DateTime($value);
+    } catch (Exception $exception) {
+        return domain_whois_cell($value);
+    }
+    return $date->format('j M Y');
+}
+
+function domain_whois_np($label, $tld)
+{
+    $cookie = tempnam(sys_get_temp_dir(), 'npwhois');
+    if ($cookie === false) {
+        return domain_whois_blank();
+    }
+    $home = domain_curl('https://register.com.np/whois-lookup', null, $cookie, true);
+    $token = '';
+    if (preg_match('/name="_token" value="([^"]+)"/', $home['body'], $match)) {
+        $token = $match[1];
+    }
+    if ($token === '') {
+        @unlink($cookie);
+        return array('status' => 'unknown', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
+    }
+    $check = domain_curl('https://register.com.np/checkdomain_whois', array(
+        '_token' => $token,
+        'domainName' => $label,
+        'domainExtension' => '.' . $tld
+    ), $cookie, false);
+    if (strpos($check['location'], 'domainavailable') !== false) {
+        @unlink($cookie);
+        return array('status' => 'free', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
+    }
+    if (strpos($check['location'], 'domainwhoisdetail') === false) {
+        @unlink($cookie);
+        return array('status' => 'unknown', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
+    }
+    $detail = domain_curl('https://register.com.np/domainwhoisdetail', null, $cookie, false);
+    @unlink($cookie);
+    if (stripos($detail['body'], 'Whoops') !== false || !preg_match_all('/<tr>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>/is', $detail['body'], $matches, PREG_SET_ORDER)) {
+        return array('status' => 'unknown', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
+    }
+    $allowed = array(
+        'domain name' => 'Domain name',
+        'first registered date' => 'Registered',
+        'last updated date' => 'Last updated',
+        'primary name server' => 'Primary name server',
+        'secondary name server' => 'Secondary name server',
+        'registrant email' => 'Registrant email',
+        'contact person' => 'Contact person',
+        'company name' => 'Company',
+        'administrative email' => 'Administrative email',
+        'telephone' => 'Telephone',
+        'address' => 'Address'
+    );
+    $rows = array();
+    foreach ($matches as $match) {
+        $key = strtolower(trim(html_entity_decode(strip_tags($match[1]), ENT_QUOTES, 'UTF-8'), " :\t"));
+        if (!isset($allowed[$key])) {
+            continue;
+        }
+        $value = domain_whois_cell($match[2]);
+        if ($key === 'first registered date' || $key === 'last updated date') {
+            $value = domain_whois_date($value);
+        }
+        if ($value === '') {
+            continue;
+        }
+        $rows[] = array('label' => $allowed[$key], 'value' => $value);
+    }
+    if (!$rows) {
+        return array('status' => 'unknown', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
+    }
+    return array('status' => 'registered', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => $rows);
+}
+
+function domain_whois_com($domain)
+{
+    $cookie = tempnam(sys_get_temp_dir(), 'comwhois');
+    $response = domain_curl('https://rdap.verisign.com/com/v1/domain/' . rawurlencode($domain), null, $cookie ? $cookie : '', false);
+    if ($cookie) {
+        @unlink($cookie);
+    }
+    if ($response['code'] === 404) {
+        return array('status' => 'free', 'domain' => $domain, 'tld' => 'com', 'rows' => array());
+    }
+    $data = json_decode($response['body'], true);
+    if ($response['code'] !== 200 || !is_array($data)) {
+        return array('status' => 'unknown', 'domain' => $domain, 'tld' => 'com', 'rows' => array());
+    }
+    $rows = array(array('label' => 'Domain name', 'value' => $domain));
+    $registrar = '';
+    if (!empty($data['entities']) && is_array($data['entities'])) {
+        foreach ($data['entities'] as $entity) {
+            $roles = isset($entity['roles']) && is_array($entity['roles']) ? $entity['roles'] : array();
+            if (!in_array('registrar', $roles, true) || empty($entity['vcardArray'][1]) || !is_array($entity['vcardArray'][1])) {
+                continue;
+            }
+            foreach ($entity['vcardArray'][1] as $card) {
+                if (is_array($card) && isset($card[0], $card[3]) && $card[0] === 'fn' && is_string($card[3])) {
+                    $registrar = domain_whois_cell($card[3]);
+                }
+            }
+        }
+    }
+    if ($registrar !== '') {
+        $rows[] = array('label' => 'Registrar', 'value' => $registrar);
+    }
+    $dates = array('registration' => 'Registered', 'expiration' => 'Expires', 'last changed' => 'Last updated');
+    if (!empty($data['events']) && is_array($data['events'])) {
+        foreach ($data['events'] as $event) {
+            $action = isset($event['eventAction']) ? (string) $event['eventAction'] : '';
+            if (!isset($dates[$action])) {
+                continue;
+            }
+            $shown = domain_whois_date(isset($event['eventDate']) ? $event['eventDate'] : '');
+            if ($shown !== '') {
+                $rows[] = array('label' => $dates[$action], 'value' => $shown);
+            }
+        }
+    }
+    $servers = array();
+    if (!empty($data['nameservers']) && is_array($data['nameservers'])) {
+        foreach ($data['nameservers'] as $server) {
+            $name = domain_whois_cell(isset($server['ldhName']) ? strtolower((string) $server['ldhName']) : '');
+            if ($name !== '') {
+                $servers[] = $name;
+            }
+        }
+    }
+    if ($servers) {
+        $rows[] = array('label' => 'Name servers', 'value' => implode(', ', $servers));
+    }
+    return array('status' => 'registered', 'domain' => $domain, 'tld' => 'com', 'rows' => $rows);
+}
+
+function domain_whois_lookup($name, $selectedTld)
+{
+    $target = domain_whois_target($name, $selectedTld);
+    if (!$target) {
+        return domain_whois_blank();
+    }
+    if (domain_is_np($target['tld'])) {
+        return domain_whois_np($target['label'], $target['tld']);
+    }
+    return domain_whois_com($target['domain']);
+}
+
 function domain_keep_first_request($conn, $domain, $requestId)
 {
     $requestId = (int) $requestId;
@@ -260,7 +475,8 @@ function domain_send_file($conn, $requestId, $clientId)
     $types = array('pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp');
     header('Content-Type: ' . $types[$ext]);
     header('X-Content-Type-Options: nosniff');
-    header('Content-Disposition: inline; filename="domain-document.' . $ext . '"');
+    header('Cache-Control: private, no-store');
+    header('Content-Disposition: ' . ($ext === 'pdf' ? 'attachment' : 'inline') . '; filename="domain-document.' . $ext . '"');
     header('Content-Length: ' . (string) filesize($full));
     readfile($full);
     exit;
@@ -277,12 +493,35 @@ function domain_client_requests($conn, $clientId)
     return $rows;
 }
 
-function domain_request_queue($conn)
+function domain_request_queue($conn, $find = '')
 {
-    $result = $conn->query('SELECT d.*, c.name AS account_name, c.email, c.phone FROM domain_requests d JOIN client_users c ON c.id = d.client_id ORDER BY CASE d.status WHEN \'requested\' THEN 0 WHEN \'active\' THEN 1 ELSE 2 END, d.id DESC');
+    $base = 'SELECT d.*, c.name AS account_name, c.email, c.phone FROM domain_requests d JOIN client_users c ON c.id = d.client_id ';
+    $find = admin_find_text($find);
+    if ($find !== '') {
+        $like = '%' . $find . '%';
+        $stmt = $conn->prepare($base . 'WHERE d.domain_name LIKE ? OR c.name LIKE ? OR c.email LIKE ? ORDER BY d.id DESC LIMIT 50');
+        $stmt->bind_param('sss', $like, $like, $like);
+        $stmt->execute();
+        $rows = db_fetch_all($stmt);
+        $stmt->close();
+        return $rows;
+    }
     $rows = array();
-    if ($result) {
+    $seen = array();
+    foreach (array(
+        $base . "WHERE d.status IN ('requested','paid') ORDER BY d.id DESC",
+        $base . 'ORDER BY d.id DESC LIMIT 80'
+    ) as $sql) {
+        $result = $conn->query($sql);
+        if (!$result) {
+            continue;
+        }
         while ($row = $result->fetch_assoc()) {
+            $id = (int) $row['id'];
+            if (isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
             $rows[] = $row;
         }
     }
@@ -340,7 +579,7 @@ function domain_pay_request($conn, $clientId, $requestId)
     }
     $again = domain_check_result(domain_label($row['domain_name']), $row['tld']);
     if ($again['status'] === 'unknown') {
-        return 'The registry could not be checked just now. Try the payment again in a moment.';
+        return 'The name could not be checked just now. Try the payment again in a moment.';
     }
     if ($again['status'] !== 'available' || $again['domain'] !== $row['domain_name']) {
         $status = 'declined';

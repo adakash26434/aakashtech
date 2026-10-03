@@ -24,6 +24,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $refundError = billing_refund_domain($conn, (int) $_POST['service_id']);
         $msg = $refundError === '' ? 'The domain amount is back in the client wallet, and that order will not renew.' : '';
         $err = $refundError;
+    } elseif (isset($_POST['save_panel'])) {
+        $panelError = hosting_panel_save(
+            $conn,
+            isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
+            isset($_POST['panel_user']) ? $_POST['panel_user'] : '',
+            isset($_POST['panel_pass']) ? $_POST['panel_pass'] : '',
+            isset($_POST['panel_host']) ? $_POST['panel_host'] : ''
+        );
+        $msg = $panelError === '' ? 'cPanel login saved. The client opens it from My Services and does not see where the server is bought.' : '';
+        $err = $panelError;
+    } elseif (isset($_POST['clear_panel'])) {
+        $msg = hosting_panel_clear($conn, isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0)
+            ? 'cPanel login removed. The client no longer sees the button.'
+            : '';
+        $err = $msg === '' ? 'That cPanel login could not be removed.' : '';
+    } elseif (isset($_POST['save_mail'])) {
+        $mailError = mail_login_save(
+            $conn,
+            isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
+            isset($_POST['mail_host']) ? $_POST['mail_host'] : ''
+        );
+        $msg = $mailError === '' ? 'Email login is on. The client opens it from My Services.' : '';
+        $err = $mailError;
+    } elseif (isset($_POST['clear_mail'])) {
+        $msg = mail_login_clear($conn, isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0)
+            ? 'Email login removed. The client no longer sees the button.'
+            : '';
+        $err = $msg === '' ? 'That email login could not be removed.' : '';
+    } elseif (isset($_POST['save_website'])) {
+        $siteError = website_save(
+            $conn,
+            isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
+            isset($_POST['site_url']) ? $_POST['site_url'] : ''
+        );
+        $msg = $siteError === '' ? 'Website link saved. The client can open it from My Services.' : '';
+        $err = $siteError;
+    } elseif (isset($_POST['clear_website'])) {
+        $msg = website_clear($conn, isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0)
+            ? 'Website link removed. The client no longer sees the button.'
+            : '';
+        $err = $msg === '' ? 'That website link could not be removed.' : '';
+    } elseif (isset($_POST['save_training'])) {
+        $visitError = training_save(
+            $conn,
+            isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
+            isset($_POST['visit_date']) ? $_POST['visit_date'] : '',
+            isset($_POST['visit_done'])
+        );
+        $msg = $visitError === '' ? 'The visit date is saved. The client sees it on My Services.' : '';
+        $err = $visitError;
+    } elseif (isset($_POST['clear_training'])) {
+        $msg = training_clear($conn, isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0)
+            ? 'The visit date was cleared.'
+            : '';
+        $err = $msg === '' ? 'That visit date could not be cleared.' : '';
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
         $failed = 0;
@@ -48,6 +103,11 @@ $plans = billing_load_plans($conn);
 $smsSlabs = billing_load_slabs($conn, 'bulk-sms');
 $voiceSlabs = billing_load_slabs($conn, 'bulk-voice');
 $subscriptions = $conn->query("SELECT s.*, c.name, c.email FROM client_services s JOIN client_users c ON c.id = s.client_id WHERE s.plan_code IS NOT NULL AND s.plan_code != '' ORDER BY s.id DESC LIMIT 30");
+$find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
+$hostingLogins = hosting_admin_rows($conn, $find);
+$mailLogins = mail_admin_rows($conn, $find);
+$websiteJobs = website_admin_rows($conn, $find);
+$trainingJobs = training_admin_rows($conn, $find);
 $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12');
 ?>
 <div class="mb-8">
@@ -167,6 +227,119 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
         </div>
         <button type="submit" name="save_prices" value="1" class="mt-5 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save prices</button>
     </form>
+</section>
+
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or service in the sections below">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
+<section class="dash-panel overflow-hidden mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Hosting logins</h3></div>
+    <div class="p-5 space-y-4">
+        <p class="text-slate-400 text-sm">After a hosting plan is active, save the cPanel username and password here. Leave the address blank so the client opens cPanel on their own domain. The client never sees where the server was bought.</p>
+        <?php if (!$hostingLogins): ?>
+            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No active hosting yet. Orders still waiting for a login stay in this list.' : 'No hosting matches that search.' ?></p>
+        <?php endif; ?>
+        <?php foreach ($hostingLogins as $row): ?>
+            <?php $openOn = hosting_panel_label($row); ?>
+            <form method="POST" class="rounded-xl border border-slate-800 p-4 space-y-2 max-w-lg">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
+                <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
+                <p class="text-slate-500 text-xs"><?php if ($openOn !== ''): ?>Client sees <?= e($openOn) ?>.<?php else: ?>No domain on this order yet.<?php endif; ?> <?php $loginHost = hosting_panel_domain($row); if ($loginHost !== '' && $loginHost !== $openOn): ?>The address bar will show <?= e($loginHost) ?> unless this address is cleared.<?php endif; ?> <?= hosting_panel_ready($row) ? 'Login is ready.' : 'The button stays hidden until a username and password are saved.' ?></p>
+                <input type="text" name="panel_user" value="<?= e($row['panel_user']) ?>" maxlength="16" class="form-input" placeholder="cPanel username" autocomplete="off">
+                <input type="password" name="panel_pass" maxlength="80" class="form-input" placeholder="<?= $row['panel_pass'] !== '' && $row['panel_pass'] !== null ? 'Saved. Leave blank to keep it.' : 'cPanel password' ?>" autocomplete="new-password">
+                <input type="text" name="panel_host" value="<?= e($row['panel_host']) ?>" maxlength="253" class="form-input" placeholder="Blank uses the client domain" autocomplete="off">
+                <div class="flex items-center gap-4">
+                    <button type="submit" name="save_panel" value="1" class="text-brand-400 text-xs">Save cPanel login</button>
+                    <?php if (trim((string) $row['panel_user']) !== '' || (string) $row['panel_pass'] !== ''): ?>
+                        <button type="submit" name="clear_panel" value="1" class="text-slate-500 text-xs">Remove login</button>
+                    <?php endif; ?>
+                </div>
+            </form>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<section class="dash-panel overflow-hidden mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Email logins</h3></div>
+    <div class="p-5 space-y-4">
+        <p class="text-slate-400 text-sm">After the mailboxes exist in Zoho, show the login here. In Zoho, set the custom login to mail.the-client-domain and point that name at Zoho first. Leave the address blank. The client opens that name and does not see a Zoho address. A Zoho address cannot be saved.</p>
+        <?php if (!$mailLogins): ?>
+            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No active mailbox plan yet. Orders still waiting to be shown stay in this list.' : 'No mailbox matches that search.' ?></p>
+        <?php endif; ?>
+        <?php foreach ($mailLogins as $row): ?>
+            <?php
+            $mailDomain = mail_login_domain($row);
+            $mailHost = mail_login_host($row);
+            ?>
+            <form method="POST" class="rounded-xl border border-slate-800 p-4 space-y-2 max-w-lg">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
+                <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
+                <p class="text-slate-500 text-xs"><?php if ($mailDomain !== ''): ?>Client sees <?= e($mailDomain) ?>. Inbox opens on <?= e($mailHost !== '' ? $mailHost : 'mail.' . $mailDomain) ?>.<?php else: ?>No domain on this order yet.<?php endif; ?> <?= (string) $row['panel_user'] === 'open' ? 'Login is on.' : 'The button stays hidden until you show it.' ?></p>
+                <input type="text" name="mail_host" value="<?= e($row['panel_host']) ?>" maxlength="253" class="form-input" placeholder="Blank uses mail.the-client-domain" autocomplete="off">
+                <div class="flex items-center gap-4">
+                    <button type="submit" name="save_mail" value="1" class="text-brand-400 text-xs">Show email login</button>
+                    <?php if ((string) $row['panel_user'] === 'open'): ?>
+                        <button type="submit" name="clear_mail" value="1" class="text-slate-500 text-xs">Remove login</button>
+                    <?php endif; ?>
+                </div>
+            </form>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<section class="dash-panel overflow-hidden mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Website links</h3></div>
+    <div class="p-5 space-y-4">
+        <p class="text-slate-400 text-sm">When a booked website is published, save its address here. Use the client’s own domain. The client opens that address from My Services.</p>
+        <?php if (!$websiteJobs): ?>
+            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No booked website yet. Orders still waiting for a link stay in this list.' : 'No website matches that search.' ?></p>
+        <?php endif; ?>
+        <?php foreach ($websiteJobs as $row): ?>
+            <form method="POST" class="rounded-xl border border-slate-800 p-4 space-y-2 max-w-lg">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
+                <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
+                <p class="text-slate-500 text-xs"><?= website_ready($row) ? 'The client can open this website.' : 'The button stays hidden until an address is saved.' ?></p>
+                <input type="text" name="site_url" value="<?= e($row['panel_host']) ?>" maxlength="253" class="form-input" placeholder="https://their-domain.com.np" autocomplete="off">
+                <div class="flex items-center gap-4">
+                    <button type="submit" name="save_website" value="1" class="text-brand-400 text-xs">Save website link</button>
+                    <?php if ((string) $row['panel_user'] === 'open'): ?>
+                        <button type="submit" name="clear_website" value="1" class="text-slate-500 text-xs">Remove link</button>
+                    <?php endif; ?>
+                </div>
+            </form>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<section class="dash-panel overflow-hidden mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Training visits</h3></div>
+    <div class="p-5 space-y-4">
+        <p class="text-slate-400 text-sm">After a training booking, confirm the visit date the client will see. Mark it complete when the visit is finished.</p>
+        <?php if (!$trainingJobs): ?>
+            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No booked training yet. Visits still waiting for a date stay in this list.' : 'No training matches that search.' ?></p>
+        <?php endif; ?>
+        <?php foreach ($trainingJobs as $row): ?>
+            <?php $visitDate = training_date($row); ?>
+            <form method="POST" class="rounded-xl border border-slate-800 p-4 space-y-2 max-w-lg">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
+                <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
+                <p class="text-slate-500 text-xs"><?php if ((string) $row['panel_user'] === 'done'): ?>Marked complete.<?php elseif ((string) $row['panel_user'] === 'confirmed' && $visitDate !== ''): ?>The client sees <?= e(date('M j, Y', strtotime($visitDate))) ?>.<?php else: ?>The client still sees this as booked.<?php endif; ?></p>
+                <input type="date" name="visit_date" value="<?= e($visitDate) ?>" class="form-input">
+                <label class="flex items-center gap-2 text-slate-400 text-xs"><input type="checkbox" name="visit_done" value="1" <?= (string) $row['panel_user'] === 'done' ? 'checked' : '' ?>> Visit is complete</label>
+                <div class="flex items-center gap-4">
+                    <button type="submit" name="save_training" value="1" class="text-brand-400 text-xs">Save visit</button>
+                    <?php if ((string) $row['panel_user'] !== ''): ?>
+                        <button type="submit" name="clear_training" value="1" class="text-slate-500 text-xs">Clear date</button>
+                    <?php endif; ?>
+                </div>
+            </form>
+        <?php endforeach; ?>
+    </div>
 </section>
 
 <section class="dash-panel overflow-hidden mb-6">

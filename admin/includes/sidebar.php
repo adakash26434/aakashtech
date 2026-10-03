@@ -13,6 +13,7 @@ $navItems = [
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
     'settings.php'   => ['Settings', 'settings'],
 ];
+$portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Menu';
 ?>
 <!-- Sidebar -->
 <aside class="fixed top-0 left-0 z-40 h-screen w-64 bg-dark-900 border-r border-dark-800 flex flex-col transition-transform duration-300 lg:translate-x-0"
@@ -37,7 +38,7 @@ $navItems = [
     <!-- Nav -->
     <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         <?php foreach ($navItems as $page => $item): ?>
-            <a href="<?= $page ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 <?= $currentPage === $page ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50' ?>">
+            <a href="<?= e($page) ?>" @click="sidebarOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 <?= $currentPage === $page ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50' ?>">
                 <i class="portal-icon" data-lucide="<?= e($item[1]) ?>" aria-hidden="true"></i>
                 <?= $item[0] ?>
             </a>
@@ -70,8 +71,9 @@ $navItems = [
         <button @click="sidebarOpen = true" :aria-expanded="sidebarOpen" aria-controls="admin-sidebar" aria-label="Open navigation" class="lg:hidden text-white p-2">
             <i class="portal-icon portal-menu-icon" data-lucide="menu" aria-hidden="true"></i>
         </button>
+        <?php $adminIdentity = site_portal_identity($conn); ?>
+        <p class="lg:hidden min-w-0 truncate text-sm font-medium text-slate-400"><?= e($portalPage) ?></p>
         <div class="hidden lg:block">
-            <?php $adminIdentity = site_portal_identity($conn); ?>
             <span class="text-slate-500 text-sm"><?= e($adminIdentity['name']) ?> · Admin</span>
         </div>
         <div class="flex items-center gap-3">

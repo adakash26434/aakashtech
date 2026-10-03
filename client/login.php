@@ -28,6 +28,7 @@ $flashError = flash('login_error');
 if ($error === '' && $flashError !== '') {
     $error = $flashError;
 }
+$loginNotice = flash('login_notice');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     $email = trim($_POST['email'] ?? '');
@@ -53,7 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             $client = null;
             $error = 'Sign-in could not be completed. Try again in a moment.';
         }
-        if ($error === '' && $client && $client['status'] === 'active' && password_verify($password, (string) $client['password'])) {
+        $storedPassword = ($error === '' && $client) ? (string) $client['password'] : '';
+        $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
+        if ($passwordMatches && $client && $client['status'] === 'active') {
             auth_clear_attempts($conn, 'client');
             $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
             totp_open_gate($conn, 'client', array(
@@ -105,8 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Please enter a valid email.';
     } elseif ($phone === '') {
         $error = 'Enter a 10-digit mobile number.';
-    } elseif (strlen($password) < 6) {
-        $error = 'Password must be at least 6 characters.';
+    } elseif (strlen($password) < 8) {
+        $error = 'Password must be at least 8 characters.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
@@ -214,6 +217,9 @@ try {
             <p class="text-slate-500 text-sm mt-1"><?= $showRegister ? 'Create your account, then add Google Authenticator' : 'Password, then a Google Authenticator code' ?></p>
         </div>
 
+        <?php if ($loginNotice): ?>
+            <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($loginNotice) ?></div>
+        <?php endif; ?>
         <?php if ($error): ?>
             <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
         <?php endif; ?>
@@ -234,6 +240,7 @@ try {
                     Sign In
                 </button>
                 <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
+                <p class="text-center"><a href="forgot-password.php" class="text-brand-400 text-sm">Forgot password</a></p>
             </form>
             <p class="text-center text-slate-600 text-sm mt-6">
                 Don't have an account? <a href="?action=register" class="text-brand-400 hover:text-brand-300 font-medium">Register here</a><br>
@@ -268,7 +275,7 @@ try {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Password *</label>
-                        <input type="password" name="password" required autocomplete="new-password" class="form-input" placeholder="Min 6 chars">
+                        <input type="password" name="password" required autocomplete="new-password" class="form-input" placeholder="Min 8 characters">
                     </div>
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Confirm *</label>

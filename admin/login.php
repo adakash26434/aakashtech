@@ -32,10 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $exception) {
             error_log('Admin sign-in could not read the account.');
             $admin = null;
-            $error = 'The admin account could not be read. In cpanel-config.php set admin_email and a password of at least 6 characters, then open this page again.';
+            $error = 'The admin account could not be read. In cpanel-config.php set admin_email and a password of at least 8 characters, then open this page again.';
         }
 
-        if ($error === '' && $admin && (int)$admin['is_active'] === 1 && password_verify($password, (string) $admin['password'])) {
+        $storedPassword = ($error === '' && $admin) ? (string) $admin['password'] : '';
+        $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
+        if ($passwordMatches && $admin && (int) $admin['is_active'] === 1) {
             auth_clear_attempts($conn, 'admin');
             totp_open_gate($conn, 'admin', array(
                 'id' => (int) $admin['id'],

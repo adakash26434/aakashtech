@@ -221,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     }
     site_seo_print(
         'Bulk SMS Provider & Hosting in Nepal | ' . $siteName,
-        'Bulk SMS provider, bulk voice calls, and hosting provider in Nepal. Domains, Zoho email, websites, and cyber training, with the rate on the page.',
+        'Bulk SMS provider, bulk voice calls, and hosting provider in Nepal. Domains, domain email, websites, and cyber training, with the rate on the page.',
         '/',
         site_seo_home_graph($publicSite, $homeSameAs),
         $siteLogo
@@ -322,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             </a>
                             <a class="solution-row" href="#services">
                                 <span class="solution-icon"><i data-lucide="server" aria-hidden="true"></i></span>
-                                <span class="solution-row-copy"><strong>Sites, hosting, Zoho email</strong><span>Domain, site, and mail in one account</span></span>
+                                <span class="solution-row-copy"><strong>Sites, hosting, domain email</strong><span>Domain, site, and mail in one account</span></span>
                                 <i class="solution-row-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i>
                             </a>
                             <a class="solution-row" href="service.php?slug=cyber-security">
@@ -356,7 +356,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
 
         <nav class="wrap job-band" aria-label="Start with what you need">
             <a href="service.php?slug=bulk-sms">Send a notice</a>
-            <a href="domain.php">Check a name</a>
+            <a href="domain.php">Register a name</a>
+            <a href="whois.php">WHOIS check</a>
             <a href="service.php?slug=hosting-server">Host a site</a>
             <a href="service.php?slug=professional-email">Open domain email</a>
             <a href="service.php?slug=custom-websites">Book a website</a>
@@ -377,7 +378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="section-heading section-heading--center reveal">
                     <span class="section-kicker">What we do</span>
                     <h2 class="font-heading">Read the rate. Buy it, or book it.</h2>
-                    <p>Open a service and see the rate before you create an account. Check a domain name before you request it. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers hosting, Zoho email, the website, and field training.</p>
+                    <p>Open a service and see the rate before you create an account. Check a domain name, or open WHOIS check up to see who holds it. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers hosting, domain email, the website, and field training.</p>
                 </div>
 
                 <div class="service-grid">
@@ -395,6 +396,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             <div class="service-card-actions">
                                 <?php if ($card['slug'] === 'domain-registration'): ?>
                                     <a class="button button--small button--primary" href="domain.php">Check a name</a>
+                                    <a class="button button--small" href="whois.php">WHOIS</a>
                                 <?php else: ?>
                                     <a class="button button--small button--primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>"><?= site_escape($card['action']) ?></a>
                                 <?php endif; ?>
@@ -402,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         </article>
                     <?php endforeach; ?>
                 </div>
-                <p class="service-pricing-disclaimer">These are list prices. The bill adds 13% VAT. SMS and voice rates fall as the quantity rises. Domain, hosting, server care, and Zoho email renew that bill from the wallet.</p>
+                <p class="service-pricing-disclaimer">These are list prices. The bill adds 13% VAT. SMS and voice rates fall as the quantity rises. Domain, hosting, server care, and domain email renew that bill from the wallet.</p>
             </div>
         </section>
 

@@ -36,14 +36,13 @@ CREATE TABLE IF NOT EXISTS client_users (
     address     TEXT DEFAULT NULL,
     status      ENUM('active', 'suspended', 'pending') DEFAULT 'active',
     avatar_color VARCHAR(20) DEFAULT '#06b6d4',
-    sms_portal_username VARCHAR(80) DEFAULT '',
-    sms_portal_password VARCHAR(80) DEFAULT '',
     totp_secret VARCHAR(64) NOT NULL DEFAULT '',
     totp_last_step INT NOT NULL DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_client_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS auth_recovery_codes (
@@ -54,6 +53,15 @@ CREATE TABLE IF NOT EXISTS auth_recovery_codes (
     used_at      DATETIME DEFAULT NULL,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_recovery_account (account_kind, account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    client_id   INT NOT NULL,
+    token_hash  CHAR(64) NOT NULL,
+    expires_at  DATETIME NOT NULL,
+    INDEX idx_reset_hash (token_hash),
+    INDEX idx_reset_client (client_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== Inquiries (from main site contact form) ======
@@ -92,7 +100,10 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE,
     INDEX idx_client (client_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_sms_campaign_due (channel, status, scheduled_at),
+    INDEX idx_sms_campaign_client_status (client_id, channel, status),
+    INDEX idx_sms_campaign_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== Client Services (what client has subscribed to) ======
@@ -118,7 +129,9 @@ CREATE TABLE IF NOT EXISTS client_services (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client_users(id) ON DELETE CASCADE,
     INDEX idx_client (client_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_service_client_status (client_id, status),
+    INDEX idx_service_renew (auto_renew, status, next_renewal)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== Support Tickets ======
@@ -158,7 +171,7 @@ INSERT IGNORE INTO services (title, slug, description, icon, features, sort_orde
 ('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
 ('Domain Registration', 'domain-registration', 'Register a .com name, or a Nepal name such as .com.np or .coop.np, and renew it from the wallet.', 'globe', '.com,.com.np,.coop.np,Auto-renew', 3),
 ('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
-('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
+('Professional Email', 'professional-email', 'Mailboxes on your own domain, managed in Nepal.', 'mail', 'Your domain,Mailboxes,Auto-renew', 5),
 ('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),
 ('Cyber Security Training', 'cyber-security', 'On-site training for directors, staff, and members.', 'shield-check', 'Directors,Staff,Members', 7);
 
@@ -243,7 +256,8 @@ CREATE TABLE IF NOT EXISTS wallet_entries (
     related_service_id INT DEFAULT 0,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_wallet_client (client_id),
-    INDEX idx_wallet_status (status)
+    INDEX idx_wallet_status (status),
+    INDEX idx_wallet_kind_status (kind, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS client_units (
@@ -301,7 +315,8 @@ CREATE TABLE IF NOT EXISTS client_kyc (
     admin_note  TEXT,
     submitted_at DATETIME DEFAULT NULL,
     reviewed_at DATETIME DEFAULT NULL,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_kyc_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== Domain registration requests. The team registers the name, then marks it active. ======
@@ -321,7 +336,8 @@ CREATE TABLE IF NOT EXISTS domain_requests (
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activated_at DATETIME DEFAULT NULL,
     INDEX idx_domain_client (client_id),
-    INDEX idx_domain_status (status)
+    INDEX idx_domain_status (status),
+    INDEX idx_domain_open (domain_name, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====== SMS dashboard: client tokens, delivery log, sender names. The upstream token is a site setting. ======
@@ -362,7 +378,9 @@ CREATE TABLE IF NOT EXISTS sms_messages (
     sent_at     DATETIME DEFAULT NULL,
     INDEX idx_sms_msg_client (client_id, created_at),
     INDEX idx_sms_msg_campaign (campaign_id),
-    INDEX idx_sms_msg_status (status)
+    INDEX idx_sms_msg_status (status),
+    INDEX idx_sms_msg_client_status (client_id, status, created_at),
+    INDEX idx_sms_msg_sent_day (client_id, status, sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sms_sender_names (

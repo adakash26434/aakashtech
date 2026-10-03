@@ -2,6 +2,9 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
+$find = admin_find_text(isset($_REQUEST['q']) ? $_REQUEST['q'] : '');
+$findBack = $find === '' ? 'clients.php' : 'clients.php?q=' . rawurlencode($find);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
     verify_csrf();
     $id = (int) ($_POST['client_id'] ?? 0);
@@ -11,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
         $stmt->execute();
         $stmt->close();
     }
-    header('Location: clients.php');
+    header('Location: ' . $findBack);
     exit;
 }
 
@@ -22,25 +25,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_authenticator']
         totp_clear($conn, 'client', $id);
         flash('client_notice', 'Authenticator reset. That client sets it up again on the next sign-in.');
     }
-    header('Location: clients.php');
+    header('Location: ' . $findBack);
     exit;
 }
 
 $clientNotice = flash('client_notice');
 
-$clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
+$clientRows = array();
+if ($find === '') {
+    $clientResult = $conn->query('SELECT * FROM client_users ORDER BY created_at DESC LIMIT 200');
+    if ($clientResult) {
+        while ($clientRow = $clientResult->fetch_assoc()) {
+            $clientRows[] = $clientRow;
+        }
+    }
+} else {
+    $like = '%' . $find . '%';
+    $clientStmt = $conn->prepare('SELECT * FROM client_users WHERE name LIKE ? OR email LIKE ? OR phone LIKE ? OR company LIKE ? ORDER BY created_at DESC LIMIT 50');
+    $clientStmt->bind_param('ssss', $like, $like, $like, $like);
+    $clientStmt->execute();
+    $clientRows = db_fetch_all($clientStmt);
+    $clientStmt->close();
+}
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Clients</h1>
-    <p class="text-slate-500 text-sm">Manage registered clients. SMS credits are spent from the dashboard and API on this site.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 accounts.' : 'Matches for “' . e($find) . '”.' ?> SMS credits are spent from the dashboard and API on this site.</p>
 </div>
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, email, phone, or company">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 
 <?php if ($clientNotice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($clientNotice) ?></div>
 <?php endif; ?>
 
 <div class="dash-panel overflow-hidden">
-    <?php if ($clients && $clients->num_rows > 0): ?>
+    <?php if ($clientRows): ?>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -55,7 +77,7 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800">
-                    <?php while ($cl = $clients->fetch_assoc()): ?>
+                    <?php foreach ($clientRows as $cl): ?>
                         <tr class="hover:bg-slate-800/50 transition">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
@@ -80,12 +102,14 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                                 <form method="POST">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
+                                    <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
                                     <button type="submit" name="toggle_client" class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                                 </form>
                                 <?php if (isset($cl['totp_secret']) && $cl['totp_secret'] !== ''): ?>
                                     <form method="POST" class="mt-2" onsubmit="return confirm('Reset Google Authenticator for this client? They set it up again at the next sign-in.');">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
+                                        <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
                                         <button type="submit" name="reset_authenticator" class="text-xs bg-transparent border-0 cursor-pointer p-0 text-slate-400 hover:text-white">Reset authenticator</button>
                                     </form>
                                 <?php else: ?>
@@ -93,12 +117,12 @@ $clients = $conn->query("SELECT * FROM client_users ORDER BY created_at DESC");
                                 <?php endif; ?>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     <?php else: ?>
-        <p class="p-12 text-center text-slate-500 text-sm">No clients registered yet.</p>
+        <p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No clients registered yet.' : 'No account matches that search.' ?></p>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

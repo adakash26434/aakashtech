@@ -36,10 +36,10 @@ function billing_service_definitions()
             'action' => 'Buy hosting'
         ),
         'professional-email' => array(
-            'title' => 'Domain email on Zoho',
-            'summary' => 'Open info@yourdomain on Zoho. Choose 1, 5, or 10 mailboxes.',
+            'title' => 'Domain email',
+            'summary' => 'Open info@yourdomain. Choose 1, 5, or 10 mailboxes.',
             'icon' => 'mail',
-            'tags' => array('Zoho', 'Your domain', 'Auto-renew'),
+            'tags' => array('Your domain', 'Mailboxes', 'Auto-renew'),
             'contact' => 'Professional Email',
             'action' => 'Buy mailboxes'
         ),
@@ -71,9 +71,9 @@ function billing_default_plans()
         array('code' => 'domain-np', 'service_slug' => 'domain-registration', 'name' => '.np domain', 'summary' => 'One Nepal name, such as .com.np or .coop.np, for a year. Renewed from the wallet.', 'billing_cycle' => 'yearly', 'price' => 1500, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'domain', 'sort_order' => 40),
         array('code' => 'hosting-business', 'service_slug' => 'hosting-server', 'name' => 'Website hosting', 'summary' => 'Yearly hosting with SSL for one website, plus routine server care.', 'billing_cycle' => 'yearly', 'price' => 4800, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'hosting', 'sort_order' => 50),
         array('code' => 'hosting-managed', 'service_slug' => 'hosting-server', 'name' => 'Managed server', 'summary' => 'Monthly server management for a site or mail server that needs a person watching it.', 'billing_cycle' => 'monthly', 'price' => 8500, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'hosting', 'sort_order' => 60),
-        array('code' => 'email-1', 'service_slug' => 'professional-email', 'name' => '1 Zoho mailbox', 'summary' => 'One name@yourdomain.com mailbox on Zoho, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 1800, 'unit_kind' => 'mailbox', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 70),
-        array('code' => 'email-5', 'service_slug' => 'professional-email', 'name' => '5 Zoho mailboxes', 'summary' => 'Five organization mailboxes on your domain, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 7500, 'unit_kind' => 'mailbox', 'unit_quantity' => 5, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 80),
-        array('code' => 'email-10', 'service_slug' => 'professional-email', 'name' => '10 Zoho mailboxes', 'summary' => 'Ten organization mailboxes on your domain, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 14000, 'unit_kind' => 'mailbox', 'unit_quantity' => 10, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 90),
+        array('code' => 'email-1', 'service_slug' => 'professional-email', 'name' => '1 mailbox', 'summary' => 'One name@yourdomain.com mailbox, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 1800, 'unit_kind' => 'mailbox', 'unit_quantity' => 1, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 70),
+        array('code' => 'email-5', 'service_slug' => 'professional-email', 'name' => '5 mailboxes', 'summary' => 'Five organization mailboxes on your domain, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 7500, 'unit_kind' => 'mailbox', 'unit_quantity' => 5, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 80),
+        array('code' => 'email-10', 'service_slug' => 'professional-email', 'name' => '10 mailboxes', 'summary' => 'Ten organization mailboxes on your domain, renewed yearly.', 'billing_cycle' => 'yearly', 'price' => 14000, 'unit_kind' => 'mailbox', 'unit_quantity' => 10, 'auto_renew_default' => 1, 'needs_detail' => 'email', 'sort_order' => 90),
         array('code' => 'web-company', 'service_slug' => 'custom-websites', 'name' => 'Company website', 'summary' => 'Home, about, services, and contact. Mobile layout and an enquiry form. You supply the words and photos in the booking.', 'billing_cycle' => 'one_time', 'price' => 45000, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 0, 'needs_detail' => 'website', 'sort_order' => 100),
         array('code' => 'web-portfolio', 'service_slug' => 'custom-websites', 'name' => 'Personal portfolio', 'summary' => 'Home, selected work, about, and contact for one person.', 'billing_cycle' => 'one_time', 'price' => 25000, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 0, 'needs_detail' => 'website', 'sort_order' => 110),
         array('code' => 'web-sahakari', 'service_slug' => 'custom-websites', 'name' => 'Bank or cooperative website', 'summary' => 'Home, services, notices, team, member information, and contact.', 'billing_cycle' => 'one_time', 'price' => 65000, 'unit_kind' => '', 'unit_quantity' => 1, 'auto_renew_default' => 0, 'needs_detail' => 'website', 'sort_order' => 120),
@@ -162,7 +162,7 @@ function billing_page_copy()
             ),
             'after' => array(
                 'The call count is added to your client account as soon as the wallet payment succeeds.',
-                'This website keeps the order, the script, and the credits. A voice copy saved under Messages does not place the calls.',
+                'This website keeps the script and the number list. The team places the call, and the voice credits are used then.',
                 'Voice credits stay on the account until the calls are placed.'
             ),
             'examples' => array(
@@ -174,9 +174,9 @@ function billing_page_copy()
             'kicker' => 'Domain registration in Nepal',
             'lead' => 'Check whether the name is free, then request .com or a Nepal ending such as .com.np or .coop.np for a year. The year starts when the team marks it active.',
             'points' => array(
-                '.com is one yearly price. Every Nepal ending on register.com.np uses the other yearly price: .com.np, .edu.np, .gov.np, .net.np, .org.np, .info.np, .mil.np, .name.np, and .coop.np. The registry decides who can hold .edu.np, .gov.np, and .mil.np.',
-                'Check the name on the Domain registration page first. A Nepal ending is checked at register.com.np. .com is checked in the .com registry record.',
-                'If the name is free, send the request with the holder and address. A Nepal request also includes the registry document. Pay the yearly bill from the wallet after that. The team registers the name only once it is paid, then marks it active.',
+                '.com is one yearly price. Every Nepal ending uses the other yearly price: .com.np, .edu.np, .gov.np, .net.np, .org.np, .info.np, .mil.np, .name.np, and .coop.np. The team confirms who can hold .edu.np, .gov.np, and .mil.np.',
+                'Check the name on the Domain registration page first.',
+                'If the name is free, send the request with the holder and address. A Nepal request also includes the required document. Pay the yearly bill from the wallet after that. The team registers the name only once it is paid, then marks it active.',
                 'Hosting and email are separate. Requesting the name does not put a website or mailboxes online.'
             ),
             'after' => array(
@@ -195,23 +195,23 @@ function billing_page_copy()
                 'The domain name is separate. Register it on the domain page if you do not already have it. A custom design is the website service.'
             ),
             'after' => array(
-                'The team sets up the hosting or server care from the domain and the use you selected.',
+                'The team sets up the hosting or server care from the domain and the use you selected. When it is active, cPanel opens from My Services.',
                 'A yearly hosting plan and a monthly managed-server plan renew from the wallet on the due date.',
                 'Turning auto-renew off stops the next charge. It does not refund the period already paid.'
             )
         ),
         'professional-email' => array(
             'kicker' => 'Domain email for organizations',
-            'lead' => 'An address on your own domain, such as info@yourcoop.com.np, on Zoho. Choose 1, 5, or 10 mailboxes for the year.',
+            'lead' => 'An address on your own domain, such as info@yourcoop.com.np. Choose 1, 5, or 10 mailboxes for the year.',
             'points' => array(
                 'For a cooperative or any organization that should send mail from its own domain, such as info@yourcoop.com.np, not from a free Gmail or Yahoo address.',
                 'Choose 1, 5, or 10 mailboxes. Type exactly that many names, one per line, without @. info becomes info@yourdomain.',
-                'The domain must already be yours. If it is not, buy it on the domain page first. The team creates the Zoho mailboxes and the domain records that let mail arrive there. If the domain is registered somewhere else, the team sends you those records to add.',
+                'The domain must already be yours. If it is not, buy it on the domain page first. The team creates the mailboxes and the domain records that let mail arrive there. If the domain is registered somewhere else, the team sends you those records to add.',
                 'The yearly price renews from the wallet. Mail already sitting in another inbox is not moved in this package.'
             ),
             'after' => array(
-                'The team creates the Zoho mailboxes from the names you typed and looks after them.',
-                'This website records the order. It does not open the Zoho account by itself.',
+                'The team creates the mailboxes from the names you typed and looks after them.',
+                'When the mailboxes are ready, Open email appears in My Services. Sign in there with the mailbox name and the password the team sends.',
                 'The year renews from the wallet. Turn auto-renew off in the client panel if the mailboxes should stop at the end of the year.'
             )
         ),
@@ -283,12 +283,12 @@ function billing_service_guide()
                 'The price per call, with 13% VAT shown before you pay',
                 'Nepali or English, using the script you write',
                 'Call credits added when the wallet payment succeeds',
-                'Sending from the same portal after identity is approved'
+                'The team places the call from the script saved under Messages'
             ),
             'steps' => array(
                 'Type the quantity and read the bill.',
                 'Write the script and choose Nepali or English.',
-                'Pay from the wallet, then send from the portal.'
+                'Pay from the wallet, then save the script under Messages.'
             ),
             'notes' => array(
                 'A smaller quantity costs more per call. A larger quantity costs less.',
@@ -305,9 +305,9 @@ function billing_service_guide()
         ),
         'domain-registration' => array(
             'includes' => array(
-                '.com checked in the Verisign record, Nepal endings such as .com.np and .coop.np checked at register.com.np',
+                '.com and Nepal endings such as .com.np and .coop.np, checked on this site',
                 'One year, then renewal from the wallet',
-                'A Nepal request includes the registry document',
+                'A Nepal request includes the required document',
                 'The team registers a paid name, then the portal shows Active'
             ),
             'steps' => array(
@@ -358,19 +358,19 @@ function billing_service_guide()
         'professional-email' => array(
             'includes' => array(
                 'Addresses on your domain, such as info@yourcoop.com.np',
-                '1, 5, or 10 Zoho mailboxes',
+                '1, 5, or 10 mailboxes on your domain',
                 'The team creates the mailboxes and the records that let mail arrive',
                 'The year renews from the wallet'
             ),
             'steps' => array(
                 'Use a domain you already have, or check a name first.',
                 'Choose 1, 5, or 10 names, such as info and accounts.',
-                'Pay the year. The team creates the Zoho mailboxes.'
+                'Pay the year. The team creates the mailboxes.'
             ),
             'notes' => array(
                 'The domain must already be yours. If it is registered somewhere else, the team sends you the records to add.',
                 'Mail already sitting in another inbox is not moved in this package.',
-                'This website records the order. The team opens the Zoho mailboxes.'
+                'This website records the order. Open email appears in the client account after the team finishes the mailboxes.'
             ),
             'plans' => array(
                 'email-1' => 'One address, such as info@',
@@ -452,7 +452,7 @@ function billing_catalog_rows()
         array('Bulk Voice Call', 'bulk-voice', 'Auto voice calls for the same notices, priced by volume.', 'phone-call', 'Auto call,Volume slabs', 2),
         array('Domain Registration', 'domain-registration', 'Register a .com name, or a Nepal name such as .com.np or .coop.np, and renew it from the wallet.', 'globe', '.com,.com.np,.coop.np,Auto-renew', 3),
         array('Domain Hosting & Server Management', 'hosting-server', 'Website hosting and server management in Nepal.', 'server', 'Hosting,SSL,Server care', 4),
-        array('Professional Email', 'professional-email', 'Zoho mailboxes on your own domain, managed in Nepal.', 'mail', 'Zoho,Mailboxes,Auto-renew', 5),
+        array('Professional Email', 'professional-email', 'Mailboxes on your own domain, managed in Nepal.', 'mail', 'Your domain,Mailboxes,Auto-renew', 5),
         array('Custom Websites', 'custom-websites', 'Company, portfolio, cooperative, restaurant, school, hotel, and news websites.', 'panels-top-left', 'Company,School,Hotel,News', 6),
         array('Cyber Security Training', 'cyber-security', 'On-site training for directors, staff, and members.', 'shield-check', 'Directors,Staff,Members', 7)
     );
@@ -569,6 +569,66 @@ function billing_exec($conn, $sql)
         throw new RuntimeException('Billing query failed.');
     }
     return $result;
+}
+
+function billing_ensure_index($conn, $table, $name, $columns)
+{
+    $tables = array(
+        'sms_messages' => true,
+        'sms_campaigns' => true,
+        'sms_api_hits' => true,
+        'client_services' => true,
+        'wallet_entries' => true,
+        'domain_requests' => true,
+        'client_kyc' => true,
+        'login_attempts' => true,
+        'client_users' => true,
+        'inquiries' => true
+    );
+    if (!isset($tables[$table]) || !preg_match('/^[a-z0-9_]+$/', $name)) {
+        return;
+    }
+    $list = array();
+    foreach ($columns as $column) {
+        if (!preg_match('/^[a-z0-9_]+$/', (string) $column)) {
+            return;
+        }
+        $list[] = $column;
+    }
+    if (!$list) {
+        return;
+    }
+    $columnSql = implode(', ', $list);
+    try {
+        if (DB_DRIVER === 'sqlite') {
+            billing_exec($conn, 'CREATE INDEX IF NOT EXISTS ' . $name . ' ON ' . $table . ' (' . $columnSql . ')');
+            return;
+        }
+        $found = $conn->query('SHOW INDEX FROM `' . $table . "` WHERE Key_name = '" . $name . "'");
+        if ($found && $found->fetch_assoc()) {
+            return;
+        }
+        billing_exec($conn, 'CREATE INDEX ' . $name . ' ON ' . $table . ' (' . $columnSql . ')');
+    } catch (Throwable $exception) {
+        error_log('Database index could not be added.');
+    }
+}
+
+function billing_ensure_indexes($conn)
+{
+    billing_ensure_index($conn, 'sms_messages', 'idx_sms_msg_client_status', array('client_id', 'status', 'created_at'));
+    billing_ensure_index($conn, 'sms_messages', 'idx_sms_msg_sent_day', array('client_id', 'status', 'sent_at'));
+    billing_ensure_index($conn, 'sms_campaigns', 'idx_sms_campaign_due', array('channel', 'status', 'scheduled_at'));
+    billing_ensure_index($conn, 'sms_campaigns', 'idx_sms_campaign_client_status', array('client_id', 'channel', 'status'));
+    billing_ensure_index($conn, 'sms_campaigns', 'idx_sms_campaign_created', array('created_at'));
+    billing_ensure_index($conn, 'client_services', 'idx_service_client_status', array('client_id', 'status'));
+    billing_ensure_index($conn, 'client_services', 'idx_service_renew', array('auto_renew', 'status', 'next_renewal'));
+    billing_ensure_index($conn, 'wallet_entries', 'idx_wallet_kind_status', array('kind', 'status'));
+    billing_ensure_index($conn, 'domain_requests', 'idx_domain_open', array('domain_name', 'status'));
+    billing_ensure_index($conn, 'client_kyc', 'idx_kyc_status', array('status'));
+    billing_ensure_index($conn, 'client_users', 'idx_client_created', array('created_at'));
+    billing_ensure_index($conn, 'login_attempts', 'idx_attempt_lookup', array('scope', 'ip', 'attempted_at'));
+    billing_ensure_index($conn, 'sms_api_hits', 'idx_sms_hit_token', array('token_id', 'created_at'));
 }
 
 function billing_table_columns($conn, $table)
@@ -997,7 +1057,10 @@ function billing_add_missing_columns($conn)
             'unit_quantity' => 'INTEGER DEFAULT 0',
             'grace_until' => 'TEXT DEFAULT NULL',
             'last_attempt_on' => 'TEXT DEFAULT NULL',
-            'order_brief' => 'TEXT DEFAULT NULL'
+            'order_brief' => 'TEXT DEFAULT NULL',
+            'panel_user' => 'TEXT DEFAULT NULL',
+            'panel_pass' => 'TEXT DEFAULT NULL',
+            'panel_host' => 'TEXT DEFAULT NULL'
         );
     } else {
         $columns = array(
@@ -1010,7 +1073,10 @@ function billing_add_missing_columns($conn)
             'unit_quantity' => 'INT DEFAULT 0',
             'grace_until' => 'DATE DEFAULT NULL',
             'last_attempt_on' => 'DATE DEFAULT NULL',
-            'order_brief' => 'TEXT DEFAULT NULL'
+            'order_brief' => 'TEXT DEFAULT NULL',
+            'panel_user' => 'VARCHAR(32) DEFAULT NULL',
+            'panel_pass' => 'TEXT DEFAULT NULL',
+            'panel_host' => 'VARCHAR(253) DEFAULT NULL'
         );
     }
 
@@ -1168,15 +1234,6 @@ function billing_ensure($conn)
     billing_create_tables($conn);
     billing_add_missing_columns($conn);
     $version = (int) billing_setting($conn, 'billing_schema_version');
-    if ($version < 1 && DB_DRIVER !== 'sqlite') {
-        billing_exec($conn, "ALTER TABLE client_services MODIFY status ENUM('active','expired','suspended','pending','past_due','booked') DEFAULT 'active'");
-    }
-    if ($version < 2 && DB_DRIVER !== 'sqlite') {
-        billing_exec($conn, "ALTER TABLE client_services MODIFY status ENUM('active','expired','suspended','pending','past_due','booked') DEFAULT 'active'");
-    }
-    if ($version < 2) {
-        billing_set_setting($conn, 'billing_schema_version', '2');
-    }
     if ($version < 3 && DB_DRIVER !== 'sqlite') {
         billing_exec($conn, "ALTER TABLE client_services MODIFY status ENUM('active','expired','suspended','pending','past_due','booked','refunded') DEFAULT 'active'");
     }
@@ -1184,7 +1241,7 @@ function billing_ensure($conn)
         billing_set_setting($conn, 'billing_schema_version', '3');
     }
     billing_add_campaign_columns($conn);
-    billing_add_portal_columns($conn);
+    billing_drop_portal_columns($conn);
     billing_ensure_kyc_table($conn);
     billing_ensure_domain_requests($conn);
     billing_seed_plans($conn);
@@ -1193,9 +1250,16 @@ function billing_ensure($conn)
     billing_ensure_slab_start($conn);
     billing_ensure_offer_prices($conn);
     billing_sync_catalog($conn);
+    if (function_exists('mail_login_scrub')) {
+        mail_login_scrub($conn);
+    }
     site_ensure_public_settings($conn);
     if (function_exists('sms_ensure_tables')) {
         sms_ensure_tables($conn);
+    }
+    billing_ensure_indexes($conn);
+    if (function_exists('panel_pass_migrate')) {
+        panel_pass_migrate($conn);
     }
 }
 
@@ -1657,7 +1721,8 @@ function billing_add_campaign_columns($conn)
             'audience' => "TEXT DEFAULT ''",
             'purpose' => "TEXT DEFAULT ''",
             'recipients_list' => "TEXT DEFAULT ''",
-            'declaration_text' => "TEXT DEFAULT ''"
+            'declaration_text' => "TEXT DEFAULT ''",
+            'language' => "TEXT DEFAULT ''"
         );
     } else {
         $columns = array(
@@ -1665,7 +1730,8 @@ function billing_add_campaign_columns($conn)
             'audience' => "VARCHAR(40) DEFAULT ''",
             'purpose' => "VARCHAR(40) DEFAULT ''",
             'recipients_list' => 'TEXT',
-            'declaration_text' => 'TEXT'
+            'declaration_text' => 'TEXT',
+            'language' => "VARCHAR(20) DEFAULT ''"
         );
     }
     foreach ($columns as $name => $definition) {
@@ -1676,25 +1742,26 @@ function billing_add_campaign_columns($conn)
     }
 }
 
-function billing_add_portal_columns($conn)
+function billing_drop_portal_columns($conn)
 {
-    $present = array_flip(billing_table_columns($conn, 'client_users'));
-    if (DB_DRIVER === 'sqlite') {
-        $columns = array(
-            'sms_portal_username' => "TEXT DEFAULT ''",
-            'sms_portal_password' => "TEXT DEFAULT ''"
-        );
-    } else {
-        $columns = array(
-            'sms_portal_username' => "VARCHAR(80) DEFAULT ''",
-            'sms_portal_password' => "VARCHAR(80) DEFAULT ''"
-        );
+    if (billing_setting($conn, 'portal_login_removed') === '1') {
+        return;
     }
-    foreach ($columns as $name => $definition) {
-        if (isset($present[$name])) {
+    $present = array_flip(billing_table_columns($conn, 'client_users'));
+    $ok = true;
+    foreach (array('sms_portal_username', 'sms_portal_password') as $name) {
+        if (!isset($present[$name])) {
             continue;
         }
-        billing_exec($conn, 'ALTER TABLE client_users ADD COLUMN ' . $name . ' ' . $definition);
+        try {
+            billing_exec($conn, 'ALTER TABLE client_users DROP COLUMN ' . $name);
+        } catch (Throwable $exception) {
+            $ok = false;
+            error_log('Old portal login column could not be removed.');
+        }
+    }
+    if ($ok) {
+        billing_set_setting($conn, 'portal_login_removed', '1');
     }
 }
 
@@ -2116,7 +2183,7 @@ function billing_kyc_decide($conn, $clientId, $decision, $note)
         if ($decision === 'approve') {
             billing_mail_person($conn, $email, 'Identity approved', array(
                 'Your identity is approved.',
-                'SMS and voice sending can use the portal login in the client panel.'
+                'You can send SMS from the SMS dashboard. A voice job is saved under Messages, and the team places the call.'
             ));
         } else {
             billing_mail_person($conn, $email, 'Identity needs a change', array(
@@ -2129,12 +2196,35 @@ function billing_kyc_decide($conn, $clientId, $decision, $note)
     return '';
 }
 
-function billing_kyc_queue($conn)
+function billing_kyc_queue($conn, $find = '')
 {
-    $result = $conn->query('SELECT k.*, c.name AS account_name, c.email, c.phone FROM client_kyc k JOIN client_users c ON c.id = k.client_id ORDER BY CASE k.status WHEN \'pending\' THEN 0 WHEN \'rejected\' THEN 1 WHEN \'approved\' THEN 2 ELSE 3 END, k.submitted_at DESC');
+    $base = 'SELECT k.*, c.name AS account_name, c.email, c.phone FROM client_kyc k JOIN client_users c ON c.id = k.client_id ';
+    $find = admin_find_text($find);
+    if ($find !== '') {
+        $like = '%' . $find . '%';
+        $stmt = $conn->prepare($base . 'WHERE c.name LIKE ? OR c.email LIKE ? OR k.full_name LIKE ? OR k.org_name LIKE ? ORDER BY k.submitted_at DESC LIMIT 50');
+        $stmt->bind_param('ssss', $like, $like, $like, $like);
+        $stmt->execute();
+        $rows = db_fetch_all($stmt);
+        $stmt->close();
+        return $rows;
+    }
     $rows = array();
-    if ($result) {
+    $seen = array();
+    foreach (array(
+        $base . "WHERE k.status = 'pending' ORDER BY k.submitted_at DESC",
+        $base . 'ORDER BY k.submitted_at DESC LIMIT 80'
+    ) as $sql) {
+        $result = $conn->query($sql);
+        if (!$result) {
+            continue;
+        }
         while ($row = $result->fetch_assoc()) {
+            $id = (int) $row['client_id'];
+            if (isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
             $rows[] = $row;
         }
     }
@@ -2167,15 +2257,11 @@ function billing_kyc_send($conn, $clientId, $slot)
     }
     header('Content-Type: ' . $types[$ext]);
     header('X-Content-Type-Options: nosniff');
-    header('Content-Disposition: inline; filename="identity-document.' . $ext . '"');
+    header('Cache-Control: private, no-store');
+    header('Content-Disposition: ' . ($ext === 'pdf' ? 'attachment' : 'inline') . '; filename="identity-document.' . $ext . '"');
     header('Content-Length: ' . (string) filesize($full));
     readfile($full);
     exit;
-}
-
-function billing_sms_portal_url()
-{
-    return 'client/sms-portal.php';
 }
 
 function billing_client_has_messaging($conn, $clientId)
@@ -2191,62 +2277,6 @@ function billing_client_has_messaging($conn, $clientId)
     $row = db_fetch_assoc($stmt);
     $stmt->close();
     return (bool) $row;
-}
-
-function billing_portal_login($conn, $clientId)
-{
-    $clientId = (int) $clientId;
-    $empty = array('username' => '', 'password' => '');
-    $stmt = $conn->prepare('SELECT sms_portal_username, sms_portal_password FROM client_users WHERE id = ?');
-    $stmt->bind_param('i', $clientId);
-    $stmt->execute();
-    $row = db_fetch_assoc($stmt);
-    $stmt->close();
-    if (!$row) {
-        return $empty;
-    }
-    return array(
-        'username' => (string) $row['sms_portal_username'],
-        'password' => (string) $row['sms_portal_password']
-    );
-}
-
-function billing_save_portal_login($conn, $clientId, $username, $password)
-{
-    $clientId = (int) $clientId;
-    if ($clientId < 1) {
-        return 'Choose a client.';
-    }
-    $username = billing_plain_line($username, 60);
-    $password = str_replace(array("\r", "\n"), '', (string) $password);
-    if (strlen($password) > 80) {
-        $password = substr($password, 0, 80);
-    }
-    $exists = $conn->prepare('SELECT id FROM client_users WHERE id = ?');
-    $exists->bind_param('i', $clientId);
-    $exists->execute();
-    $found = db_fetch_assoc($exists);
-    $exists->close();
-    if (!$found) {
-        return 'That client was not found.';
-    }
-    $current = billing_portal_login($conn, $clientId);
-    if ($username === '') {
-        $password = '';
-    } elseif ($password === '') {
-        $password = $current['password'];
-    }
-    if ($username !== '' && !preg_match('/^[A-Za-z0-9][A-Za-z0-9._@-]{1,59}$/', $username)) {
-        return 'Portal username should be 2 to 60 letters, numbers, dots, or hyphens.';
-    }
-    if ($username !== '' && strlen($password) < 4) {
-        return 'Enter the portal password from the SMS company. Leave it blank only when a password is already saved.';
-    }
-    $stmt = $conn->prepare('UPDATE client_users SET sms_portal_username = ?, sms_portal_password = ? WHERE id = ?');
-    $stmt->bind_param('ssi', $username, $password, $clientId);
-    $stmt->execute();
-    $stmt->close();
-    return '';
 }
 
 function billing_training_topics()
@@ -2719,10 +2749,59 @@ function billing_buy_href_plan($code)
 function client_safe_next($value)
 {
     $value = (string) $value;
-    if (!preg_match('/^(shop|checkout|wallet|services|index|campaigns|sms-portal|sms-logs|sms-api|support|profile|kyc|domains)\.php(\?(service|plan|amount)=[A-Za-z0-9_-]+(?:&for=domain)?)?$/', $value)) {
+    $parts = parse_url($value);
+    if (!is_array($parts) || isset($parts['scheme']) || isset($parts['host']) || isset($parts['user']) || !isset($parts['path'])) {
         return 'index.php';
     }
-    return $value;
+    $page = $parts['path'];
+    $pages = array('shop.php', 'checkout.php', 'wallet.php', 'services.php', 'index.php', 'campaigns.php', 'sms-portal.php', 'sms-logs.php', 'sms-api.php', 'support.php', 'profile.php', 'kyc.php', 'domains.php');
+    if (!in_array($page, $pages, true)) {
+        return 'index.php';
+    }
+    $query = array();
+    if (isset($parts['query'])) {
+        parse_str($parts['query'], $query);
+    }
+    $keep = array();
+    if ($page === 'shop.php' && isset($query['service']) && preg_match('/^[A-Za-z0-9_-]+$/', (string) $query['service'])) {
+        $keep['service'] = (string) $query['service'];
+    }
+    if ($page === 'checkout.php' && isset($query['plan']) && preg_match('/^[A-Za-z0-9_-]+$/', (string) $query['plan'])) {
+        $keep['plan'] = (string) $query['plan'];
+    }
+    if ($page === 'wallet.php' && isset($query['amount']) && preg_match('/^[0-9]{1,7}$/', (string) $query['amount'])) {
+        $keep['amount'] = (string) $query['amount'];
+        if (isset($query['for']) && (string) $query['for'] === 'domain') {
+            $keep['for'] = 'domain';
+        }
+    }
+    if ($page === 'sms-portal.php') {
+        foreach (array('send', 'retry', 'reuse') as $key) {
+            if (isset($query[$key]) && preg_match('/^[0-9]{1,9}$/', (string) $query[$key])) {
+                $keep[$key] = (string) $query[$key];
+                break;
+            }
+        }
+    }
+    if ($page === 'sms-logs.php') {
+        $statuses = array('sent', 'failed', 'queued', 'sending', 'scheduled');
+        if (isset($query['status']) && in_array((string) $query['status'], $statuses, true)) {
+            $keep['status'] = (string) $query['status'];
+        }
+        if (isset($query['q']) && preg_match('/^[0-9]{1,10}$/', (string) $query['q'])) {
+            $keep['q'] = (string) $query['q'];
+        }
+        if (isset($query['send']) && preg_match('/^[0-9]{1,9}$/', (string) $query['send'])) {
+            $keep['send'] = (string) $query['send'];
+        }
+        if (isset($query['page']) && preg_match('/^[0-9]{1,2}$/', (string) $query['page'])) {
+            $keep['page'] = (string) $query['page'];
+        }
+    }
+    if (!$keep) {
+        return $page;
+    }
+    return $page . '?' . http_build_query($keep);
 }
 
 function billing_vat_bill($amount)

@@ -46,8 +46,8 @@ function site_seo_phrases()
             'description' => 'Hosting provider in Nepal for one website with SSL and routine care, or monthly server management. The price is on this page. Domain and design are separate.'
         ),
         'professional-email' => array(
-            'title' => 'Professional email on Zoho in Nepal',
-            'description' => 'Professional email on your own domain in Nepal, on Zoho, for a cooperative or organization. Choose 1, 5, or 10 mailboxes. The yearly price is on this page.'
+            'title' => 'Professional email on your domain in Nepal',
+            'description' => 'Professional email on your own domain in Nepal, for a cooperative or organization. Choose 1, 5, or 10 mailboxes. The yearly price is on this page.'
         ),
         'custom-websites' => array(
             'title' => 'Custom websites in Nepal',
@@ -74,15 +74,15 @@ function site_seo_faqs($slug)
             array('How is the voice-call rate calculated?', 'The row that contains your quantity is the price per call. A quantity outside the table cannot be ordered.')
         ),
         'domain-registration' => array(
-            array('Which domains can I register?', '.com, and the Nepal endings listed on register.com.np, including .com.np and .coop.np. The Domain registration page checks the name, then you request it and pay the yearly bill from the wallet.'),
-            array('Does the site check if the name is free?', 'Yes. A Nepal ending is checked at register.com.np and .com is checked in the Verisign registry record. The team registers a paid request, then marks it active. If the name cannot be registered, the amount returns to the wallet.')
+            array('Which domains can I register?', '.com, and Nepal endings such as .com.np and .coop.np. The Domain registration page checks the name, then you request it and pay the yearly bill from the wallet.'),
+            array('Does the site check if the name is free?', 'Yes. The name is checked before you request it. WHOIS check up shows the public record for a Nepal name or a .com name. The team registers a paid request, then marks it active. If the name cannot be registered, the amount returns to the wallet.')
         ),
         'hosting-server' => array(
-            array('What does this hosting provider include?', 'Yearly hosting is one website, SSL, and routine care. Monthly managed server is for a site or mail server that needs a person watching it.'),
+            array('What does this hosting provider include?', 'Yearly hosting is one website, SSL, and routine care. Monthly managed server is for a site or mail server that needs a person watching it. After it is active, cPanel opens from the client account.'),
             array('Does hosting include a new website design?', 'No. Hosting keeps a site online. A custom website is a separate booking, and the domain is registered separately.')
         ),
         'professional-email' => array(
-            array('Can I get email on my own domain?', 'Yes. You choose 1, 5, or 10 names, such as info@yourdomain. The domain must already be yours. The team creates the Zoho mailboxes and the domain records that let mail arrive there.'),
+            array('Can I get email on my own domain?', 'Yes. You choose 1, 5, or 10 names, such as info@yourdomain. The domain must already be yours. The team creates the mailboxes and the domain records that let mail arrive there. Open email appears in the client account after that.'),
             array('Is old mail moved across?', 'No. This package creates the new mailboxes. Mail already sitting in Gmail, Yahoo, or another inbox stays where it is.')
         ),
         'custom-websites' => array(
@@ -105,7 +105,7 @@ function site_seo_business($publicSite, $sameAs)
         '@id' => site_absolute_url('/') . '#business',
         'name' => $name,
         'url' => site_absolute_url('/'),
-        'description' => 'Bulk SMS provider, bulk voice calls, and hosting provider in Nepal, with domains, Zoho email, custom websites, and on-site cyber training.',
+        'description' => 'Bulk SMS provider, bulk voice calls, and hosting provider in Nepal, with domains, domain email, custom websites, and on-site cyber training.',
         'areaServed' => array('@type' => 'Country', 'name' => 'Nepal'),
         'address' => array(
             '@type' => 'PostalAddress',

@@ -13,17 +13,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = $decision === 'approve' ? 'Identity approved. The client can no longer edit it.' : 'Sent back to the client. They can update it and submit again.';
     }
 }
+$find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $rows = array();
 try {
-    $rows = billing_kyc_queue($conn);
+    $rows = billing_kyc_queue($conn, $find);
 } catch (Throwable $exception) {
     error_log('Identity queue could not be loaded.');
 }
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Identity</h1>
-    <p class="text-slate-500 text-sm">Approve the person or organization before they can send SMS or create an API token.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Pending checks stay in view. Older decisions are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Approve the person or organization before they can send SMS, save a voice job, or create an API token.</p>
 </div>
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, organization, or email">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 <?php if ($notice): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div>
 <?php endif; ?>
@@ -32,7 +37,7 @@ try {
 <?php endif; ?>
 
 <?php if (!$rows): ?>
-    <div class="dash-panel"><div class="p-6 text-slate-400 text-sm">No identity has been submitted.</div></div>
+    <div class="dash-panel"><div class="p-6 text-slate-400 text-sm"><?= $find === '' ? 'No identity has been submitted.' : 'No identity matches that search.' ?></div></div>
 <?php endif; ?>
 
 <?php foreach ($rows as $row): ?>

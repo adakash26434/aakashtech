@@ -157,6 +157,10 @@ function sms_save_template($conn, $clientId, $label, $text)
     if ($label === '' || $text === '') {
         return 'Name the saved message and write the text first.';
     }
+    $blocked = sms_prohibited_notice($text);
+    if ($blocked !== '') {
+        return $blocked;
+    }
     $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM sms_templates WHERE client_id = ?');
     $stmt->bind_param('i', $clientId);
     $stmt->execute();
@@ -502,11 +506,28 @@ function sms_recent_sends($conn, $clientId)
     return $rows;
 }
 
-function sms_outcome_counts($conn, $clientId)
+function sms_outcome_counts($conn, $clientId, $campaigns)
 {
     $clientId = (int) $clientId;
-    $stmt = $conn->prepare('SELECT campaign_id, SUM(CASE WHEN status = \'sent\' THEN 1 ELSE 0 END) AS sent_count, SUM(CASE WHEN status = \'failed\' THEN 1 ELSE 0 END) AS failed_count FROM sms_messages WHERE client_id = ? GROUP BY campaign_id');
-    $stmt->bind_param('i', $clientId);
+    $ids = array();
+    foreach ($campaigns as $campaign) {
+        if (!isset($campaign['id']) || (isset($campaign['channel']) && (string) $campaign['channel'] !== 'sms')) {
+            continue;
+        }
+        $ids[] = (int) $campaign['id'];
+    }
+    if (!$ids) {
+        return array();
+    }
+    $marks = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $conn->prepare('SELECT campaign_id, SUM(CASE WHEN status = \'sent\' THEN 1 ELSE 0 END) AS sent_count, SUM(CASE WHEN status = \'failed\' THEN 1 ELSE 0 END) AS failed_count FROM sms_messages WHERE client_id = ? AND campaign_id IN (' . $marks . ') GROUP BY campaign_id');
+    $types = 'i' . str_repeat('i', count($ids));
+    $params = array_merge(array($clientId), $ids);
+    $bind = array($types);
+    foreach ($params as $key => $unused) {
+        $bind[] = &$params[$key];
+    }
+    call_user_func_array(array($stmt, 'bind_param'), $bind);
     $stmt->execute();
     $rows = db_fetch_all($stmt);
     $stmt->close();
@@ -598,11 +619,31 @@ function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page
     if (!is_string($search) || strlen($search) > 10) {
         $search = '';
     }
-    $like = '%' . $search . '%';
-    $campaignKey = $campaignId > 0 ? (string) $campaignId : '';
     $offset = ($page - 1) * $perPage;
-    $stmt = $conn->prepare('SELECT id, recipient, sender_id, message_text, parts, status, source, error_text, created_at, sent_at FROM sms_messages WHERE client_id = ? AND (? = \'\' OR status = ?) AND (? = \'\' OR recipient LIKE ?) AND (? = \'\' OR campaign_id = ?) ORDER BY id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
-    $stmt->bind_param('issssss', $clientId, $status, $status, $search, $like, $campaignKey, $campaignKey);
+    $where = array('client_id = ?');
+    $types = 'i';
+    $params = array($clientId);
+    if ($status !== '') {
+        $where[] = 'status = ?';
+        $types .= 's';
+        $params[] = $status;
+    }
+    if ($search !== '') {
+        $where[] = 'recipient LIKE ?';
+        $types .= 's';
+        $params[] = '%' . $search . '%';
+    }
+    if ($campaignId > 0) {
+        $where[] = 'campaign_id = ?';
+        $types .= 'i';
+        $params[] = $campaignId;
+    }
+    $stmt = $conn->prepare('SELECT id, recipient, sender_id, message_text, parts, status, source, error_text, created_at, sent_at FROM sms_messages WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC, id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
+    $bind = array($types);
+    foreach ($params as $key => $unused) {
+        $bind[] = &$params[$key];
+    }
+    call_user_func_array(array($stmt, 'bind_param'), $bind);
     $stmt->execute();
     $rows = db_fetch_all($stmt);
     $stmt->close();
@@ -904,6 +945,44 @@ function sms_mark_messages($conn, $ids, $status, $error)
     $stmt->close();
 }
 
+function sms_prohibited_notice($text)
+{
+    $text = str_replace(array("\r", "\n", "\t"), ' ', (string) $text);
+    $text = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $text);
+    if (!is_string($text)) {
+        return '';
+    }
+    $text = preg_replace('/\s+/u', ' ', $text);
+    if (!is_string($text) || trim($text) === '') {
+        return '';
+    }
+    $latin = strtolower($text);
+    $latin = strtr($latin, array('@' => 'a', '$' => 's', '0' => 'o', '1' => 'i'));
+    $patterns = array(
+        '/(?<!do not )(?<!don\'t )\b(send|share|give|forward|reply with|enter|submit|whatsapp|viber)\b.{0,40}\b(otp|pin|password|passwd|cvv|mpin)\b/',
+        '/\b(otp|pin|password|cvv|mpin)\b.{0,40}\b(pathau|pathaunu|to this number|to me)\b/',
+        '/(ओटीपी|पिन कोड|पासवर्ड).{0,24}(?<!न)(पठाउनुहोस्|पठाउनु|दिनुहोस्|लेख्नुहोस्)/u',
+        '/(?<!न)(पठाउनुहोस्|पठाउनुहोला|दिनुहोस्).{0,20}(ओटीपी|पासवर्ड|पिन)/u',
+        '/\b(you have won|you\'ve won|you won|lucky winner|claim your prize|lottery winner|prize money)\b/',
+        '/(जितेर हात|पुरस्कार पाउनुभयो|ल्याटरी जित)/u',
+        '/\b(i will kill|bomb threat|pay or else)\b/',
+        '/(मार्दिन्छु|मारिदिन्छु|बम राखेको छ)/u',
+        '/\b(call girls?|escort service|child porn|underage sex|sex for money)\b/',
+        '/\b(kill all|wipe out all)\b.{0,30}\b(muslims?|hindus?|christians?|dalits?|madhesis?)\b/',
+        '/\b(cocaine|heroin|mdma)\b.{0,24}\b(for sale|buy now|price)\b/',
+        '/(गाँजा|चरस).{0,16}(बेच्छ|बेच्ने|किन्नुहोस्)/u',
+        '/\b(online casino|satta matka|cricket betting id)\b/',
+        '/\b(account (is|has been) (suspended|blocked|locked))\b.{0,50}\b(click|http|verify now|link)\b/'
+    );
+    foreach ($patterns as $pattern) {
+        $subject = substr($pattern, -2) === '/u' ? $text : $latin;
+        if (preg_match($pattern, $subject)) {
+            return 'This text cannot be sent. Nepal law does not allow fraud, a threat, sexual content, hate, or a request for a password, PIN, or OTP.';
+        }
+    }
+    return '';
+}
+
 function sms_deliver_campaign($conn, $campaignId)
 {
     if (function_exists('set_time_limit')) {
@@ -921,6 +1000,32 @@ function sms_deliver_campaign($conn, $campaignId)
     }
     $clientId = (int) $campaign['client_id'];
     $text = (string) $campaign['message_content'];
+    $blocked = sms_prohibited_notice($text);
+    if ($blocked !== '') {
+        $queued = $conn->prepare('SELECT id FROM sms_messages WHERE campaign_id = ? AND status IN (\'queued\', \'sending\')');
+        $queued->bind_param('i', $campaignId);
+        $queued->execute();
+        $queuedRows = db_fetch_all($queued);
+        $queued->close();
+        $refundIds = array();
+        foreach ($queuedRows as $queuedRow) {
+            $refundIds[] = (int) $queuedRow['id'];
+        }
+        if ($refundIds) {
+            billing_add_units($conn, $clientId, 'sms', sms_message_parts($text) * count($refundIds));
+            sms_mark_messages($conn, $refundIds, 'failed', 'prohibited');
+        }
+        $failed = 'failed';
+        $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ?');
+        $stmt->bind_param('si', $failed, $campaignId);
+        $stmt->execute();
+        $stmt->close();
+        $balance = billing_unit_balances($conn, $clientId);
+        return sms_result(false, $blocked, array(
+            'balance' => (int) $balance['sms'],
+            'campaign_id' => $campaignId
+        ));
+    }
     $sender = (string) $campaign['sender_id'];
     $parts = sms_message_parts($text);
     $parsed = sms_collect_numbers((string) $campaign['recipients_list']);
@@ -1059,6 +1164,10 @@ function sms_send($conn, $clientId, $job)
     $text = billing_plain_block(isset($job['text']) ? $job['text'] : '', 1000);
     if ($text === '') {
         return sms_result(false, 'Write the message.');
+    }
+    $blocked = sms_prohibited_notice($text);
+    if ($blocked !== '') {
+        return sms_result(false, $blocked);
     }
     $parsed = sms_collect_numbers(isset($job['numbers']) ? $job['numbers'] : '');
     if (!$parsed['ok']) {
@@ -1283,6 +1392,11 @@ function sms_api_allow($conn, $tokenRow, $ip)
     $hit->bind_param('i', $tokenId);
     $hit->execute();
     $hit->close();
+    $cut = date('Y-m-d H:i:s', time() - 86400);
+    $drop = $conn->prepare('DELETE FROM sms_api_hits WHERE token_id = ? AND created_at < ?');
+    $drop->bind_param('is', $tokenId, $cut);
+    $drop->execute();
+    $drop->close();
     $now = date('Y-m-d H:i:s');
     $touch = $conn->prepare('UPDATE sms_api_tokens SET last_used_at = ? WHERE id = ?');
     $touch->bind_param('si', $now, $tokenId);
@@ -1384,3 +1498,105 @@ function sms_api_credit($conn)
         'data' => array('balance' => (int) $balance['sms'])
     ));
 }
+
+function voice_place_job($conn, $campaignId)
+{
+    $campaignId = (int) $campaignId;
+    $stmt = $conn->prepare('SELECT id, client_id, channel, status, recipients_count, message_content FROM sms_campaigns WHERE id = ?');
+    $stmt->bind_param('i', $campaignId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row || (string) $row['channel'] !== 'voice' || ((string) $row['status'] !== 'draft' && (string) $row['status'] !== 'scheduled')) {
+        return 'That voice job cannot be marked placed.';
+    }
+    $count = (int) $row['recipients_count'];
+    $clientId = (int) $row['client_id'];
+    if ($count < 1 || $clientId < 1) {
+        return 'This voice job has no numbers.';
+    }
+    $blocked = sms_prohibited_notice((string) $row['message_content']);
+    if ($blocked !== '') {
+        return $blocked;
+    }
+    $kind = 'voice_calls';
+    $debit = $conn->prepare('UPDATE client_units SET balance = balance - ? WHERE client_id = ? AND unit_kind = ? AND balance >= ?');
+    $debit->bind_param('iisi', $count, $clientId, $kind, $count);
+    $debit->execute();
+    $taken = billing_affected($conn) === 1;
+    $debit->close();
+    if (!$taken) {
+        return 'This account does not have enough voice credits for these numbers.';
+    }
+    $status = 'sent';
+    $mark = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND channel = \'voice\' AND status IN (\'draft\', \'scheduled\')');
+    $mark->bind_param('si', $status, $campaignId);
+    $mark->execute();
+    $marked = billing_affected($conn) === 1;
+    $mark->close();
+    if (!$marked) {
+        billing_add_units($conn, $clientId, $kind, $count);
+        return 'That voice job could not be marked placed.';
+    }
+    return '';
+}
+
+function voice_cancel_job($conn, $clientId, $campaignId)
+{
+    $clientId = (int) $clientId;
+    $campaignId = (int) $campaignId;
+    $status = 'cancelled';
+    $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND client_id = ? AND channel = \'voice\' AND status IN (\'draft\', \'scheduled\')');
+    $stmt->bind_param('sii', $status, $campaignId, $clientId);
+    $stmt->execute();
+    $ok = billing_affected($conn) === 1;
+    $stmt->close();
+    return $ok;
+}
+
+function voice_reserved_count($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    $channel = 'voice';
+    $draft = 'draft';
+    $scheduled = 'scheduled';
+    $stmt = $conn->prepare('SELECT COALESCE(SUM(recipients_count), 0) AS held FROM sms_campaigns WHERE client_id = ? AND channel = ? AND status IN (?, ?)');
+    $stmt->bind_param('isss', $clientId, $channel, $draft, $scheduled);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    return $row ? (int) $row['held'] : 0;
+}
+
+function voice_return_job($conn, $campaignId)
+{
+    $campaignId = (int) $campaignId;
+    $stmt = $conn->prepare('SELECT id, client_id, channel, status, recipients_count, scheduled_at FROM sms_campaigns WHERE id = ?');
+    $stmt->bind_param('i', $campaignId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row || (string) $row['channel'] !== 'voice' || (string) $row['status'] !== 'sent') {
+        return 'Those voice credits cannot be returned.';
+    }
+    $count = (int) $row['recipients_count'];
+    $clientId = (int) $row['client_id'];
+    if ($count < 1 || $clientId < 1) {
+        return 'Those voice credits cannot be returned.';
+    }
+    $draft = trim((string) $row['scheduled_at']) !== '' ? 'scheduled' : 'draft';
+    $sent = 'sent';
+    $channel = 'voice';
+    $mark = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ? AND channel = ? AND status = ?');
+    $mark->bind_param('siss', $draft, $campaignId, $channel, $sent);
+    $mark->execute();
+    $marked = billing_affected($conn) === 1;
+    $mark->close();
+    if (!$marked) {
+        return 'Those voice credits cannot be returned.';
+    }
+    billing_add_units($conn, $clientId, 'voice_calls', $count);
+    return '';
+}
+
+

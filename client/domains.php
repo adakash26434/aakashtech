@@ -26,7 +26,7 @@ $fundsLeft = $balance;
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Domain requests</h1>
-    <p class="text-slate-500 text-sm">Pay the yearly bill from the wallet. The team registers the name after that, then the status becomes Active and the year starts. <a class="text-brand-400" href="../domain.php">Check another name</a></p>
+    <p class="text-slate-500 text-sm">Pay the yearly bill from the wallet. The team registers the name after that, then the status becomes Active and the year starts. <a class="text-brand-400" href="../domain.php">Register a name</a> · <a class="text-brand-400" href="../whois.php">WHOIS check up</a></p>
 </div>
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
@@ -43,7 +43,7 @@ $fundsLeft = $balance;
     <article class="dash-panel mb-4">
         <div class="p-6">
             <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <h2 class="font-heading font-semibold text-white text-lg"><?= e($row['domain_name']) ?></h2>
+                <h2 class="font-heading font-semibold text-white text-lg"><?= e($row['domain_name']) ?> <a class="text-brand-400 text-xs font-medium" href="../whois.php?name=<?= rawurlencode((string) $row['domain_name']) ?>">See the record</a></h2>
                 <span class="text-sm <?= $status === 'active' ? 'text-green-400' : ($status === 'declined' ? 'text-red-300' : 'text-yellow-300') ?>"><?php
                     if ($status === 'requested' && $price > 0) {
                         echo 'Waiting for payment';
@@ -58,9 +58,9 @@ $fundsLeft = $balance;
             <?php if ($status !== 'declined'): ?>
             <ol class="domain-steps">
                 <li class="is-done">Name checked as available</li>
-                <li class="is-done">Request sent<?= $row['document_path'] !== '' ? ' with the registry document' : '' ?></li>
+                <li class="is-done">Request sent<?= $row['document_path'] !== '' ? ' with the required document' : '' ?></li>
                 <li class="<?= $paid ? 'is-done' : 'is-current' ?>"><?= $price > 0 ? 'Yearly bill paid from the wallet' : 'No separate bill on this request' ?></li>
-                <li class="<?= $status === 'active' ? 'is-done' : ($registering ? 'is-current' : '') ?>">The team registers this name at the registry</li>
+                <li class="<?= $status === 'active' ? 'is-done' : ($registering ? 'is-current' : '') ?>">The team registers this name</li>
                 <li class="<?= $status === 'active' ? 'is-done' : '' ?>">Active, then the year renews from the wallet</li>
             </ol>
             <?php endif; ?>
@@ -87,7 +87,7 @@ $fundsLeft = $balance;
                 </form>
             <?php endif; ?>
             <?php if ($status === 'paid' || $status === 'active'): ?>
-                <p class="text-slate-400 text-sm mt-4">Hosting, domain email, and a website stay separate. <a class="text-brand-400" href="shop.php?service=hosting-server">Hosting</a> · <a class="text-brand-400" href="shop.php?service=professional-email">Zoho email</a> · <a class="text-brand-400" href="shop.php?service=custom-websites">Website</a></p>
+                <p class="text-slate-400 text-sm mt-4">Hosting, domain email, and a website stay separate. <a class="text-brand-400" href="shop.php?service=hosting-server">Hosting</a> · <a class="text-brand-400" href="shop.php?service=professional-email">Domain email</a> · <a class="text-brand-400" href="shop.php?service=custom-websites">Website</a></p>
             <?php endif; ?>
             <?php if ($row['document_path'] !== ''): ?>
                 <p class="mt-4"><a class="text-brand-400 text-sm" href="domain-file.php?id=<?= (int) $row['id'] ?>">View the attached document</a></p>

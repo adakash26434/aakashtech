@@ -4,7 +4,8 @@ $cid = get_client_id();
 $navItems = [
     'index.php'     => ['Dashboard', 'layout-dashboard'],
     'shop.php'      => ['Buy Services', 'shopping-bag'],
-    '../domain.php' => ['Check a domain', 'globe'],
+    '../domain.php' => ['Domain registration', 'globe'],
+    '../whois.php'  => ['WHOIS check up', 'search'],
     'domains.php'   => ['My domains', 'list-checks'],
     'services.php'  => ['My Services', 'server'],
     'wallet.php'    => ['Wallet', 'wallet'],
@@ -16,6 +17,28 @@ $navItems = [
     'support.php'   => ['Support', 'life-buoy'],
     'profile.php'   => ['Profile', 'user-round'],
 ];
+$panelNav = hosting_client_panels($conn, (int) $cid);
+$mailNav = mail_client_logins($conn, (int) $cid);
+$siteNav = website_client_sites($conn, (int) $cid);
+if ($panelNav || $mailNav || $siteNav) {
+    $rebuilt = array();
+    foreach ($navItems as $page => $item) {
+        $rebuilt[$page] = $item;
+        if ($page === 'services.php') {
+            if ($panelNav) {
+                $rebuilt['services.php#hosting-panel'] = array('cPanel', 'monitor');
+            }
+            if ($mailNav) {
+                $rebuilt['services.php#domain-email'] = array('Email', 'mail');
+            }
+            if ($siteNav) {
+                $rebuilt['services.php#website'] = array('Website', 'panels-top-left');
+            }
+        }
+    }
+    $navItems = $rebuilt;
+}
+$portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Menu';
 ?>
 <aside id="client-sidebar" class="fixed top-0 left-0 z-40 h-screen w-64 bg-dark-900 border-r border-dark-800 flex flex-col transition-transform duration-300 lg:translate-x-0"
        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
@@ -37,7 +60,7 @@ $navItems = [
 
     <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         <?php foreach ($navItems as $page => $item): ?>
-            <a href="<?= $page ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 <?= $currentPage === $page ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50' ?>">
+            <a href="<?= e($page) ?>" @click="sidebarOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 <?= $currentPage === $page ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50' ?>">
                 <i class="portal-icon" data-lucide="<?= e($item[1]) ?>" aria-hidden="true"></i>
                 <?= $item[0] ?>
             </a>
@@ -67,6 +90,7 @@ $navItems = [
         <button @click="sidebarOpen = true" :aria-expanded="sidebarOpen" aria-controls="client-sidebar" aria-label="Open navigation" class="lg:hidden text-white p-2">
             <i class="portal-icon portal-menu-icon" data-lucide="menu" aria-hidden="true"></i>
         </button>
+        <p class="lg:hidden min-w-0 truncate text-sm font-medium text-slate-400"><?= e($portalPage) ?></p>
         <div class="hidden lg:block"><span class="text-slate-500 text-sm"><?= e($identity['name']) ?> · Client</span></div>
         <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">
             <i class="portal-icon" data-lucide="external-link" aria-hidden="true"></i>

@@ -53,6 +53,8 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
 
             <div class="footer-column">
                 <h2>Explore</h2>
+                <a href="domain.php">Domain registration</a>
+                <a href="whois.php">WHOIS check up</a>
                 <a href="<?= $navBase ?>#services">Services</a>
                 <a href="<?= $navBase ?>#about">Why us</a>
                 <a href="<?= $navBase ?>#process">How we work</a>
@@ -65,7 +67,7 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                 <a href="service.php?slug=bulk-voice">Bulk voice calls</a>
                 <a href="service.php?slug=domain-registration">Domains</a>
                 <a href="service.php?slug=hosting-server">Hosting &amp; servers</a>
-                <a href="service.php?slug=professional-email">Zoho email</a>
+                <a href="service.php?slug=professional-email">Domain email</a>
                 <a href="service.php?slug=custom-websites">Websites</a>
                 <a href="service.php?slug=cyber-security">Cyber training</a>
             </div>

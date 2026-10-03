@@ -3,7 +3,8 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 $allowedFilters = array('new', 'read', 'replied', 'closed');
-$filter = (isset($_GET['status']) && in_array($_GET['status'], $allowedFilters, true)) ? $_GET['status'] : 'all';
+$filter = (isset($_REQUEST['status']) && in_array($_REQUEST['status'], $allowedFilters, true)) ? $_REQUEST['status'] : 'all';
+$find = admin_find_text(isset($_REQUEST['q']) ? $_REQUEST['q'] : '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_inquiry_status'])) {
     verify_csrf();
@@ -19,21 +20,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_inquiry_status'])
 
 $inquiries = array();
 try {
-    if ($filter === 'all') {
-        $result = $conn->query('SELECT * FROM inquiries ORDER BY created_at DESC');
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $inquiries[] = $row;
-            }
+    $where = array();
+    $types = '';
+    $params = array();
+    if ($filter !== 'all') {
+        $where[] = 'status = ?';
+        $types .= 's';
+        $params[] = $filter;
+    }
+    if ($find !== '') {
+        $like = '%' . $find . '%';
+        $where[] = '(name LIKE ? OR email LIKE ? OR phone LIKE ? OR message LIKE ?)';
+        $types .= 'ssss';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
+    $sql = 'SELECT * FROM inquiries' . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY created_at DESC LIMIT ' . ($find === '' ? '200' : '50');
+    $stmt = $conn->prepare($sql);
+    if ($stmt && $types !== '') {
+        $bind = array($types);
+        foreach ($params as $key => $unused) {
+            $bind[] = &$params[$key];
         }
-    } else {
-        $stmt = $conn->prepare('SELECT * FROM inquiries WHERE status = ? ORDER BY created_at DESC');
-        if ($stmt) {
-            $stmt->bind_param('s', $filter);
-            $stmt->execute();
-            $inquiries = db_fetch_all($stmt);
-            $stmt->close();
-        }
+        call_user_func_array(array($stmt, 'bind_param'), $bind);
+    }
+    if ($stmt) {
+        $stmt->execute();
+        $inquiries = db_fetch_all($stmt);
+        $stmt->close();
     }
 } catch (Throwable $exception) {
     error_log('Inquiries could not be listed.');
@@ -43,16 +59,22 @@ try {
 <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">Inquiries</h1>
-        <p class="text-slate-500 text-sm">Manage contact form submissions</p>
+        <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 contact messages.' : 'Matches for “' . e($find) . '”.' ?></p>
     </div>
     <div class="flex gap-2">
-        <a href="inquiries.php" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'all' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">All</a>
-        <a href="?status=new" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'new' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">New</a>
-        <a href="?status=read" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'read' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Read</a>
-        <a href="?status=replied" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'replied' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Replied</a>
-        <a href="?status=closed" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'closed' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Closed</a>
+        <?php $findQuery = $find === '' ? '' : '&q=' . rawurlencode($find); ?>
+        <a href="inquiries.php<?= $find === '' ? '' : '?q=' . rawurlencode($find) ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'all' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">All</a>
+        <a href="?status=new<?= $findQuery ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'new' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">New</a>
+        <a href="?status=read<?= $findQuery ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'read' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Read</a>
+        <a href="?status=replied<?= $findQuery ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'replied' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Replied</a>
+        <a href="?status=closed<?= $findQuery ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'closed' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">Closed</a>
     </div>
 </div>
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <?php if ($filter !== 'all'): ?><input type="hidden" name="status" value="<?= e($filter) ?>"><?php endif; ?>
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, email, phone, or message">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 
 <div class="dash-panel overflow-hidden">
     <?php if ($inquiries): ?>
@@ -91,6 +113,8 @@ try {
                                 <form method="POST" class="flex flex-wrap items-center gap-2">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="inquiry_id" value="<?= (int) $row['id'] ?>">
+                                    <?php if ($filter !== 'all'): ?><input type="hidden" name="status" value="<?= e($filter) ?>"><?php endif; ?>
+                                    <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
                                     <select name="inquiry_status" class="form-input w-auto text-sm" aria-label="Inquiry status">
                                         <?php foreach ($allowedFilters as $choice): ?>
                                             <option value="<?= e($choice) ?>" <?= $row['status'] === $choice ? 'selected' : '' ?>><?= e(ucfirst($choice)) ?></option>

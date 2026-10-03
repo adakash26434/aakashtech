@@ -64,6 +64,9 @@ function sms_log_reason($code)
     if ($code === 'line-off' || $code === 'line-rejected' || $code === 'line-empty' || $code === 'sender-rejected') {
         return 'Not delivered. Credits were returned.';
     }
+    if ($code === 'prohibited') {
+        return 'Not sent. Credits were returned.';
+    }
     return '';
 }
 ?>

@@ -161,7 +161,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
         ?></pre>
         <p>A sent message looks like this. <code class="text-brand-300">balance</code> is the SMS credit left on this account.</p>
         <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{ "error": false, "message": "1 SMS sent.", "data": { "count": 1, "credits_used": 1, "balance": 4999 } }</pre>
-        <p>A bad token returns 401. A message that was not accepted returns 400 and the credits for those numbers come back. More than 30 calls in a minute returns 429.</p>
+        <p>A bad token returns 401. A message that was not accepted returns 400 and the credits for those numbers come back. A message Nepal law does not allow also returns 400 and is not charged. More than 30 calls in a minute returns 429.</p>
         <p class="text-slate-400 break-all">Credit check: POST <?= e($creditUrl) ?> with the same <code class="text-brand-300">auth_token</code>.</p>
         <pre class="overflow-x-auto text-xs text-slate-300 bg-slate-900/70 rounded-xl p-4">{ "error": false, "message": "SMS credit balance.", "data": { "balance": <?= (int) $apiBalance['sms'] ?> } }</pre>
     </div>

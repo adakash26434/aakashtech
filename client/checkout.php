@@ -51,10 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['review_order']) || i
     } elseif (isset($_POST['confirm_purchase'])) {
         $result = billing_purchase($conn, (int) get_client_id(), $plan, $_POST);
         if (!empty($result['ok'])) {
-            if ($needs === 'sms' || $needs === 'voice') {
+            if ($needs === 'sms') {
                 $done = 'Credit is on your account. Send it from the SMS dashboard on the next page. An API token can be created there after identity is approved.';
                 flash('billing', $done);
                 header('Location: sms-portal.php');
+            } elseif ($needs === 'voice') {
+                $done = 'Voice credits are on your account. Save the script under Messages. The team places the call, and the credits are used then.';
+                flash('billing', $done);
+                header('Location: campaigns.php');
             } else {
                 $done = (isset($result['status']) && $result['status'] === 'booked')
                     ? 'Booking received. The details you entered are saved, so the work can start without another call.'

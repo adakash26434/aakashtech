@@ -27,6 +27,21 @@ DirectoryIndex index.php
     </IfModule>
 </FilesMatch>
 
+# Hide the git folder, database files, and environment files.
+RewriteRule (^|/)\.git(/|$) - [F,L]
+RewriteRule (^|/)\.env$ - [F,L]
+RewriteRule ^uploads/.*\.(php|phtml|phar|php5)$ - [F,L]
+
+<FilesMatch "\.(sqlite3?|env|bak|old)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Hide SQL file
 <Files "*.sql">
     <IfModule mod_authz_core.c>

@@ -7,8 +7,11 @@ $err = '';
 
 $client = null;
 try {
-    $clientResult = $conn->query("SELECT * FROM client_users WHERE id = " . (int) $cid);
-    $client = $clientResult ? $clientResult->fetch_assoc() : null;
+    $clientStmt = $conn->prepare('SELECT * FROM client_users WHERE id = ?');
+    $clientStmt->bind_param('i', $cid);
+    $clientStmt->execute();
+    $client = db_fetch_assoc($clientStmt);
+    $clientStmt->close();
 } catch (Throwable $exception) {
     error_log('Client profile could not be read.');
 }
@@ -54,10 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current = $_POST['current_pass'] ?? '';
     $new = $_POST['new_pass'] ?? '';
     $confirm = $_POST['confirm_pass'] ?? '';
-    if (!password_verify($current, $client['password'])) {
+    if (!auth_password_matches((string) $client['password'], $current)) {
         $err = 'Current password is incorrect.';
-    } elseif (strlen($new) < 6) {
-        $err = 'New password must be at least 6 characters.';
+    } elseif (strlen($new) < 8) {
+        $err = 'New password must be at least 8 characters.';
     } elseif ($new !== $confirm) {
         $err = 'Passwords do not match.';
     } else {
@@ -71,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
             $stmt->execute();
             $stmt->close();
             $client['password'] = $hash;
+            auth_remember_password('client', $hash);
+            password_reset_clear($conn, $cid);
             $msg = 'Password changed successfully!';
         } catch (Throwable $exception) {
             error_log('Client password could not be saved.');
@@ -87,7 +92,7 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">My Profile</h1>
-    <p class="text-slate-500 text-sm">Manage your account information</p>
+    <p class="text-slate-500 text-sm">Name, mobile, password, and the authenticator code for sign-in.</p>
 </div>
 
 <?php if ($msg): ?>
@@ -147,7 +152,7 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">New Password</label>
-                <input type="password" name="new_pass" required class="form-input" placeholder="Min 6 characters">
+                <input type="password" name="new_pass" required class="form-input" placeholder="Min 8 characters">
             </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Confirm New Password</label>

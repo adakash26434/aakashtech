@@ -106,11 +106,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $confirm = $_POST['confirm_pass'] ?? '';
     $admin_id = (int)$_SESSION['admin_id'];
 
-    $row = $conn->query("SELECT password FROM admin_users WHERE id=$admin_id")->fetch_assoc();
-    if (!password_verify($current, $row['password'])) {
+    $stmt = $conn->prepare('SELECT password FROM admin_users WHERE id = ?');
+    $stmt->bind_param('i', $admin_id);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!auth_password_matches($row ? (string) $row['password'] : '', $current)) {
         $err = 'Current password is incorrect.';
-    } elseif (strlen($new) < 6) {
-        $err = 'New password must be at least 6 characters.';
+    } elseif (strlen($new) < 8) {
+        $err = 'New password must be at least 8 characters.';
     } elseif ($new !== $confirm) {
         $err = 'Passwords do not match.';
     } else {
@@ -119,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         $stmt->bind_param("si", $hash, $admin_id);
         $stmt->execute();
         $stmt->close();
+        auth_remember_password('admin', $hash);
         $msg = 'Password changed successfully.';
     }
 }

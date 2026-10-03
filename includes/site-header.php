@@ -26,7 +26,13 @@ $guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site
         </a>
 
         <nav class="desktop-nav" aria-label="Main navigation">
-            <a href="<?= $navBase === '' ? 'domain.php' : 'domain.php' ?>">Domain registration</a>
+            <details class="nav-drop">
+                <summary>Domains</summary>
+                <div class="nav-drop-panel">
+                    <a href="domain.php"<?= basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '') === 'domain.php' ? ' aria-current="page"' : '' ?>>Domain registration</a>
+                    <a href="whois.php"<?= basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '') === 'whois.php' ? ' aria-current="page"' : '' ?>>WHOIS check up</a>
+                </div>
+            </details>
             <a href="<?= $navBase ?>#services">Services</a>
             <a href="<?= $navBase ?>#about">Why us</a>
             <a href="<?= $navBase ?>#process">How we work</a>
@@ -59,7 +65,13 @@ $guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site
          x-transition:enter-start="mobile-nav-enter-start"
          x-transition:enter-end="mobile-nav-enter-end"
          @click.outside="mobileOpen = false" aria-label="Mobile navigation">
-        <a href="domain.php" @click="mobileOpen = false">Domain registration</a>
+        <details class="nav-drop">
+            <summary>Domains</summary>
+            <div class="nav-drop-panel">
+                <a href="domain.php" @click="mobileOpen = false">Domain registration</a>
+                <a href="whois.php" @click="mobileOpen = false">WHOIS check up</a>
+            </div>
+        </details>
         <a href="<?= $navBase ?>#services" @click="mobileOpen = false">Services</a>
         <a href="<?= $navBase ?>#about" @click="mobileOpen = false">Why us</a>
         <a href="<?= $navBase ?>#process" @click="mobileOpen = false">How we work</a>

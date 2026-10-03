@@ -36,11 +36,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     }
 }
 
-$tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid ORDER BY created_at DESC");
+$find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
+$cid = (int) $cid;
+$ticketRows = array();
+$ticketSeen = array();
+if ($find !== '') {
+    $like = '%' . $find . '%';
+    $ticketStmt = $conn->prepare('SELECT * FROM support_tickets WHERE client_id = ? AND (subject LIKE ? OR description LIKE ?) ORDER BY created_at DESC LIMIT 50');
+    $ticketStmt->bind_param('iss', $cid, $like, $like);
+    $ticketStmt->execute();
+    $ticketRows = db_fetch_all($ticketStmt);
+    $ticketStmt->close();
+} else {
+    foreach (array(
+        'SELECT * FROM support_tickets WHERE client_id = ? AND status IN (\'open\',\'in_progress\') ORDER BY created_at DESC',
+        'SELECT * FROM support_tickets WHERE client_id = ? ORDER BY created_at DESC LIMIT 40'
+    ) as $ticketSql) {
+        $ticketStmt = $conn->prepare($ticketSql);
+        $ticketStmt->bind_param('i', $cid);
+        $ticketStmt->execute();
+        foreach (db_fetch_all($ticketStmt) as $ticketRow) {
+            $ticketId = (int) $ticketRow['id'];
+            if (isset($ticketSeen[$ticketId])) {
+                continue;
+            }
+            $ticketSeen[$ticketId] = true;
+            $ticketRows[] = $ticketRow;
+        }
+        $ticketStmt->close();
+    }
+}
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Support</h1>
-    <p class="text-slate-500 text-sm">Get help from our support team</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Open tickets stay in view. Older tickets are in the latest 40.' : 'Matches for “' . e($find) . '”.' ?></p>
 </div>
 
 <?php if ($msg): ?>
@@ -76,10 +105,13 @@ $tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid OR
     </form>
 </div>
 
-<!-- Ticket List -->
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Subject or message">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 <div class="grid gap-4">
-    <?php if ($tickets && $tickets->num_rows > 0): ?>
-        <?php while ($t = $tickets->fetch_assoc()): ?>
+    <?php if ($ticketRows): ?>
+        <?php foreach ($ticketRows as $t): ?>
             <div class="dash-panel">
                 <div class="p-5">
                     <div class="flex items-start justify-between gap-4 mb-3">
@@ -109,9 +141,9 @@ $tickets = $conn->query("SELECT * FROM support_tickets WHERE client_id = $cid OR
                     <?php endif; ?>
                 </div>
             </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     <?php else: ?>
-        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm">No support tickets. Open one above!</p></div>
+        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet. Use the form above when you need the team.' : 'No ticket matches that search.' ?></p></div>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

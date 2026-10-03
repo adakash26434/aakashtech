@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_domain'])) {
             unset($_SESSION['domain_offer']);
             $offer = null;
         } elseif ($result['status'] === 'unknown') {
-            $error = 'The registry could not be checked just now. Try the name again in a moment.';
+            $error = 'The name could not be checked just now. Try the name again in a moment.';
             unset($_SESSION['domain_offer']);
             $offer = null;
         } else {
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
     } else {
         $again = domain_check_result($offer['label'], $offer['tld']);
         if ($again['status'] === 'unknown') {
-            $error = 'The registry could not be checked just now. Try again in a moment.';
+            $error = 'The name could not be checked just now. Try again in a moment.';
         } elseif ($again['status'] !== 'available' || $again['domain'] !== $offer['domain']) {
             $error = 'That name is no longer free. Check it again.';
             unset($_SESSION['domain_offer']);
@@ -104,8 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
             $error = 'Enter the account name and a valid email.';
         } elseif ($phone === '') {
             $error = 'Enter a 10-digit mobile number.';
-        } elseif (strlen($password) < 6) {
-            $error = 'Use a password of at least 6 characters.';
+        } elseif (strlen($password) < 8) {
+            $error = 'Use a password of at least 8 characters.';
         } else {
             $exists = $conn->prepare('SELECT id FROM client_users WHERE email = ? LIMIT 1');
             $exists->bind_param('s', $email);
@@ -207,6 +207,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
 }
 
 $yearBill = $offer ? domain_year_bill($conn, $offer['tld']) : array('label' => '');
+if ($typedLabel === '' && !$offer && isset($_GET['label'])) {
+    $fromGet = domain_label($_GET['label']);
+    if ($fromGet !== '') {
+        $typedLabel = $fromGet;
+    }
+}
 $checkedLabel = $offer ? $offer['label'] : $typedLabel;
 $checkedTld = $offer ? $offer['tld'] : $tld;
 if (!isset($holderName)) {
@@ -240,6 +246,7 @@ if (!isset($accountPhone)) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/site.css">
     <script defer src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="assets/js/site.js"></script>
 </head>
 <body class="site-public font-body antialiased">
@@ -251,11 +258,11 @@ if (!isset($accountPhone)) {
                 <div>
                     <p class="section-kicker">Domain registration</p>
                     <h1 class="font-heading">Check the name, then request it.</h1>
-                    <p class="domain-lead">Choose the ending. Nepal names such as .com.np and .coop.np are checked at register.com.np. .com is checked in the Verisign record. A Nepal request includes the registry document. .edu.np, .gov.np, and .mil.np are on that official list, and the registry decides who can hold them. A free name can be requested. You pay the yearly bill from the wallet, the team registers that name, and the client portal shows Active after that. The paid year starts then and renews from the wallet.</p>
+                    <p class="domain-lead">Choose the ending. Nepal names such as .com.np and .coop.np, and .com, are checked here. To see who already holds a name, use <a href="whois.php">WHOIS check up</a>. A Nepal request includes the document for that name. .edu.np, .gov.np, and .mil.np can be requested, and the team confirms who can hold them. A free name can be requested. You pay the yearly bill from the wallet, the team registers that name, and the client portal shows Active after that. The paid year starts then and renews from the wallet.</p>
                     <h2 class="detail-subhead font-heading">After the name is active</h2>
                     <ul class="detail-points">
                         <li><a href="service.php?slug=hosting-server">Hosting</a> keeps a website online. It is a separate yearly or monthly bill.</li>
-                        <li><a href="service.php?slug=professional-email">Zoho email</a> opens addresses such as info@this name. The mailboxes are separate.</li>
+                        <li><a href="service.php?slug=professional-email">Domain email</a> opens addresses such as info@the-name. The mailboxes are separate.</li>
                         <li><a href="service.php?slug=custom-websites">A website</a> is booked on its own. The domain does not include the design.</li>
                     </ul>
                 </div>
@@ -294,8 +301,8 @@ if (!isset($accountPhone)) {
                             <label for="holder_address">Address for the registration</label>
                             <input id="holder_address" name="holder_address" type="text" maxlength="200" required value="<?= site_escape($holderAddress) ?>">
                             <?php if (domain_is_np($offer['tld'])): ?>
-                                <label for="document">Registry document</label>
-                                <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. register.com.np accepts a JPG or PNG.</p>
+                                <label for="document">Required document</label>
+                                <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a JPG or PNG.</p>
                                 <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
                             <?php endif; ?>
                             <?php if (!$loggedIn): ?>
@@ -307,7 +314,7 @@ if (!isset($accountPhone)) {
                                 <label for="phone">Mobile</label>
                                 <input id="phone" name="phone" type="tel" maxlength="16" required inputmode="tel" autocomplete="tel" placeholder="10-digit mobile" value="<?= site_escape($accountPhone) ?>">
                                 <label for="password">Password</label>
-                                <input id="password" name="password" type="password" minlength="6" required autocomplete="new-password">
+                                <input id="password" name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="Min 8 characters">
                             <?php else: ?>
                                 <p class="domain-note">This request is saved to the account you are signed in with.</p>
                             <?php endif; ?>

@@ -178,7 +178,7 @@ $tokenRow = db_fetch_assoc($tokenStmt);
 $tokenStmt->close();
 $tokenCount = $tokenRow ? (int) $tokenRow['c'] : 0;
 
-$recentStmt = $conn->prepare('SELECT id, recipient, message_text, parts, status, source, created_at FROM sms_messages WHERE client_id = ? ORDER BY id DESC LIMIT 8');
+$recentStmt = $conn->prepare('SELECT id, recipient, message_text, parts, status, source, created_at FROM sms_messages WHERE client_id = ? ORDER BY created_at DESC, id DESC LIMIT 8');
 $recentStmt->bind_param('i', $cid);
 $recentStmt->execute();
 $recent = db_fetch_all($recentStmt);
@@ -329,6 +329,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                     </div>
                     <textarea name="message_content" x-model="text" required rows="4" maxlength="1000" class="form-input" placeholder="The exact text people should receive"><?= e($values['message_content']) ?></textarea>
                     <p class="text-xs mt-1" :class="estimate().short ? 'text-red-400' : 'text-slate-500'" x-text="estimate().label"></p>
+                    <p class="text-slate-500 text-xs mt-1">A request for a password, PIN, or OTP, and a scam, threat, or sexual message, is refused.</p>
                 </div>
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-1.5">

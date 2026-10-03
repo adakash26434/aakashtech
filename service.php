@@ -114,6 +114,7 @@ $navBase = 'index.php';
                     <p class="detail-lead"><?= service_escape($page['lead']) ?></p>
                     <?php if ($slug === 'domain-registration'): ?>
                         <a class="button button--primary detail-cta" href="domain.php">Check a name</a>
+                        <a class="detail-back" href="whois.php">WHOIS check up</a>
                     <?php else: ?>
                         <a class="button button--primary detail-cta" href="#buy"><?= service_escape($service['action']) ?></a>
                     <?php endif; ?>
@@ -143,7 +144,7 @@ $navBase = 'index.php';
                     <?php endif; ?>
                     <?php if (!empty($page['examples'])): ?>
                         <h2 class="detail-subhead font-heading">A notice you can copy</h2>
-                        <p class="detail-lead">Replace the words in brackets. Each number receives this same notice. Sending is done in the client SMS dashboard.</p>
+                        <p class="detail-lead"><?php if ($slug === 'bulk-voice'): ?>Replace the words in brackets. Each number hears this same script. The team places the call from the job saved under Messages.<?php else: ?>Replace the words in brackets. Each number receives this same notice. Sending is done in the client SMS dashboard.<?php endif; ?></p>
                         <?php foreach ($page['examples'] as $example): ?>
                             <figure class="notice-sample">
                                 <figcaption><?= service_escape($example[0]) ?></figcaption>

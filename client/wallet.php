@@ -49,11 +49,35 @@ foreach ($paymentMethods as $paymentMethod) {
 if (!in_array($methodValue, $methodCodes, true)) {
     $methodValue = $methodCodes ? $methodCodes[0] : '';
 }
-$history = $conn->prepare('SELECT * FROM wallet_entries WHERE client_id = ? ORDER BY id DESC LIMIT 20');
-$history->bind_param('i', $cid);
-$history->execute();
-$entries = db_fetch_all($history);
-$history->close();
+$find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
+$entries = array();
+$entrySeen = array();
+if ($find !== '') {
+    $like = '%' . $find . '%';
+    $history = $conn->prepare('SELECT * FROM wallet_entries WHERE client_id = ? AND (reference_note LIKE ? OR kind LIKE ? OR status LIKE ? OR method LIKE ?) ORDER BY id DESC LIMIT 50');
+    $history->bind_param('issss', $cid, $like, $like, $like, $like);
+    $history->execute();
+    $entries = db_fetch_all($history);
+    $history->close();
+} else {
+    foreach (array(
+        'SELECT * FROM wallet_entries WHERE client_id = ? AND status = \'pending\' ORDER BY id DESC',
+        'SELECT * FROM wallet_entries WHERE client_id = ? ORDER BY id DESC LIMIT 30'
+    ) as $historySql) {
+        $history = $conn->prepare($historySql);
+        $history->bind_param('i', $cid);
+        $history->execute();
+        foreach (db_fetch_all($history) as $entryRow) {
+            $entryId = (int) $entryRow['id'];
+            if (isset($entrySeen[$entryId])) {
+                continue;
+            }
+            $entrySeen[$entryId] = true;
+            $entries[] = $entryRow;
+        }
+        $history->close();
+    }
+}
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Wallet</h1>
@@ -82,7 +106,7 @@ $history->close();
         <div class="dash-stat-label">SMS credits</div>
     </div>
     <div class="dash-stat-card">
-        <div class="dash-stat-value"><?= number_format((int) $units['voice_calls'] + (int) $units['voice_minutes']) ?></div>
+        <div class="dash-stat-value"><?= number_format((int) $units['voice_calls']) ?></div>
         <div class="dash-stat-label">Voice calls</div>
     </div>
 </div>
@@ -138,8 +162,12 @@ $history->close();
     </section>
 </div>
 
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Note, type, or status">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 <section class="dash-panel overflow-hidden">
-    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Recent wallet activity</h3></div>
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white"><?= $find === '' ? 'Wallet activity' : 'Matches for “' . e($find) . '”' ?></h3></div>
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
@@ -161,7 +189,7 @@ $history->close();
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm">No wallet activity yet.</td></tr>
+                    <tr><td colspan="4" class="px-4 py-10 text-center text-slate-500 text-sm"><?= $find === '' ? 'No wallet activity yet. A waiting top-up stays in this list.' : 'No wallet row matches that search.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

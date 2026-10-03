@@ -65,7 +65,11 @@ if (DB_DRIVER === 'sqlite') {
 
 require_once __DIR__ . '/includes/billing.php';
 require_once __DIR__ . '/includes/sms-gateway.php';
+require_once __DIR__ . '/includes/hosting-panel.php';
+require_once __DIR__ . '/includes/mail-login.php';
+require_once __DIR__ . '/includes/delivery.php';
 require_once __DIR__ . '/includes/totp.php';
+require_once __DIR__ . '/includes/password-reset.php';
 try {
     auth_ensure_client_table($conn);
 } catch (Throwable $exception) {
@@ -78,6 +82,7 @@ try {
 }
 try {
     auth_ensure_attempts($conn);
+    auth_ensure_resets($conn);
 } catch (Throwable $exception) {
     error_log('Login attempt log could not be created.');
 }
@@ -114,11 +119,20 @@ ini_set('log_errors', '1');
 
 // ====== AUTH HELPERS ======
 
+function auth_password_matches($hash, $password)
+{
+    $hash = (string) $hash;
+    if (!preg_match('/^\$2[aby]\$\d{2}\$/', $hash)) {
+        $hash = '$2y$12$gcQN4wgUESfFgF1.LI1LaOtdBMyHbJrFtwOR0hJx1KyhE5hiSz00y';
+    }
+    return password_verify((string) $password, $hash);
+}
+
 function cpanel_apply_admin($conn, $email, $password)
 {
     $email = trim((string) $email);
     $password = (string) $password;
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 6) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
         return;
     }
     $stamp = hash('sha256', $email . "\0" . $password);
@@ -166,10 +180,16 @@ function is_client_logged_in() {
 }
 
 function require_admin() {
+    global $conn;
+    $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+    $prefix = strpos($script, '/admin/') !== false ? '' : 'admin/';
     if (!is_admin_logged_in() || !auth_account_is_active('admin')) {
         auth_drop_role('admin');
-        $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
-        $prefix = strpos($script, '/admin/') !== false ? '' : 'admin/';
+        header('Location: ' . $prefix . 'login.php');
+        exit;
+    }
+    if (!$conn || !auth_password_still_current($conn, 'admin')) {
+        auth_drop_role('admin');
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
@@ -177,6 +197,7 @@ function require_admin() {
 }
 
 function require_client() {
+    global $conn;
     $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
     $prefix = strpos($script, '/client/') !== false ? '' : 'client/';
     if (!is_client_logged_in()) {
@@ -189,6 +210,12 @@ function require_client() {
     if (!auth_account_is_active('client')) {
         auth_drop_role('client');
         flash('login_error', 'Your account is suspended. Contact support.');
+        header('Location: ' . $prefix . 'login.php');
+        exit;
+    }
+    if (!$conn || !auth_password_still_current($conn, 'client')) {
+        auth_drop_role('client');
+        flash('login_error', 'The password changed. Sign in again.');
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
@@ -242,6 +269,47 @@ function verify_csrf() {
 function auth_fresh_session() {
     session_regenerate_id(true);
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+function auth_password_seal($hash)
+{
+    return hash('sha256', (string) $hash);
+}
+
+function auth_remember_password($kind, $hash)
+{
+    $key = ($kind === 'admin' ? 'admin' : 'client') . '_password_seal';
+    $_SESSION[$key] = auth_password_seal($hash);
+}
+
+function auth_password_still_current($conn, $kind)
+{
+    $kind = $kind === 'admin' ? 'admin' : 'client';
+    $id = $kind === 'admin' ? (int) (isset($_SESSION['admin_id']) ? $_SESSION['admin_id'] : 0) : (int) (isset($_SESSION['client_id']) ? $_SESSION['client_id'] : 0);
+    if ($id < 1) {
+        return false;
+    }
+    $sql = $kind === 'admin'
+        ? 'SELECT password FROM admin_users WHERE id = ?'
+        : 'SELECT password FROM client_users WHERE id = ?';
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return true;
+    }
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return false;
+    }
+    $seal = auth_password_seal($row['password']);
+    $key = $kind . '_password_seal';
+    if (!isset($_SESSION[$key]) || (string) $_SESSION[$key] === '') {
+        $_SESSION[$key] = $seal;
+        return true;
+    }
+    return hash_equals((string) $_SESSION[$key], $seal);
 }
 
 function auth_client_ip() {
@@ -309,8 +377,6 @@ function auth_ensure_client_table($conn)
             address TEXT DEFAULT NULL,
             status TEXT DEFAULT 'active',
             avatar_color TEXT DEFAULT '#06b6d4',
-            sms_portal_username TEXT DEFAULT '',
-            sms_portal_password TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
@@ -332,8 +398,6 @@ function auth_ensure_client_table($conn)
             address TEXT DEFAULT NULL,
             status VARCHAR(20) DEFAULT 'active',
             avatar_color VARCHAR(20) DEFAULT '#06b6d4',
-            sms_portal_username VARCHAR(80) DEFAULT '',
-            sms_portal_password VARCHAR(80) DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_email (email),
@@ -374,6 +438,7 @@ function auth_ensure_attempts($conn) {
             ip TEXT NOT NULL,
             attempted_at TEXT NOT NULL
         )');
+        billing_ensure_index($conn, 'login_attempts', 'idx_attempt_lookup', array('scope', 'ip', 'attempted_at'));
         return;
     }
     billing_exec($conn, 'CREATE TABLE IF NOT EXISTS login_attempts (
@@ -589,6 +654,15 @@ function auth_end_session() {
 
 function e($str) {
     return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+}
+
+function admin_find_text($value)
+{
+    $value = trim(str_replace(array("\0", '%', '_'), '', (string) $value));
+    if (strlen($value) > 80) {
+        $value = substr($value, 0, 80);
+    }
+    return $value;
 }
 
 function flash($key, $msg = null) {

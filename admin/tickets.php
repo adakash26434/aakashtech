@@ -2,7 +2,8 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
-$tickets = $conn->query("SELECT t.*, c.name as client_name, c.email as client_email FROM support_tickets t JOIN client_users c ON t.client_id = c.id ORDER BY t.created_at DESC");
+$find = admin_find_text(isset($_REQUEST['q']) ? $_REQUEST['q'] : '');
+$findBack = $find === '' ? 'tickets.php' : 'tickets.php?q=' . rawurlencode($find);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     verify_csrf();
@@ -37,18 +38,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
             'Open Support in the client panel to read it.'
         ));
     }
-    header('Location: tickets.php');
+    header('Location: ' . $findBack);
     exit;
+}
+
+$ticketSql = 'SELECT t.*, c.name as client_name, c.email as client_email FROM support_tickets t JOIN client_users c ON t.client_id = c.id ';
+$ticketRows = array();
+if ($find !== '') {
+    $like = '%' . $find . '%';
+    $ticketStmt = $conn->prepare($ticketSql . 'WHERE t.subject LIKE ? OR t.description LIKE ? OR c.name LIKE ? OR c.email LIKE ? ORDER BY t.created_at DESC LIMIT 50');
+    $ticketStmt->bind_param('ssss', $like, $like, $like, $like);
+    $ticketStmt->execute();
+    $ticketRows = db_fetch_all($ticketStmt);
+    $ticketStmt->close();
+} else {
+    $ticketSeen = array();
+    foreach (array(
+        $ticketSql . "WHERE t.status IN ('open','in_progress') ORDER BY t.created_at DESC LIMIT 50",
+        $ticketSql . 'ORDER BY t.created_at DESC LIMIT 100'
+    ) as $ticketQuery) {
+        $ticketResult = $conn->query($ticketQuery);
+        if (!$ticketResult) {
+            continue;
+        }
+        while ($ticketRow = $ticketResult->fetch_assoc()) {
+            $ticketId = (int) $ticketRow['id'];
+            if (isset($ticketSeen[$ticketId])) {
+                continue;
+            }
+            $ticketSeen[$ticketId] = true;
+            $ticketRows[] = $ticketRow;
+        }
+    }
 }
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Support Tickets</h1>
-    <p class="text-slate-500 text-sm">Manage client support requests</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Open tickets stay in view. Older closed tickets are in the latest 100.' : 'Matches for “' . e($find) . '”.' ?></p>
 </div>
+<form method="GET" class="mb-4 flex flex-wrap gap-2">
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client, subject, or message">
+    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+</form>
 
 <div class="grid gap-4">
-    <?php if ($tickets && $tickets->num_rows > 0): ?>
-        <?php while ($t = $tickets->fetch_assoc()): ?>
+    <?php if ($ticketRows): ?>
+        <?php foreach ($ticketRows as $t): ?>
             <div class="dash-panel">
                 <div class="p-5">
                     <div class="flex items-start justify-between gap-4 mb-3">
@@ -81,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
                     <form method="POST" action="" class="flex gap-2 flex-wrap">
                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                         <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
+                        <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
                         <input type="text" name="admin_reply" placeholder="Type a reply..." class="form-input flex-1 min-w-[200px]">
                         <select name="status" class="form-input w-auto">
                             <option value="open" <?= $t['status'] === 'open' ? 'selected' : '' ?>>Open</option>
@@ -92,9 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
                     </form>
                 </div>
             </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     <?php else: ?>
-        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm">No support tickets found.</p></div>
+        <div class="dash-panel"><p class="p-12 text-center text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet.' : 'No ticket matches that search.' ?></p></div>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
