@@ -90,11 +90,12 @@ if ($record && isset($record['domain'], $record['tld']) && $record['status'] ===
     <?php include __DIR__ . '/includes/site-header.php'; ?>
     <main id="main-content">
         <section class="section detail-section">
-            <div class="wrap domain-layout">
+            <div class="wrap">
+                <div class="whois-top">
                 <div>
                     <p class="section-kicker">WHOIS check up</p>
                     <h1 class="font-heading">See who holds the name.</h1>
-                    <p class="domain-lead">Enter a Nepal name, such as .com.np or .coop.np, or a .com name. The public record is shown on this page. A name with no record can be requested under <a href="domain.php">Domain registration</a>.</p>
+                    <p class="domain-lead">Enter a Nepal name, such as .com.np or .coop.np, or a .com name. The public record is shown in a table below. A name with no record can be requested under <a href="domain.php">Domain registration</a>.</p>
                 </div>
                 <div class="domain-panel">
                     <?php if ($error !== ''): ?>
@@ -116,21 +117,40 @@ if ($record && isset($record['domain'], $record['tld']) && $record['status'] ===
                         <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
                         <button class="button button--primary" type="submit" name="check_whois" value="1">Check the record</button>
                     </form>
-                    <?php if ($record && $record['status'] === 'free'): ?>
+                </div>
+                </div>
+                <?php if ($record && $record['status'] === 'free'): ?>
+                    <div class="whois-sheet">
                         <p class="domain-result domain-result--free"><?= site_escape($record['domain']) ?> has no public record. It can be requested.</p>
                         <a class="button button--primary" href="<?= site_escape($registerHref) ?>">Request this name</a>
-                    <?php elseif ($record && $record['status'] === 'registered'): ?>
+                    </div>
+                <?php elseif ($record && $record['status'] === 'registered'): ?>
+                    <?php
+                    $whoisGroups = array('domain' => array(), 'registrar' => array());
+                    foreach ($record['rows'] as $row) {
+                        $group = (isset($row['group']) && $row['group'] === 'registrar') ? 'registrar' : 'domain';
+                        $whoisGroups[$group][] = $row;
+                    }
+                    $whoisTitles = array('domain' => 'Domain information', 'registrar' => 'Registrar information');
+                    ?>
+                    <div class="whois-sheet">
                         <p class="domain-result domain-result--taken"><?= site_escape($record['domain']) ?> is already registered.</p>
-                        <dl class="whois-record">
-                            <?php foreach ($record['rows'] as $row): ?>
-                                <div>
-                                    <dt><?= site_escape($row['label']) ?></dt>
-                                    <dd><?= site_escape($row['value']) ?></dd>
-                                </div>
-                            <?php endforeach; ?>
-                        </dl>
-                    <?php endif; ?>
-                </div>
+                        <?php foreach ($whoisGroups as $group => $groupRows): ?>
+                            <?php if (!$groupRows) { continue; } ?>
+                            <h2 class="whois-heading font-heading"><?= site_escape($whoisTitles[$group]) ?></h2>
+                            <table class="whois-table">
+                                <tbody>
+                                    <?php foreach ($groupRows as $row): ?>
+                                        <tr>
+                                            <th scope="row"><?= site_escape($row['label']) ?></th>
+                                            <td><?= nl2br(site_escape($row['value'])) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
     </main>

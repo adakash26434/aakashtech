@@ -290,6 +290,16 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell.portal-auth {
     isolation: isolate;
+    display: block;
+    min-height: 100vh;
+    height: auto;
+    overflow-x: clip;
+    overflow-y: auto;
+}
+
+.portal-shell.portal-auth > .relative {
+    margin-top: 2.5rem;
+    margin-bottom: 3rem;
 }
 
 .portal-shell.portal-auth form {
@@ -348,6 +358,10 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #0b8b7a, #075e54);
+}
+
+.portal-shell .dash-panel.overflow-hidden {
+    overflow-x: auto;
 }
 
 .portal-shell main > * {

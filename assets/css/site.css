@@ -85,6 +85,7 @@ body.site-public textarea {
     z-index: 40;
     top: 0;
     width: 100%;
+    overflow: visible;
     background: rgba(251, 253, 252, 0.78);
     border-bottom: 1px solid transparent;
     backdrop-filter: blur(16px);
@@ -103,6 +104,7 @@ body.site-public textarea {
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+    overflow: visible;
 }
 
 .brand {
@@ -169,10 +171,11 @@ body.site-public textarea {
 
 .desktop-nav {
     gap: clamp(16px, 2.5vw, 34px);
+    overflow: visible;
 }
 
 .desktop-nav a,
-.desktop-nav .nav-drop summary,
+.desktop-nav .nav-drop-label,
 .portal-link {
     color: var(--site-muted);
     font-size: var(--type-label);
@@ -184,7 +187,8 @@ body.site-public textarea {
     position: relative;
 }
 
-.nav-drop summary {
+.nav-drop summary,
+.nav-drop-label {
     list-style: none;
     cursor: pointer;
 }
@@ -193,7 +197,8 @@ body.site-public textarea {
     display: none;
 }
 
-.nav-drop summary::after {
+.nav-drop summary::after,
+.nav-drop-label::after {
     content: "";
     display: inline-block;
     width: 0;
@@ -204,12 +209,12 @@ body.site-public textarea {
     vertical-align: 2px;
 }
 
-.nav-drop-panel {
+.desktop-nav .nav-drop-panel {
     display: none;
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 10px);
     left: 0;
-    z-index: 40;
+    z-index: 50;
     min-width: 220px;
     padding: 8px;
     background: #fff;
@@ -218,18 +223,33 @@ body.site-public textarea {
     box-shadow: 0 12px 30px rgba(20, 55, 61, 0.08);
 }
 
-.nav-drop:hover .nav-drop-panel,
-.nav-drop:focus-within .nav-drop-panel,
-.nav-drop[open] .nav-drop-panel {
-    display: grid;
+.desktop-nav .nav-drop::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 14px;
+}
+
+.desktop-nav .nav-drop:hover .nav-drop-panel,
+.desktop-nav .nav-drop:focus-within .nav-drop-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.desktop-nav .nav-drop-label[aria-current="page"] {
+    color: var(--site-teal-dark);
 }
 
 .desktop-nav .nav-drop-panel a,
 .mobile-nav .nav-drop-panel a {
     display: block;
+    width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
     color: var(--site-ink);
+    white-space: nowrap;
 }
 
 .desktop-nav .nav-drop-panel a:hover,
@@ -1850,11 +1870,32 @@ a.contact-method:hover strong {
     box-shadow: 0 0 0 3px rgba(11, 139, 122, 0.12);
 }
 
+.domain-page {
+    display: grid;
+    gap: 28px;
+}
+
 .domain-layout {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1fr);
     gap: 40px;
     align-items: start;
+}
+
+.domain-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 18px;
+}
+
+.domain-span {
+    grid-column: 1 / -1;
+}
+
+.domain-request-sheet h2,
+.domain-request-sheet h3 {
+    margin: 0 0 8px;
+    font-size: 22px;
 }
 
 .domain-lead,
@@ -1926,27 +1967,62 @@ a.contact-method:hover strong {
 .domain-result--free { color: #075e54; }
 .domain-result--taken { color: #8a3b2a; }
 
-.whois-record {
-    margin-top: 8px;
-}
-
-.whois-record div {
+.whois-top {
     display: grid;
-    grid-template-columns: minmax(120px, 170px) 1fr;
-    gap: 8px 16px;
-    padding: 10px 0;
-    border-top: 1px solid var(--site-line);
+    grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1fr);
+    gap: 40px;
+    align-items: start;
 }
 
-.whois-record dt {
+.whois-sheet {
+    margin-top: 28px;
+}
+
+.whois-heading {
+    margin: 22px 0 10px;
+    font-size: 20px;
+}
+
+.whois-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid var(--site-line);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.whois-table th,
+.whois-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--site-line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.whois-table tr:last-child th,
+.whois-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.whois-table th {
+    width: 240px;
     color: var(--site-muted);
+    background: #f7fbf9;
     font-size: var(--type-label);
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-.whois-record dd {
-    margin: 0;
+.whois-table td {
     color: var(--site-ink);
-    overflow-wrap: anywhere;
+    font-weight: 600;
+    overflow-wrap: break-word;
+}
+
+.whois-table tr:nth-child(even) th,
+.whois-table tr:nth-child(even) td {
+    background: #fbfdfc;
 }
 
 .domain-check .button,
@@ -2332,6 +2408,46 @@ a.contact-method:hover strong {
     outline-offset: 3px;
 }
 
+@media (max-width: 1080px) {
+    .desktop-nav,
+    .portal-link,
+    .nav-cta {
+        display: none;
+    }
+
+    .menu-toggle {
+        display: grid;
+    }
+
+    .mobile-nav .nav-drop-panel {
+        display: none;
+        position: static;
+        min-width: 0;
+        margin: 0 0 4px 12px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .mobile-nav .nav-drop:hover .nav-drop-panel,
+    .mobile-nav .nav-drop:focus-within .nav-drop-panel {
+        display: none;
+    }
+
+    .mobile-nav .nav-drop[open] .nav-drop-panel {
+        display: grid;
+    }
+
+    .mobile-nav .nav-drop summary {
+        padding: 13px 4px;
+        color: var(--site-ink-soft);
+        border-bottom: 1px solid var(--site-line);
+        font-size: 14px;
+    }
+}
+
 @media (max-width: 980px) {
     .desktop-nav {
         gap: 16px;
@@ -2472,8 +2588,15 @@ a.contact-method:hover strong {
     }
 
     .domain-layout,
+    .whois-top,
+    .domain-fields,
     .service-grid {
         grid-template-columns: 1fr;
+    }
+
+    .whois-table th {
+        width: 42%;
+        white-space: normal;
     }
 
     .service-card {

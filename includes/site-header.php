@@ -26,13 +26,14 @@ $guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site
         </a>
 
         <nav class="desktop-nav" aria-label="Main navigation">
-            <details class="nav-drop">
-                <summary>Domains</summary>
+            <?php $domainHere = in_array(basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : ''), array('domain.php', 'whois.php'), true); ?>
+            <div class="nav-drop">
+                <a class="nav-drop-label" href="domain.php"<?= $domainHere ? ' aria-current="page"' : '' ?>>Domains</a>
                 <div class="nav-drop-panel">
                     <a href="domain.php"<?= basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '') === 'domain.php' ? ' aria-current="page"' : '' ?>>Domain registration</a>
                     <a href="whois.php"<?= basename(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '') === 'whois.php' ? ' aria-current="page"' : '' ?>>WHOIS check up</a>
                 </div>
-            </details>
+            </div>
             <a href="<?= $navBase ?>#services">Services</a>
             <a href="<?= $navBase ?>#about">Why us</a>
             <a href="<?= $navBase ?>#process">How we work</a>

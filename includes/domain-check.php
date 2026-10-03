@@ -202,13 +202,26 @@ function domain_whois_cell($value)
 {
     $value = html_entity_decode(strip_tags((string) $value), ENT_QUOTES, 'UTF-8');
     $value = trim(preg_replace('/\s+/', ' ', $value));
-    if ($value === '' || strlen($value) > 180) {
+    if ($value === '' || strlen($value) > 240) {
         return '';
     }
-    if (preg_match('#https?://|www\.|register\.com\.np|rdap\.|verisign#i', $value)) {
+    if (preg_match('#https?://|www\.#i', $value)) {
         return '';
     }
     return $value;
+}
+
+function domain_whois_vcard($entity, $field)
+{
+    if (!is_array($entity) || empty($entity['vcardArray'][1]) || !is_array($entity['vcardArray'][1])) {
+        return '';
+    }
+    foreach ($entity['vcardArray'][1] as $card) {
+        if (is_array($card) && isset($card[0], $card[3]) && $card[0] === $field && is_string($card[3])) {
+            return domain_whois_cell($card[3]);
+        }
+    }
+    return '';
 }
 
 function domain_whois_date($value)
@@ -260,13 +273,13 @@ function domain_whois_np($label, $tld)
     }
     $allowed = array(
         'domain name' => 'Domain name',
-        'first registered date' => 'Registered',
-        'last updated date' => 'Last updated',
+        'first registered date' => 'First registered date',
+        'last updated date' => 'Last updated date',
         'primary name server' => 'Primary name server',
         'secondary name server' => 'Secondary name server',
         'registrant email' => 'Registrant email',
         'contact person' => 'Contact person',
-        'company name' => 'Company',
+        'company name' => 'Company name',
         'administrative email' => 'Administrative email',
         'telephone' => 'Telephone',
         'address' => 'Address'
@@ -274,7 +287,7 @@ function domain_whois_np($label, $tld)
     $rows = array();
     foreach ($matches as $match) {
         $key = strtolower(trim(html_entity_decode(strip_tags($match[1]), ENT_QUOTES, 'UTF-8'), " :\t"));
-        if (!isset($allowed[$key])) {
+        if ($key === '') {
             continue;
         }
         $value = domain_whois_cell($match[2]);
@@ -284,7 +297,8 @@ function domain_whois_np($label, $tld)
         if ($value === '') {
             continue;
         }
-        $rows[] = array('label' => $allowed[$key], 'value' => $value);
+        $label = isset($allowed[$key]) ? $allowed[$key] : ucwords($key);
+        $rows[] = array('group' => 'domain', 'label' => $label, 'value' => $value);
     }
     if (!$rows) {
         return array('status' => 'unknown', 'domain' => $label . '.' . $tld, 'tld' => $tld, 'rows' => array());
@@ -306,25 +320,8 @@ function domain_whois_com($domain)
     if ($response['code'] !== 200 || !is_array($data)) {
         return array('status' => 'unknown', 'domain' => $domain, 'tld' => 'com', 'rows' => array());
     }
-    $rows = array(array('label' => 'Domain name', 'value' => $domain));
-    $registrar = '';
-    if (!empty($data['entities']) && is_array($data['entities'])) {
-        foreach ($data['entities'] as $entity) {
-            $roles = isset($entity['roles']) && is_array($entity['roles']) ? $entity['roles'] : array();
-            if (!in_array('registrar', $roles, true) || empty($entity['vcardArray'][1]) || !is_array($entity['vcardArray'][1])) {
-                continue;
-            }
-            foreach ($entity['vcardArray'][1] as $card) {
-                if (is_array($card) && isset($card[0], $card[3]) && $card[0] === 'fn' && is_string($card[3])) {
-                    $registrar = domain_whois_cell($card[3]);
-                }
-            }
-        }
-    }
-    if ($registrar !== '') {
-        $rows[] = array('label' => 'Registrar', 'value' => $registrar);
-    }
-    $dates = array('registration' => 'Registered', 'expiration' => 'Expires', 'last changed' => 'Last updated');
+    $rows = array(array('group' => 'domain', 'label' => 'Domain name', 'value' => $domain));
+    $dates = array('registration' => 'Registered on', 'expiration' => 'Expires on', 'last changed' => 'Updated on');
     if (!empty($data['events']) && is_array($data['events'])) {
         foreach ($data['events'] as $event) {
             $action = isset($event['eventAction']) ? (string) $event['eventAction'] : '';
@@ -333,9 +330,21 @@ function domain_whois_com($domain)
             }
             $shown = domain_whois_date(isset($event['eventDate']) ? $event['eventDate'] : '');
             if ($shown !== '') {
-                $rows[] = array('label' => $dates[$action], 'value' => $shown);
+                $rows[] = array('group' => 'domain', 'label' => $dates[$action], 'value' => $shown);
             }
         }
+    }
+    $statuses = array();
+    if (!empty($data['status']) && is_array($data['status'])) {
+        foreach ($data['status'] as $status) {
+            $clean = domain_whois_cell(str_replace('_', ' ', (string) $status));
+            if ($clean !== '') {
+                $statuses[] = $clean;
+            }
+        }
+    }
+    if ($statuses) {
+        $rows[] = array('group' => 'domain', 'label' => 'Status', 'value' => implode("\n", $statuses));
     }
     $servers = array();
     if (!empty($data['nameservers']) && is_array($data['nameservers'])) {
@@ -347,7 +356,47 @@ function domain_whois_com($domain)
         }
     }
     if ($servers) {
-        $rows[] = array('label' => 'Name servers', 'value' => implode(', ', $servers));
+        $rows[] = array('group' => 'domain', 'label' => 'Name servers', 'value' => implode("\n", $servers));
+    }
+    if (!empty($data['entities']) && is_array($data['entities'])) {
+        foreach ($data['entities'] as $entity) {
+            $roles = isset($entity['roles']) && is_array($entity['roles']) ? $entity['roles'] : array();
+            if (!in_array('registrar', $roles, true)) {
+                continue;
+            }
+            $registrar = domain_whois_vcard($entity, 'fn');
+            if ($registrar !== '') {
+                $rows[] = array('group' => 'registrar', 'label' => 'Registrar', 'value' => $registrar);
+            }
+            if (!empty($entity['publicIds']) && is_array($entity['publicIds'])) {
+                foreach ($entity['publicIds'] as $publicId) {
+                    $kind = isset($publicId['type']) ? (string) $publicId['type'] : '';
+                    $identifier = domain_whois_cell(isset($publicId['identifier']) ? $publicId['identifier'] : '');
+                    if ($identifier !== '' && stripos($kind, 'IANA') !== false) {
+                        $rows[] = array('group' => 'registrar', 'label' => 'IANA ID', 'value' => $identifier);
+                    }
+                }
+            }
+            $email = domain_whois_vcard($entity, 'email');
+            if ($email !== '') {
+                $rows[] = array('group' => 'registrar', 'label' => 'Email', 'value' => $email);
+            }
+            $nested = isset($entity['entities']) && is_array($entity['entities']) ? $entity['entities'] : array();
+            foreach ($nested as $child) {
+                $childRoles = isset($child['roles']) && is_array($child['roles']) ? $child['roles'] : array();
+                if (!in_array('abuse', $childRoles, true)) {
+                    continue;
+                }
+                $abuseEmail = domain_whois_vcard($child, 'email');
+                $abusePhone = domain_whois_vcard($child, 'tel');
+                if ($abuseEmail !== '') {
+                    $rows[] = array('group' => 'registrar', 'label' => 'Abuse email', 'value' => $abuseEmail);
+                }
+                if ($abusePhone !== '') {
+                    $rows[] = array('group' => 'registrar', 'label' => 'Abuse phone', 'value' => $abusePhone);
+                }
+            }
+        }
     }
     return array('status' => 'registered', 'domain' => $domain, 'tld' => 'com', 'rows' => $rows);
 }

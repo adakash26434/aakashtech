@@ -194,7 +194,7 @@ try {
         <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl"></div>
     </div>
 
-    <div class="relative z-10 w-full max-w-md mx-4">
+    <div class="relative z-10 w-full <?= $showRegister ? 'max-w-xl' : 'max-w-md' ?> mx-auto px-4">
         <div class="text-center mb-8">
             <a href="../index.php" class="inline-flex items-center justify-center gap-3 mb-6">
                 <?php if ($identity['logo'] !== ''): ?>
@@ -256,7 +256,7 @@ try {
                     <label class="block text-slate-300 text-sm font-medium mb-2">Email *</label>
                     <input type="email" name="email" required autocomplete="email" class="form-input" placeholder="you@example.com" value="<?= e($registerValues['email']) ?>">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Mobile *</label>
                         <input type="tel" name="phone" required inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($registerValues['phone']) ?>">
@@ -266,7 +266,7 @@ try {
                         <input type="text" name="company" class="form-input" placeholder="Company Ltd" value="<?= e($registerValues['company']) ?>">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-300 text-sm font-medium mb-2">Password *</label>
                         <input type="password" name="password" required autocomplete="new-password" class="form-input" placeholder="Min 8 characters">

@@ -255,7 +255,8 @@ if (!isset($accountPhone)) {
     <?php include __DIR__ . '/includes/site-header.php'; ?>
     <main id="main-content">
         <section class="section detail-section">
-            <div class="wrap domain-layout">
+            <div class="wrap domain-page">
+            <div class="domain-layout">
                 <div>
                     <p class="section-kicker">Domain registration</p>
                     <h1 class="font-heading">Check the name, then request it.</h1>
@@ -290,42 +291,68 @@ if (!isset($accountPhone)) {
                     <?php if ($offer && $offer['status'] === 'taken'): ?>
                         <p class="domain-result domain-result--taken"><?= site_escape($offer['domain']) ?> is already registered. Choose another name.</p>
                     <?php elseif ($offer && $offer['status'] === 'available'): ?>
-                        <p class="domain-result domain-result--free"><?= site_escape($offer['domain']) ?> is available. Send the request below.<?php if ($yearBill['label'] !== ''): ?> Yearly bill <?= site_escape($yearBill['label']) ?>.<?php endif; ?></p>
-                        <form method="POST" enctype="multipart/form-data" class="domain-request">
-                            <input type="hidden" name="csrf_token" value="<?= site_escape(csrf_token()) ?>">
-                            <label for="holder_name"><?= domain_is_np($offer['tld']) ? 'Person or organization on the document' : 'Person or organization' ?></label>
-                            <input id="holder_name" name="holder_name" type="text" maxlength="200" required value="<?= site_escape($holderName) ?>">
-                            <div class="domain-tlds">
-                                <label><input type="radio" name="holder_kind" value="individual" <?= $holderKind !== 'organization' ? 'checked' : '' ?>> Individual</label>
-                                <label><input type="radio" name="holder_kind" value="organization" <?= $holderKind === 'organization' ? 'checked' : '' ?>> Organization</label>
-                            </div>
-                            <label for="holder_address">Address for the registration</label>
-                            <input id="holder_address" name="holder_address" type="text" maxlength="200" required value="<?= site_escape($holderAddress) ?>">
-                            <?php if (domain_is_np($offer['tld'])): ?>
-                                <label for="document">Required document</label>
-                                <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a JPG or PNG.</p>
-                                <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
-                            <?php endif; ?>
-                            <?php if (!$loggedIn): ?>
-                                <h2 class="font-heading">Create the client account</h2>
-                                <label for="account_name">Your name</label>
-                                <input id="account_name" name="account_name" type="text" maxlength="80" required autocomplete="name" value="<?= site_escape($accountName) ?>">
-                                <label for="email">Email</label>
-                                <input id="email" name="email" type="email" maxlength="254" required autocomplete="email" value="<?= site_escape($accountEmail) ?>">
-                                <label for="phone">Mobile</label>
-                                <input id="phone" name="phone" type="tel" maxlength="16" required inputmode="tel" autocomplete="tel" placeholder="10-digit mobile" value="<?= site_escape($accountPhone) ?>">
-                                <label for="password">Password</label>
-                                <input id="password" name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="Min 8 characters">
-                            <?php else: ?>
-                                <p class="domain-note">This request is saved to the account you are signed in with.</p>
-                            <?php endif; ?>
-                            <p class="domain-note">Sending the request does not take the payment. If the wallet does not cover this year, the next page asks for that amount. After it is confirmed, pay the bill under My domains. The team registers the name after that payment.</p>
-                            <label for="request_check">What is <?= site_escape(auth_math_prompt('domain-request')) ?>?</label>
-                            <input id="request_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
-                            <button class="button button--primary" type="submit" name="request_domain" value="1">Send registration request</button>
-                        </form>
+                        <p class="domain-result domain-result--free"><?= site_escape($offer['domain']) ?> is available.<?php if ($yearBill['label'] !== ''): ?> Yearly bill <?= site_escape($yearBill['label']) ?>.<?php endif; ?> The request form is below.</p>
                     <?php endif; ?>
                 </div>
+            </div>
+            <?php if ($offer && $offer['status'] === 'available'): ?>
+                <div class="domain-panel domain-request-sheet">
+                    <h2 class="font-heading">Send the request</h2>
+                    <form method="POST" enctype="multipart/form-data" class="domain-request">
+                        <input type="hidden" name="csrf_token" value="<?= site_escape(csrf_token()) ?>">
+                        <div class="domain-fields">
+                            <div>
+                                <label for="holder_name"><?= domain_is_np($offer['tld']) ? 'Person or organization on the document' : 'Person or organization' ?></label>
+                                <input id="holder_name" name="holder_name" type="text" maxlength="200" required value="<?= site_escape($holderName) ?>">
+                            </div>
+                            <div>
+                                <label for="holder_address">Address for the registration</label>
+                                <input id="holder_address" name="holder_address" type="text" maxlength="200" required value="<?= site_escape($holderAddress) ?>">
+                            </div>
+                            <div class="domain-span">
+                                <div class="domain-tlds">
+                                    <label><input type="radio" name="holder_kind" value="individual" <?= $holderKind !== 'organization' ? 'checked' : '' ?>> Individual</label>
+                                    <label><input type="radio" name="holder_kind" value="organization" <?= $holderKind === 'organization' ? 'checked' : '' ?>> Organization</label>
+                                </div>
+                            </div>
+                            <?php if (domain_is_np($offer['tld'])): ?>
+                                <div class="domain-span">
+                                    <label for="document">Required document</label>
+                                    <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a JPG or PNG.</p>
+                                    <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!$loggedIn): ?>
+                                <div class="domain-span"><h3 class="font-heading">Create the client account</h3></div>
+                                <div>
+                                    <label for="account_name">Your name</label>
+                                    <input id="account_name" name="account_name" type="text" maxlength="80" required autocomplete="name" value="<?= site_escape($accountName) ?>">
+                                </div>
+                                <div>
+                                    <label for="email">Email</label>
+                                    <input id="email" name="email" type="email" maxlength="254" required autocomplete="email" value="<?= site_escape($accountEmail) ?>">
+                                </div>
+                                <div>
+                                    <label for="phone">Mobile</label>
+                                    <input id="phone" name="phone" type="tel" maxlength="16" required inputmode="tel" autocomplete="tel" placeholder="10-digit mobile" value="<?= site_escape($accountPhone) ?>">
+                                </div>
+                                <div>
+                                    <label for="password">Password</label>
+                                    <input id="password" name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="Min 8 characters">
+                                </div>
+                            <?php else: ?>
+                                <p class="domain-note domain-span">This request is saved to the account you are signed in with.</p>
+                            <?php endif; ?>
+                            <div>
+                                <label for="request_check">What is <?= site_escape(auth_math_prompt('domain-request')) ?>?</label>
+                                <input id="request_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
+                            </div>
+                        </div>
+                        <p class="domain-note">Sending the request does not take the payment. If the wallet does not cover this year, the next page asks for that amount. After it is confirmed, pay the bill under My domains.</p>
+                        <button class="button button--primary" type="submit" name="request_domain" value="1">Send registration request</button>
+                    </form>
+                </div>
+            <?php endif; ?>
             </div>
         </section>
     </main>
