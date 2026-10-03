@@ -633,7 +633,16 @@ function billing_ensure_indexes($conn)
 
 function billing_table_columns($conn, $table)
 {
-    $allowed = array('client_services' => true, 'sms_campaigns' => true, 'client_users' => true, 'domain_requests' => true);
+    $allowed = array(
+        'client_services' => true,
+        'sms_campaigns' => true,
+        'client_users' => true,
+        'domain_requests' => true,
+        'support_tickets' => true,
+        'client_kyc' => true,
+        'sms_credit_notes' => true,
+        'sms_number_lists' => true
+    );
     if (!isset($allowed[$table])) {
         throw new InvalidArgumentException('Unknown table.');
     }

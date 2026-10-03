@@ -162,10 +162,12 @@ $creditNotes = array();
 $walletRows = array();
 $bulkLeft = null;
 $clientTab = 'account';
+$loadProblem = '';
 if (isset($_GET['tab']) && in_array($_GET['tab'], array('account', 'wallet', 'sms', 'services'), true)) {
     $clientTab = (string) $_GET['tab'];
 }
 if ($client) {
+    try {
     $balance = billing_balance($conn, $id);
     $units = billing_unit_balances($conn, $id);
     $one = sms_admin_client_figures($conn, array($id));
@@ -173,10 +175,12 @@ if ($client) {
         $figures = $one[$id];
     }
     $svc = $conn->prepare('SELECT id, service_name, status, detail_label, price, next_renewal, order_brief, unit_kind, unit_quantity FROM client_services WHERE client_id = ? ORDER BY id DESC LIMIT 40');
+    if ($svc) {
     $svc->bind_param('i', $id);
     $svc->execute();
     $services = db_fetch_all($svc);
     $svc->close();
+    }
     $planResult = $conn->query('SELECT code, name, needs_detail, service_slug FROM service_plans WHERE is_active = 1 ORDER BY sort_order, id');
     if ($planResult) {
         while ($planRow = $planResult->fetch_assoc()) {
@@ -202,6 +206,10 @@ if ($client) {
         $walletRows = db_fetch_all($walletStmt);
         $walletStmt->close();
     }
+    } catch (Throwable $exception) {
+        error_log('Client account page could not be loaded.');
+        $loadProblem = 'This client could not be opened. Refresh the page.';
+    }
 }
 $planGroups = array(
     'voice' => 'Voice calls',
@@ -218,6 +226,9 @@ foreach ($servicePlans as $servicePlan) {
 
 $notice = flash('client_notice');
 $problem = flash('client_error');
+if ($problem === '' && $loadProblem !== '') {
+    $problem = $loadProblem;
+}
 $contactEmail = $client ? (string) $client['email'] : '';
 $contactPhone = $client ? (string) $client['phone'] : '';
 $passwordOne = '';
