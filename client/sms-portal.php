@@ -184,6 +184,12 @@ $recentStmt->execute();
 $recent = db_fetch_all($recentStmt);
 $recentStmt->close();
 
+$creditNoteStmt = $conn->prepare('SELECT credits, note, created_at FROM sms_credit_notes WHERE client_id = ? ORDER BY id DESC LIMIT 8');
+$creditNoteStmt->bind_param('i', $cid);
+$creditNoteStmt->execute();
+$creditNotes = db_fetch_all($creditNoteStmt);
+$creditNoteStmt->close();
+
 $schedChannel = 'sms';
 $schedStatus = 'scheduled';
 $schedStmt = $conn->prepare('SELECT id, campaign_name, recipients_count, scheduled_at FROM sms_campaigns WHERE client_id = ? AND channel = ? AND status = ? ORDER BY scheduled_at ASC');
@@ -229,7 +235,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
 <div class="mb-8 flex items-end justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">Send SMS</h1>
-        <p class="text-slate-500 text-sm">Credits you buy are sent from this page. The same account can also create an API token for OTP and alerts.</p>
+        <p class="text-slate-500 text-sm">Credits you buy are sent from this page. The same account can also create an API token for OTP and alerts. <a class="text-brand-400" href="manual.php#sms">नेपाली चरण</a></p>
     </div>
     <a href="shop.php?service=bulk-sms" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Buy SMS credit</a>
 </div>
@@ -259,6 +265,20 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
     </div>
 </div>
 
+<?php if ($creditNotes): ?>
+    <div class="dash-panel overflow-hidden mb-6">
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Credits added</h3></div>
+        <div class="divide-y divide-slate-800">
+            <?php foreach ($creditNotes as $creditNote): ?>
+                <div class="p-4 flex flex-wrap items-baseline justify-between gap-2">
+                    <p class="text-slate-300 text-sm"><?= e($creditNote['note']) ?></p>
+                    <p class="text-white text-sm"><?= number_format((int) $creditNote['credits']) ?> SMS · <?= e(sms_format_time($creditNote['created_at'])) ?></p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if (!$kycReady): ?>
     <div class="dash-panel mb-6">
         <div class="p-6">
@@ -272,6 +292,8 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
         <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">SMS credits stay on this account. Sending opens when the line is connected.</div>
     <?php elseif ((int) $balances['sms'] < 1): ?>
         <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">This account has no SMS credits. <a href="shop.php?service=bulk-sms" class="text-brand-300">Buy credit</a> before sending.</div>
+    <?php elseif ((int) $balances['sms'] < 100): ?>
+        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm"><?= number_format((int) $balances['sms']) ?> SMS credits left. <a href="shop.php?service=bulk-sms" class="text-brand-300">Buy more</a> before a larger send is refused.</div>
     <?php endif; ?>
     <div class="grid lg:grid-cols-5 gap-6 mb-6">
         <div class="dash-panel lg:col-span-3 min-w-0">
@@ -355,7 +377,7 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
                         </div>
                     </div>
                     <textarea name="numbers" x-model="numbers" required rows="6" class="form-input" placeholder="9800000001 or Name, 9800000001"><?= e($values['numbers']) ?></textarea>
-                    <p class="text-slate-500 text-xs mt-1">Up to 500 numbers. A name or a heading on the same line is skipped. Duplicates are sent once. Nepal Telecom and Ncell only.</p>
+                    <p class="text-slate-500 text-xs mt-1">Up to 500 numbers. Write <code class="text-brand-300">{name}</code> in the message and <code class="text-brand-300">Ram, 9800000001</code> on each line to use that person’s name. A line with only a number is sent once. Nepal Telecom and Ncell only.</p>
                 </div>
                 <div>
                     <label class="block text-slate-400 text-xs font-medium mb-1.5">Send later, optional, Nepal time</label>
@@ -507,19 +529,44 @@ function smsComposer(seed) {
             var seen = {};
             var count = 0;
             var bad = 0;
-            String(this.numbers || '').split(/[\s,;]+/).forEach(function (part) {
-                if (!part || !/\d/.test(part)) return;
-                var digits = smsNepalDigits(part);
-                if (!digits) {
-                    bad += 1;
-                    return;
-                }
-                if (!seen[digits]) {
-                    seen[digits] = 1;
+            var credits = 0;
+            var usesName = text.indexOf('{name}') !== -1;
+            var creditParts = function (body) {
+                var bodyChars = Array.from(body);
+                if (!bodyChars.length) return 0;
+                var bodyUnicode = /[^\n\r\x20-\x7E]/.test(body);
+                return bodyUnicode ? (bodyChars.length <= 70 ? 1 : Math.ceil(bodyChars.length / 67)) : (bodyChars.length <= 160 ? 1 : Math.ceil(bodyChars.length / 153));
+            };
+            String(this.numbers || '').split(/\r?\n/).forEach(function (line) {
+                var bits = String(line || '').trim().split(/[\s,;]+/);
+                var nums = [];
+                var words = [];
+                bits.forEach(function (part) {
+                    if (!part) return;
+                    if (!/\d/.test(part)) {
+                        words.push(part);
+                        return;
+                    }
+                    var digits = smsNepalDigits(part);
+                    if (!digits) {
+                        bad += 1;
+                        return;
+                    }
+                    if (!seen[digits]) {
+                        seen[digits] = 1;
+                        nums.push(digits);
+                    }
+                });
+                var person = words.join(' ');
+                nums.forEach(function () {
                     count += 1;
-                }
+                    var body = usesName ? text.split('{name}').join(person).replace(/\s+,/g, ',').replace(/ {2,}/g, ' ').trim() : text;
+                    credits += body ? creditParts(body) : parts;
+                });
             });
-            var credits = parts * count;
+            if (!usesName) {
+                credits = parts * count;
+            }
             var label = chars.length
                 ? chars.length + ' characters · ' + parts + ' credit' + (parts === 1 ? '' : 's') + ' per number'
                 : 'English up to 160 characters is 1 SMS. Nepali up to 70 characters is 1 SMS.';

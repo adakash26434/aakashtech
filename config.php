@@ -610,7 +610,7 @@ function auth_account_is_active($role) {
             return $row && (int) $row['is_active'] === 1;
         }
         $id = (int) ($_SESSION['client_id'] ?? 0);
-        $stmt = $conn->prepare('SELECT status FROM client_users WHERE id = ?');
+        $stmt = $conn->prepare('SELECT status, name, email FROM client_users WHERE id = ?');
         if (!$stmt) {
             return false;
         }
@@ -618,7 +618,12 @@ function auth_account_is_active($role) {
         $stmt->execute();
         $row = db_fetch_assoc($stmt);
         $stmt->close();
-        return $row && $row['status'] === 'active';
+        if ($row && $row['status'] === 'active') {
+            $_SESSION['client_name'] = (string) $row['name'];
+            $_SESSION['client_email'] = (string) $row['email'];
+            return true;
+        }
+        return false;
     } catch (Throwable $exception) {
         error_log('Account status could not be read.');
         return false;

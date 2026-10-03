@@ -120,7 +120,7 @@ $voiceFree = max(0, (int) $balances['voice_calls'] - $voiceHeld);
 <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">Messages</h1>
-        <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting jobs stay in view. Older messages are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> SMS is sent from the <a href="sms-portal.php" class="text-brand-400">SMS dashboard</a>. A voice job is placed by the team.</p>
+        <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting jobs stay in view. Older messages are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> SMS is sent from the <a href="sms-portal.php" class="text-brand-400">SMS dashboard</a>. A voice job is placed by the team. <a class="text-brand-400" href="manual.php#voice">नेपाली चरण</a></p>
     </div>
     <div class="flex gap-6 text-sm">
         <span class="text-slate-400">SMS credits: <strong class="text-white"><?= number_format($balances['sms']) ?></strong></span>

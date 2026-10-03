@@ -209,7 +209,7 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Settings</h1>
-    <p class="text-slate-500 text-sm">Logo, public contact details, and the inbox that receives new requests</p>
+    <p class="text-slate-500 text-sm">Logo, public contact details, and the inbox that receives new requests. <a class="text-brand-400" href="manual.php#settings">नेपाली चरण</a></p>
 </div>
 
 <div class="dash-panel mb-6">
@@ -225,7 +225,7 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="mail_from">Sending address</label>
             <input id="mail_from" type="email" name="mail_from" maxlength="120" class="form-input" value="<?= e($mailFrom) ?>" placeholder="noreply@aakashtechnologies.com.np">
         </div>
-        <p class="text-slate-500 text-xs">Queries and notices arrive at the notification email. Automatic mail is sent from the sending address, and a reply goes to the public email below. On cPanel, noreply@aakashtechnologies.com.np and info@aakashtechnologies.com.np should both be mailboxes on this domain. Leave the notification email blank to stop the emails. The requests still appear in the admin panel.</p>
+        <p class="text-slate-500 text-xs">Queries and notices arrive at the notification email. Client mail is sent from the sending address. The default is noreply@aakashtechnologies.com.np. A reply goes to the public email below. On cPanel, that sending address should be a mailbox on this domain. Leave the notification email blank to stop admin notices. Client mail still goes out, and the requests still appear in the admin panel.</p>
         <?php if ($notifyTestAt !== ''): ?>
             <p class="text-slate-400 text-sm">Last test <?= e($notifyTestAt) ?>: <?= $notifyTestResult === 'accepted' ? 'the server accepted it. Confirm it is in the inbox.' : 'the server refused it.' ?><?= $notifyTestError !== '' ? ' ' . e($notifyTestError) : '' ?></p>
         <?php endif; ?>
@@ -237,6 +237,20 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
             <button type="submit" name="send_notify_test" value="1" class="px-6 py-2.5 border border-slate-600 text-white text-sm font-medium rounded-xl transition">Send a test email</button>
         </div>
     </form>
+</div>
+
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Mail the client receives</h3></div>
+    <div class="p-5 space-y-4">
+        <p class="text-slate-400 text-sm">These go out on their own as <?= e(site_sender_name()) ?> &lt;<?= e($mailFrom) ?>&gt;. The password is never written in the email.</p>
+        <?php foreach (billing_mail_catalog() as $draft): ?>
+            <div class="rounded-xl border border-slate-800 p-4">
+                <p class="text-white text-sm font-medium"><?= e($draft['when']) ?></p>
+                <p class="text-brand-300 text-xs mt-2">Subject: <?= e($draft['subject']) ?></p>
+                <p class="text-slate-400 text-xs mt-2 whitespace-pre-wrap"><?= e(implode("\n", $draft['lines'])) ?></p>
+            </div>
+        <?php endforeach; ?>
+    </div>
 </div>
 
 <div class="dash-panel mb-6">

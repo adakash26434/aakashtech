@@ -21,34 +21,18 @@ if (!$client) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     verify_csrf();
-    $name = substr(trim((string) ($_POST['name'] ?? '')), 0, 80);
-    $phoneInput = trim((string) ($_POST['phone'] ?? ''));
-    $phone = $phoneInput === '' ? '' : auth_mobile_number($phoneInput);
-    $company = substr(trim((string) ($_POST['company'] ?? '')), 0, 120);
-    $address = substr(trim((string) ($_POST['address'] ?? '')), 0, 300);
-    if ($name === '') {
-        $err = 'Name is required.';
-    } elseif ($phoneInput !== '' && $phone === '') {
-        $err = 'Enter a 10-digit mobile number.';
+    $name = isset($_POST['name']) ? $_POST['name'] : '';
+    $company = isset($_POST['company']) ? $_POST['company'] : '';
+    $address = isset($_POST['address']) ? $_POST['address'] : '';
+    $saved = billing_client_save_profile($conn, $cid, $name, $company, $address);
+    if ($saved !== '') {
+        $err = $saved;
     } else {
-        try {
-            $stmt = $conn->prepare("UPDATE client_users SET name = ?, phone = ?, company = ?, address = ? WHERE id = ?");
-            if (!$stmt) {
-                throw new RuntimeException('Profile update failed.');
-            }
-            $stmt->bind_param("ssssi", $name, $phone, $company, $address, $cid);
-            $stmt->execute();
-            $stmt->close();
-            $_SESSION['client_name'] = $name;
-            $msg = 'Profile updated successfully!';
-            $client['name'] = $name;
-            $client['phone'] = $phone;
-            $client['company'] = $company;
-            $client['address'] = $address;
-        } catch (Throwable $exception) {
-            error_log('Client profile could not be saved.');
-            $err = 'Failed to update profile.';
-        }
+        $client['name'] = billing_plain_line($name, 80);
+        $client['company'] = billing_plain_line($company, 120);
+        $client['address'] = billing_plain_block($address, 300);
+        $_SESSION['client_name'] = $client['name'];
+        $msg = 'Profile updated successfully!';
     }
 }
 
@@ -92,7 +76,7 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">My Profile</h1>
-    <p class="text-slate-500 text-sm">Name, mobile, password, and the authenticator code for sign-in.</p>
+    <p class="text-slate-500 text-sm">Name, company, and address can be updated here. The sign-in email and mobile stay as they were registered.</p>
 </div>
 
 <?php if ($msg): ?>
@@ -122,13 +106,14 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
                 <input type="text" name="name" required class="form-input" value="<?= e($client['name']) ?>">
             </div>
             <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Email (cannot change)</label>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">Email</label>
                 <input type="email" class="form-input opacity-50 cursor-not-allowed" value="<?= e($client['email']) ?>" disabled>
             </div>
             <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Mobile (10 digits)</label>
-                <input type="tel" name="phone" inputmode="tel" maxlength="16" autocomplete="tel" class="form-input" placeholder="10-digit mobile" value="<?= e($client['phone'] ?? '') ?>">
+                <label class="block text-slate-400 text-xs font-medium mb-1.5">Mobile</label>
+                <input type="tel" class="form-input opacity-50 cursor-not-allowed" value="<?= e($client['phone'] ?? '') ?>" disabled>
             </div>
+            <p class="text-slate-500 text-xs">The sign-in email and mobile are required and stay fixed. Ask the team through Support if either one must change.</p>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Company</label>
                 <input type="text" name="company" class="form-input" value="<?= e($client['company'] ?? '') ?>">

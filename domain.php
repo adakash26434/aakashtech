@@ -126,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
                 if ($clientId < 1) {
                     $error = 'The account could not be created.';
                 } else {
+                    billing_mail_client_event($conn, $clientId, 'account');
                     $freshClient = true;
                 }
             }
@@ -183,6 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
                 'Payment: still waiting',
                 'Client: ' . billing_notify_client_label($conn, $clientId),
                 'Open Admin → Domains.'
+            ));
+            billing_mail_client_event($conn, $clientId, 'domain-request', array(
+                'domain' => $offer['domain'],
+                'amount' => $price
             ));
             auth_fresh_session();
             $covered = billing_balance($conn, $clientId);

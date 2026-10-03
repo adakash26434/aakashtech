@@ -199,7 +199,7 @@ function hosting_panel_for_client($conn, $clientId, $serviceId)
 function hosting_panel_save($conn, $serviceId, $user, $pass, $host)
 {
     $serviceId = (int) $serviceId;
-    $stmt = $conn->prepare('SELECT id, plan_code, panel_pass FROM client_services WHERE id = ?');
+    $stmt = $conn->prepare('SELECT id, client_id, plan_code, panel_pass FROM client_services WHERE id = ?');
     $stmt->bind_param('i', $serviceId);
     $stmt->execute();
     $row = db_fetch_assoc($stmt);
@@ -230,6 +230,7 @@ function hosting_panel_save($conn, $serviceId, $user, $pass, $host)
     $update->bind_param('sssi', $user, $pass, $host, $serviceId);
     $update->execute();
     $update->close();
+    billing_mail_client_event($conn, (int) $row['client_id'], 'hosting-ready', array('user' => $user));
     return '';
 }
 

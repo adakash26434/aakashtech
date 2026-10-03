@@ -13,6 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ? 'Top-up added to the client wallet.'
             : '';
         $err = $msg === '' ? 'That top-up could not be confirmed.' : '';
+    } elseif (isset($_POST['manual_wallet'])) {
+        $walletError = billing_admin_wallet_credit(
+            $conn,
+            isset($_POST['wallet_client']) ? (int) $_POST['wallet_client'] : 0,
+            isset($_POST['wallet_amount']) ? (int) $_POST['wallet_amount'] : 0,
+            isset($_POST['wallet_note']) ? $_POST['wallet_note'] : ''
+        );
+        $msg = $walletError === '' ? 'Payment added to the client wallet. They can spend it on services.' : '';
+        $err = $walletError;
     } elseif (isset($_POST['reject_topup'])) {
         $msg = billing_reject_topup($conn, (int) $_POST['entry_id']) ? 'Top-up rejected.' : '';
         $err = $msg === '' ? 'That top-up could not be rejected.' : '';
@@ -43,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mailError = mail_login_save(
             $conn,
             isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
-            isset($_POST['mail_host']) ? $_POST['mail_host'] : ''
+            isset($_POST['mail_host']) ? $_POST['mail_host'] : '',
+            isset($_POST['mail_domain']) ? $_POST['mail_domain'] : '',
+            isset($_POST['mail_boxes']) ? $_POST['mail_boxes'] : ''
         );
         $msg = $mailError === '' ? 'Email login is on. The client opens it from My Services.' : '';
         $err = $mailError;
@@ -56,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $siteError = website_save(
             $conn,
             isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
-            isset($_POST['site_url']) ? $_POST['site_url'] : ''
+            isset($_POST['site_url']) ? $_POST['site_url'] : '',
+            isset($_POST['site_note']) ? $_POST['site_note'] : ''
         );
         $msg = $siteError === '' ? 'Website link saved. The client can open it from My Services.' : '';
         $err = $siteError;
@@ -70,7 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn,
             isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0,
             isset($_POST['visit_date']) ? $_POST['visit_date'] : '',
-            isset($_POST['visit_done'])
+            isset($_POST['visit_done']),
+            isset($_POST['visit_place']) ? $_POST['visit_place'] : ''
         );
         $msg = $visitError === '' ? 'The visit date is saved. The client sees it on My Services.' : '';
         $err = $visitError;
@@ -99,6 +112,8 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 $pending = $conn->query("SELECT w.*, c.name, c.email FROM wallet_entries w JOIN client_users c ON c.id = w.client_id WHERE w.kind = 'topup' AND w.status = 'pending' ORDER BY w.id ASC");
+$walletClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
+$officePayments = $conn->query("SELECT w.amount, w.reference_note, w.created_at, c.name, c.email FROM wallet_entries w JOIN client_users c ON c.id = w.client_id WHERE w.kind = 'topup' AND w.method = 'office' AND w.status = 'completed' ORDER BY w.id DESC LIMIT 20");
 $plans = billing_load_plans($conn);
 $smsSlabs = billing_load_slabs($conn, 'bulk-sms');
 $voiceSlabs = billing_load_slabs($conn, 'bulk-voice');
@@ -112,7 +127,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Billing</h1>
-    <p class="text-slate-500 text-sm">Confirm incoming wallet funds. Renewals after that run without a staff action.</p>
+    <p class="text-slate-500 text-sm">Confirm incoming wallet funds. Renewals after that run without a staff action. <a class="text-brand-400" href="manual.php#billing">नेपाली चरण</a></p>
 </div>
 
 <?php if ($msg !== ''): ?>
@@ -161,6 +176,53 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
             </tbody>
         </table>
     </div>
+</section>
+
+<section class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add a payment yourself</h3></div>
+    <form method="POST" class="p-5 grid md:grid-cols-4 gap-3 items-end">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="wallet_client">Client</label>
+            <select id="wallet_client" name="wallet_client" required class="form-input">
+                <option value="">Choose</option>
+                <?php if ($walletClients): ?>
+                    <?php while ($walletClient = $walletClients->fetch_assoc()): ?>
+                        <option value="<?= (int) $walletClient['id'] ?>"><?= e($walletClient['name']) ?> · <?= e($walletClient['email']) ?></option>
+                    <?php endwhile; ?>
+                <?php endif; ?>
+            </select>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="wallet_amount">Amount (NPR)</label>
+            <input id="wallet_amount" name="wallet_amount" type="number" min="1" max="1000000" required class="form-input" placeholder="5000">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="wallet_note">Where it was received</label>
+            <input id="wallet_note" name="wallet_note" type="text" maxlength="160" required class="form-input" placeholder="Cash at the office">
+        </div>
+        <button type="submit" name="manual_wallet" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Add to wallet</button>
+    </form>
+    <p class="px-5 pb-4 text-slate-500 text-xs">Use this when the client paid in cash or outside eSewa, Khalti, and the bank form. The amount is ready to spend immediately.</p>
+</section>
+
+<section class="dash-panel overflow-hidden mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Payments you added</h3></div>
+    <?php if ($officePayments && $officePayments->num_rows > 0): ?>
+        <div class="divide-y divide-slate-800">
+            <?php while ($officeRow = $officePayments->fetch_assoc()): ?>
+                <div class="p-4 flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                        <p class="text-white text-sm"><?= e($officeRow['name']) ?> <span class="text-slate-500"><?= e($officeRow['email']) ?></span></p>
+                        <p class="text-slate-400 text-xs mt-1"><?= e($officeRow['reference_note']) ?></p>
+                    </div>
+                    <p class="text-white text-sm"><?= e(billing_money_label($officeRow['amount'])) ?> · <?= e(date('M j, Y', strtotime($officeRow['created_at']))) ?></p>
+                </div>
+            <?php endwhile; ?>
+        </div>
+    <?php else: ?>
+        <p class="p-6 text-slate-500 text-sm">No office payment has been added yet.</p>
+    <?php endif; ?>
 </section>
 
 <section class="dash-panel mb-6">
@@ -272,12 +334,19 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
             <?php
             $mailDomain = mail_login_domain($row);
             $mailHost = mail_login_host($row);
+            $mailBoxes = mail_login_boxes($row);
+            $mailLocals = array();
+            foreach ($mailBoxes as $mailBox) {
+                $mailLocals[] = strstr($mailBox, '@', true);
+            }
             ?>
             <form method="POST" class="rounded-xl border border-slate-800 p-4 space-y-2 max-w-lg">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="service_id" value="<?= (int) $row['id'] ?>">
                 <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
-                <p class="text-slate-500 text-xs"><?php if ($mailDomain !== ''): ?>Client sees <?= e($mailDomain) ?>. Inbox opens on <?= e($mailHost !== '' ? $mailHost : 'mail.' . $mailDomain) ?>.<?php else: ?>No domain on this order yet.<?php endif; ?> <?= (string) $row['panel_user'] === 'open' ? 'Login is on.' : 'The button stays hidden until you show it.' ?></p>
+                <p class="text-slate-500 text-xs">Up to <?= (int) mail_box_limit((string) $row['plan_code']) ?> mailbox<?= mail_box_limit((string) $row['plan_code']) === 1 ? '' : 'es' ?>. <?php if ($mailDomain !== ''): ?>Inbox opens on <?= e($mailHost !== '' ? $mailHost : 'mail.' . $mailDomain) ?>.<?php endif; ?> <?= (string) $row['panel_user'] === 'open' ? 'Login is on.' : 'The button stays hidden until you show it.' ?> The password is sent to the client and is not stored here.</p>
+                <input type="text" name="mail_domain" value="<?= e($mailDomain) ?>" maxlength="253" class="form-input" placeholder="shop.com.np" autocomplete="off">
+                <input type="text" name="mail_boxes" value="<?= e(implode(', ', $mailLocals)) ?>" maxlength="300" class="form-input" placeholder="info, sales" autocomplete="off">
                 <input type="text" name="mail_host" value="<?= e($row['panel_host']) ?>" maxlength="253" class="form-input" placeholder="Blank uses mail.the-client-domain" autocomplete="off">
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_mail" value="1" class="text-brand-400 text-xs">Show email login</button>
@@ -304,6 +373,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
                 <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
                 <p class="text-slate-500 text-xs"><?= website_ready($row) ? 'The client can open this website.' : 'The button stays hidden until an address is saved.' ?></p>
                 <input type="text" name="site_url" value="<?= e($row['panel_host']) ?>" maxlength="253" class="form-input" placeholder="https://their-domain.com.np" autocomplete="off">
+                <input type="text" name="site_note" value="<?= e(delivery_brief_value($row, 'Note')) ?>" maxlength="180" class="form-input" placeholder="What is live, optional">
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_website" value="1" class="text-brand-400 text-xs">Save website link</button>
                     <?php if ((string) $row['panel_user'] === 'open'): ?>
@@ -330,6 +400,7 @@ $renewals = $conn->query('SELECT * FROM renewal_events ORDER BY id DESC LIMIT 12
                 <p class="text-white text-sm font-medium"><?= e($row['name']) ?> · <?= e($row['service_name']) ?></p>
                 <p class="text-slate-500 text-xs"><?php if ((string) $row['panel_user'] === 'done'): ?>Marked complete.<?php elseif ((string) $row['panel_user'] === 'confirmed' && $visitDate !== ''): ?>The client sees <?= e(date('M j, Y', strtotime($visitDate))) ?>.<?php else: ?>The client still sees this as booked.<?php endif; ?></p>
                 <input type="date" name="visit_date" value="<?= e($visitDate) ?>" class="form-input">
+                <input type="text" name="visit_place" value="<?= e(delivery_brief_value($row, 'Place')) ?>" maxlength="180" class="form-input" placeholder="Place, such as the client office">
                 <label class="flex items-center gap-2 text-slate-400 text-xs"><input type="checkbox" name="visit_done" value="1" <?= (string) $row['panel_user'] === 'done' ? 'checked' : '' ?>> Visit is complete</label>
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_training" value="1" class="text-brand-400 text-xs">Save visit</button>

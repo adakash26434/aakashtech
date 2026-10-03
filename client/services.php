@@ -26,7 +26,7 @@ $balance = billing_balance($conn, $cid);
 <div class="mb-8 flex items-end justify-between flex-wrap gap-4">
     <div>
         <h1 class="font-heading font-bold text-white text-2xl mb-1">My Services</h1>
-        <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($balance)) ?> · <?= number_format($units['sms']) ?> SMS · <?= number_format((int) $units['voice_calls']) ?> voice calls</p>
+        <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($balance)) ?> · <?= number_format($units['sms']) ?> SMS · <?= number_format((int) $units['voice_calls']) ?> voice calls. <a class="text-brand-400" href="manual.php#services">नेपाली चरण</a></p>
     </div>
     <a href="shop.php" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Buy a service</a>
 </div>
@@ -89,7 +89,10 @@ $balance = billing_balance($conn, $cid);
                     <?php endif; ?>
                     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                         <?php if (!empty($s['start_date'])): ?><span>Started <?= e(date('M d, Y', strtotime($s['start_date']))) ?></span><?php endif; ?>
-                        <?php if (!empty($s['next_renewal'])): ?><span>Next renewal <?= e(date('M d, Y', strtotime($s['next_renewal']))) ?></span><?php endif; ?>
+                        <?php if (!empty($s['next_renewal'])): ?>
+                            <?php $renewDays = (int) floor((strtotime($s['next_renewal']) - strtotime(date('Y-m-d'))) / 86400); ?>
+                            <span>Next renewal <?= e(date('M d, Y', strtotime($s['next_renewal']))) ?><?= $renewDays <= 14 ? ' · keep the wallet ready' : '' ?></span>
+                        <?php endif; ?>
                         <?php if ((float) $s['price'] > 0): ?><span>Bill <?= e(billing_money_label($s['price'])) ?><?= e(billing_cycle_suffix($s['billing_cycle'] ?? '')) ?>, VAT included</span><?php endif; ?>
                     </div>
                     <?php if (hosting_panel_ready($s)): ?>
@@ -108,7 +111,10 @@ $balance = billing_balance($conn, $cid);
                             <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
                             <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open email<?= mail_login_domain($s) !== '' ? ' · ' . e(mail_login_domain($s)) : '' ?></button>
                         </form>
-                        <p class="text-slate-500 text-xs mt-2">Opens the inbox<?= mail_login_domain($s) !== '' ? ' at mail.' . e(mail_login_domain($s)) : '' ?> after that name is pointed. Sign in with the mailbox name and the password the team sent.</p>
+                        <p class="text-slate-500 text-xs mt-2">Opens the inbox<?= mail_login_domain($s) !== '' ? ' at mail.' . e(mail_login_domain($s)) : '' ?> after that name is pointed. Sign in with the password the team sent.</p>
+                        <?php if (mail_login_boxes($s)): ?>
+                            <p class="text-slate-300 text-xs mt-1"><?= e(implode(' · ', mail_login_boxes($s))) ?></p>
+                        <?php endif; ?>
                     <?php elseif (in_array((string) $s['plan_code'], mail_login_plans(), true) && $status === 'active'): ?>
                         <p class="text-slate-400 text-xs mt-3">Email login appears here after the team finishes these mailboxes.</p>
                     <?php endif; ?>
@@ -119,13 +125,14 @@ $balance = billing_balance($conn, $cid);
                             <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open website<?= website_label($s) !== '' ? ' · ' . e(website_label($s)) : '' ?></button>
                         </form>
                         <p class="text-slate-500 text-xs mt-2">Opens the published website.</p>
+                        <?php if (delivery_brief_value($s, 'Note') !== ''): ?><p class="text-slate-300 text-xs mt-1"><?= e(delivery_brief_value($s, 'Note')) ?></p><?php endif; ?>
                     <?php elseif (in_array((string) $s['plan_code'], website_plans(), true) && ($status === 'booked' || $status === 'active')): ?>
                         <p class="text-slate-400 text-xs mt-3">The website link appears here after the team publishes it.</p>
                     <?php endif; ?>
                     <?php if (in_array((string) $s['plan_code'], training_plans(), true) && (string) $s['panel_user'] === 'done' && training_date($s) !== ''): ?>
-                        <p class="text-green-300 text-xs mt-3">This visit is complete. It was on <?= e(date('M j, Y', strtotime(training_date($s)))) ?>.</p>
+                        <p class="text-green-300 text-xs mt-3">This visit is complete. It was on <?= e(date('M j, Y', strtotime(training_date($s)))) ?><?= delivery_brief_value($s, 'Place') !== '' ? ' at ' . e(delivery_brief_value($s, 'Place')) : '' ?>.</p>
                     <?php elseif (in_array((string) $s['plan_code'], training_plans(), true) && (string) $s['panel_user'] === 'confirmed' && training_date($s) !== ''): ?>
-                        <p class="text-brand-300 text-xs mt-3">Visit confirmed for <?= e(date('M j, Y', strtotime(training_date($s)))) ?>.</p>
+                        <p class="text-brand-300 text-xs mt-3">Visit confirmed for <?= e(date('M j, Y', strtotime(training_date($s)))) ?><?= delivery_brief_value($s, 'Place') !== '' ? ' at ' . e(delivery_brief_value($s, 'Place')) : '' ?>.</p>
                     <?php elseif (in_array((string) $s['plan_code'], training_plans(), true) && $status === 'booked'): ?>
                         <p class="text-slate-400 text-xs mt-3">The visit date appears here after the team confirms it.</p>
                     <?php endif; ?>

@@ -54,6 +54,7 @@ RewriteRule ^uploads/.*\.(php|phtml|phar|php5)$ - [F,L]
 </Files>
 
 RewriteRule ^includes/ - [F,L]
+RewriteRule ^docs/ - [F,L]
 RewriteRule ^uploads/kyc/ - [F,L]
 RewriteRule ^uploads/domains/ - [F,L]
 

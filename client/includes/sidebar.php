@@ -15,6 +15,7 @@ $navItems = [
     'sms-api.php' => ['SMS API', 'key-round'],
     'campaigns.php' => ['Messages', 'message-square-text'],
     'support.php'   => ['Support', 'life-buoy'],
+    'manual.php'    => ['मार्गदर्शन', 'book-open'],
     'profile.php'   => ['Profile', 'user-round'],
 ];
 $panelNav = hosting_client_panels($conn, (int) $cid);
@@ -92,9 +93,15 @@ $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Men
         </button>
         <p class="lg:hidden min-w-0 truncate text-sm font-medium text-slate-400"><?= e($portalPage) ?></p>
         <div class="hidden lg:block"><span class="text-slate-500 text-sm"><?= e($identity['name']) ?> · Client</span></div>
-        <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">
-            <i class="portal-icon" data-lucide="external-link" aria-hidden="true"></i>
-            View Site
-        </a>
+        <div class="flex items-center gap-3 shrink-0">
+            <a href="manual.php" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition" aria-label="मार्गदर्शन">
+                <i class="portal-icon" data-lucide="book-open" aria-hidden="true"></i>
+                <span class="hidden sm:inline">मार्गदर्शन</span>
+            </a>
+            <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">
+                <i class="portal-icon" data-lucide="external-link" aria-hidden="true"></i>
+                <span class="hidden sm:inline">View Site</span>
+            </a>
+        </div>
     </header>
     <main class="flex-1 p-4 lg:p-8">

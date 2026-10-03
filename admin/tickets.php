@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     if (!in_array($status, $statuses, true)) {
         $status = 'resolved';
     }
-    $lookup = $conn->prepare('SELECT t.subject, c.email FROM support_tickets t JOIN client_users c ON c.id = t.client_id WHERE t.id = ? LIMIT 1');
-    $ticketEmail = '';
+    $lookup = $conn->prepare('SELECT t.subject, t.client_id FROM support_tickets t WHERE t.id = ? LIMIT 1');
+    $ticketClient = 0;
     $ticketSubject = '';
     if ($lookup) {
         $lookup->bind_param('i', $id);
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
         $ticketRow = db_fetch_assoc($lookup);
         $lookup->close();
         if ($ticketRow) {
-            $ticketEmail = (string) $ticketRow['email'];
+            $ticketClient = (int) $ticketRow['client_id'];
             $ticketSubject = (string) $ticketRow['subject'];
         }
     }
@@ -31,11 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
     $stmt->bind_param("ssi", $reply, $status, $id);
     $stmt->execute();
     $stmt->close();
-    if ($reply !== '' && $ticketEmail !== '') {
-        billing_mail_person($conn, $ticketEmail, 'Reply on your support ticket', array(
-            'There is a reply on: ' . $ticketSubject,
-            $reply,
-            'Open Support in the client panel to read it.'
+    if ($reply !== '' && $ticketClient > 0) {
+        billing_mail_client_event($conn, $ticketClient, 'ticket-reply', array(
+            'subject' => billing_notify_clip($ticketSubject, 160),
+            'reply' => str_replace("\r", '', $reply)
         ));
     }
     header('Location: ' . $findBack);

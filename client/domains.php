@@ -26,7 +26,7 @@ $fundsLeft = $balance;
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Domain requests</h1>
-    <p class="text-slate-500 text-sm">Pay the yearly bill from the wallet. The team registers the name after that, then the status becomes Active and the year starts. <a class="text-brand-400" href="../domain.php">Register a name</a> · <a class="text-brand-400" href="../whois.php">WHOIS check up</a></p>
+    <p class="text-slate-500 text-sm">Pay the yearly bill from the wallet. The team registers the name after that, then the status becomes Active and the year starts. <a class="text-brand-400" href="../domain.php">Register a name</a> · <a class="text-brand-400" href="../whois.php">WHOIS check up</a> · <a class="text-brand-400" href="manual.php#domain">नेपाली चरण</a></p>
 </div>
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
@@ -61,7 +61,7 @@ $fundsLeft = $balance;
                 <li class="is-done">Request sent<?= $row['document_path'] !== '' ? ' with the required document' : '' ?></li>
                 <li class="<?= $paid ? 'is-done' : 'is-current' ?>"><?= $price > 0 ? 'Yearly bill paid from the wallet' : 'No separate bill on this request' ?></li>
                 <li class="<?= $status === 'active' ? 'is-done' : ($registering ? 'is-current' : '') ?>">The team registers this name</li>
-                <li class="<?= $status === 'active' ? 'is-done' : '' ?>">Active, then the year renews from the wallet</li>
+                <li class="<?= $status === 'active' ? 'is-done' : '' ?>">Active, then the year renews from the wallet<?php if ($status === 'active' && !empty($row['activated_at'])): ?> on <?= e(date('M j, Y', strtotime($row['activated_at'] . ' +1 year'))) ?><?php endif; ?></li>
             </ol>
             <?php endif; ?>
             <?php if ($status === 'declined' && $row['admin_note'] !== ''): ?>

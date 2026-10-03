@@ -67,6 +67,13 @@ function sms_ensure_tables($conn)
         )");
         billing_exec($conn, 'CREATE INDEX IF NOT EXISTS idx_sms_template_client ON sms_templates(client_id)');
         billing_exec($conn, 'CREATE INDEX IF NOT EXISTS idx_sms_list_client ON sms_number_lists(client_id)');
+        billing_exec($conn, "CREATE TABLE IF NOT EXISTS sms_credit_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL,
+            credits INTEGER NOT NULL,
+            note TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )");
         return;
     }
 
@@ -131,6 +138,14 @@ function sms_ensure_tables($conn)
         numbers_text TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_sms_list_client (client_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_exec($conn, "CREATE TABLE IF NOT EXISTS sms_credit_notes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        credits INT NOT NULL,
+        note VARCHAR(160) DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_sms_credit_client (client_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
@@ -404,12 +419,42 @@ function sms_request_sender($conn, $clientId, $name)
     return '';
 }
 
-function sms_collect_numbers($raw)
+function sms_contact_name($value)
+{
+    $value = trim((string) $value);
+    $value = preg_replace('/[^\p{L}\p{M} .\'-]/u', '', $value);
+    if (!is_string($value)) {
+        return '';
+    }
+    $value = preg_replace('/\s+/u', ' ', trim($value));
+    if (!is_string($value)) {
+        return '';
+    }
+    if (function_exists('mb_substr')) {
+        return mb_substr($value, 0, 40);
+    }
+    return substr($value, 0, 40);
+}
+
+function sms_personalize($text, $name)
+{
+    $text = (string) $text;
+    if (strpos($text, '{name}') === false) {
+        return $text;
+    }
+    $name = trim((string) $name);
+    $text = str_replace('{name}', $name, $text);
+    $text = preg_replace('/\s+,/u', ',', $text);
+    $text = preg_replace('/[ ]{2,}/', ' ', $text);
+    return is_string($text) ? trim($text) : '';
+}
+
+function sms_collect_contacts($raw)
 {
     $lines = preg_split('/\r\n|\r|\n/', (string) $raw);
-    $numbers = array();
+    $contacts = array();
     if (!is_array($lines)) {
-        return array('ok' => false, 'error' => 'Add at least one mobile number.', 'numbers' => array());
+        return array('ok' => false, 'error' => 'Add at least one mobile number.', 'contacts' => array());
     }
     foreach ($lines as $line) {
         $line = trim($line);
@@ -420,25 +465,115 @@ function sms_collect_numbers($raw)
         if (!is_array($parts)) {
             continue;
         }
+        $numbers = array();
+        $words = array();
         foreach ($parts as $part) {
-            if ($part === '' || !preg_match('/\d/', $part)) {
+            if ($part === '') {
+                continue;
+            }
+            if (!preg_match('/\d/', $part)) {
+                $words[] = $part;
                 continue;
             }
             $digits = auth_mobile_number($part);
             if (!preg_match('/^9[78]\d{8}$/', $digits)) {
-                return array('ok' => false, 'error' => 'Each number has to be a 10-digit Nepal mobile, Nepal Telecom or Ncell.', 'numbers' => array());
+                return array('ok' => false, 'error' => 'Each number has to be a 10-digit Nepal mobile, Nepal Telecom or Ncell.', 'contacts' => array());
             }
             $numbers[$digits] = $digits;
         }
+        $name = sms_contact_name(implode(' ', $words));
+        foreach ($numbers as $digits) {
+            if (!isset($contacts[$digits])) {
+                $contacts[$digits] = array('number' => $digits, 'name' => $name);
+            }
+        }
     }
-    $numbers = array_values($numbers);
-    if (count($numbers) < 1) {
-        return array('ok' => false, 'error' => 'Add at least one mobile number.', 'numbers' => array());
+    $contacts = array_values($contacts);
+    if (count($contacts) < 1) {
+        return array('ok' => false, 'error' => 'Add at least one mobile number.', 'contacts' => array());
     }
-    if (count($numbers) > 500) {
-        return array('ok' => false, 'error' => 'Send at most 500 numbers at a time.', 'numbers' => array());
+    if (count($contacts) > 500) {
+        return array('ok' => false, 'error' => 'Send at most 500 numbers at a time.', 'contacts' => array());
     }
-    return array('ok' => true, 'error' => '', 'numbers' => $numbers);
+    return array('ok' => true, 'error' => '', 'contacts' => $contacts);
+}
+
+function sms_collect_numbers($raw)
+{
+    $parsed = sms_collect_contacts($raw);
+    $numbers = array();
+    if (!empty($parsed['ok'])) {
+        foreach ($parsed['contacts'] as $contact) {
+            $numbers[] = $contact['number'];
+        }
+    }
+    return array(
+        'ok' => !empty($parsed['ok']),
+        'error' => isset($parsed['error']) ? $parsed['error'] : '',
+        'numbers' => $numbers
+    );
+}
+
+function sms_store_contacts($contacts)
+{
+    $lines = array();
+    foreach ($contacts as $contact) {
+        $name = isset($contact['name']) ? (string) $contact['name'] : '';
+        $number = (string) $contact['number'];
+        $lines[] = $name === '' ? $number : $name . "\t" . $number;
+    }
+    return implode("\n", $lines);
+}
+
+function sms_contacts_from_stored($raw)
+{
+    $contacts = array();
+    $lines = preg_split('/\r\n|\r|\n/', (string) $raw);
+    if (!is_array($lines)) {
+        return $contacts;
+    }
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        $name = '';
+        $number = $line;
+        if (strpos($line, "\t") !== false) {
+            $pair = explode("\t", $line, 2);
+            $name = sms_contact_name($pair[0]);
+            $number = $pair[1];
+        }
+        $digits = auth_mobile_number($number);
+        if (!preg_match('/^9[78]\d{8}$/', $digits) || isset($contacts[$digits])) {
+            continue;
+        }
+        $contacts[$digits] = array('number' => $digits, 'name' => $name);
+    }
+    return array_values($contacts);
+}
+
+function sms_render_messages($template, $contacts)
+{
+    $messages = array();
+    $credits = 0;
+    foreach ($contacts as $contact) {
+        $text = sms_personalize($template, isset($contact['name']) ? $contact['name'] : '');
+        if ($text === '') {
+            return array('ok' => false, 'error' => 'The message is empty after the name is added.', 'messages' => array(), 'credits' => 0);
+        }
+        $parts = sms_message_parts($text);
+        $credits += $parts;
+        $messages[] = array(
+            'number' => $contact['number'],
+            'text' => $text,
+            'parts' => $parts
+        );
+    }
+    if (!$messages) {
+        return array('ok' => false, 'error' => 'Add at least one mobile number.', 'messages' => array(), 'credits' => 0);
+    }
+    return array('ok' => true, 'error' => '', 'messages' => $messages, 'credits' => $credits);
 }
 
 function sms_parse_schedule($when)
@@ -843,6 +978,109 @@ function sms_line_balance($conn)
     return array('ok' => true, 'error' => '', 'balance' => $balance);
 }
 
+function sms_vendor_stock($conn, $force = false)
+{
+    $line = sms_line($conn);
+    $label = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
+    $saved = billing_setting($conn, 'sms_vendor_balance');
+    $checked = billing_setting($conn, 'sms_vendor_checked');
+    $balance = ($saved !== '' && is_numeric($saved)) ? (int) $saved : null;
+    $age = $checked !== '' ? time() - (int) strtotime($checked) : 999999;
+    if (!$line['connected']) {
+        return array('balance' => null, 'checked' => '', 'error' => '', 'label' => '');
+    }
+    if (!$force && $balance !== null && $age >= 0 && $age < 900) {
+        return array('balance' => $balance, 'checked' => $checked, 'error' => '', 'label' => $label);
+    }
+    $live = sms_line_balance($conn);
+    if (!empty($live['ok'])) {
+        $now = date('Y-m-d H:i:s');
+        billing_set_setting($conn, 'sms_vendor_balance', (string) (int) $live['balance']);
+        billing_set_setting($conn, 'sms_vendor_checked', $now);
+        return array('balance' => (int) $live['balance'], 'checked' => $now, 'error' => '', 'label' => $label);
+    }
+    return array(
+        'balance' => $balance,
+        'checked' => $checked,
+        'error' => (string) $live['error'],
+        'label' => $label
+    );
+}
+
+function sms_vendor_stock_saved($conn)
+{
+    $line = sms_line($conn);
+    $saved = billing_setting($conn, 'sms_vendor_balance');
+    $label = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
+    if (!$line['connected'] || $saved === '' || !is_numeric($saved)) {
+        return array('balance' => null, 'label' => $label);
+    }
+    return array('balance' => (int) $saved, 'label' => $label);
+}
+
+function sms_admin_client_figures($conn, $ids)
+{
+    $clean = array();
+    foreach ($ids as $id) {
+        $id = (int) $id;
+        if ($id > 0) {
+            $clean[$id] = $id;
+        }
+    }
+    $figures = array();
+    foreach ($clean as $id) {
+        $figures[$id] = array('used' => 0, 'left' => 0);
+    }
+    if (!$figures) {
+        return $figures;
+    }
+    $marks = implode(',', $figures ? array_keys($figures) : array(0));
+    $used = $conn->query('SELECT client_id, SUM(parts) AS used_credits FROM sms_messages WHERE status = \'sent\' AND client_id IN (' . $marks . ') GROUP BY client_id');
+    if ($used) {
+        while ($row = $used->fetch_assoc()) {
+            $figures[(int) $row['client_id']]['used'] = (int) $row['used_credits'];
+        }
+    }
+    $left = $conn->query('SELECT client_id, balance FROM client_units WHERE unit_kind = \'sms\' AND client_id IN (' . $marks . ')');
+    if ($left) {
+        while ($row = $left->fetch_assoc()) {
+            $figures[(int) $row['client_id']]['left'] = (int) $row['balance'];
+        }
+    }
+    return $figures;
+}
+
+function sms_clients_holding($conn)
+{
+    $kind = 'sms';
+    $stmt = $conn->prepare('SELECT COALESCE(SUM(balance), 0) AS held FROM client_units WHERE unit_kind = ?');
+    if (!$stmt) {
+        return 0;
+    }
+    $stmt->bind_param('s', $kind);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    return $row ? (int) $row['held'] : 0;
+}
+
+function sms_remember_credit($conn, $clientId, $credits, $note)
+{
+    $clientId = (int) $clientId;
+    $credits = (int) $credits;
+    $note = billing_plain_line($note, 160);
+    if ($clientId < 1 || $credits < 1 || $note === '') {
+        return;
+    }
+    $insert = $conn->prepare('INSERT INTO sms_credit_notes (client_id, credits, note) VALUES (?, ?, ?)');
+    if (!$insert) {
+        return;
+    }
+    $insert->bind_param('iis', $clientId, $credits, $note);
+    $insert->execute();
+    $insert->close();
+}
+
 function sms_line_test($conn, $number)
 {
     $digits = auth_mobile_number($number);
@@ -851,11 +1089,11 @@ function sms_line_test($conn, $number)
     }
     $line = sms_line($conn);
     if (!$line['connected'] || $line['sender'] === '') {
-        return 'Save the line token and the sender name first.';
+        return 'Save the API key and the sender name first.';
     }
     $checked = sms_vendor_send($conn, array($digits), 'Aakash Technologies line check.', $line['sender']);
     if ($checked['code'] !== '' || $checked['rejected']) {
-        return 'The line did not accept the check. Confirm the token, the sender name, and that the line still has credit.';
+        return 'The line did not accept the check. Confirm the API key, the sender name, and that the line still has credit.';
     }
     return '';
 }
@@ -881,10 +1119,10 @@ function sms_save_line($conn, $post)
     $token = trim(isset($post['sms_line_token']) ? (string) $post['sms_line_token'] : '');
     $token = str_replace(array("\r", "\n", " "), '', $token);
     if ($provider !== '' && $token === '' && billing_setting($conn, 'sms_line_token') === '') {
-        return 'Paste the token from the account you buy SMS from.';
+        return 'Paste the API key from the account you buy SMS from.';
     }
     if ($token !== '' && (strlen($token) < 8 || strlen($token) > 200)) {
-        return 'That token does not look complete.';
+        return 'That API key does not look complete.';
     }
     billing_set_setting($conn, 'sms_line_provider', $provider);
     billing_set_setting($conn, 'sms_line_sender', $sender);
@@ -897,6 +1135,112 @@ function sms_save_line($conn, $post)
         billing_set_setting($conn, 'sms_line_token', '');
     }
     return '';
+}
+
+function sms_admin_usage($conn, $find = '')
+{
+    $find = function_exists('admin_find_text') ? admin_find_text($find) : trim((string) $find);
+    $sql = 'SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left, COALESCE(sent.used_credits, 0) AS sms_used
+        FROM client_users c
+        LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = \'sms\'
+        LEFT JOIN (
+            SELECT client_id, SUM(parts) AS used_credits
+            FROM sms_messages
+            WHERE status = \'sent\'
+            GROUP BY client_id
+        ) sent ON sent.client_id = c.id
+        WHERE (COALESCE(u.balance, 0) > 0 OR COALESCE(sent.used_credits, 0) > 0)';
+    if ($find !== '') {
+        $sql .= ' AND (c.name LIKE ? OR c.email LIKE ?)';
+    }
+    $sql .= ' ORDER BY sms_used DESC, c.id DESC LIMIT 100';
+    $stmt = $conn->prepare($sql);
+    if ($find !== '') {
+        $like = '%' . $find . '%';
+        $stmt->bind_param('ss', $like, $like);
+    }
+    $stmt->execute();
+    $rows = db_fetch_all($stmt);
+    $stmt->close();
+    $used = 0;
+    $left = 0;
+    foreach ($rows as $row) {
+        $used += (int) $row['sms_used'];
+        $left += (int) $row['sms_left'];
+    }
+    return array('rows' => $rows, 'clients' => count($rows), 'used' => $used, 'left' => $left);
+}
+
+function sms_admin_grant($conn, $clientId, $credits, $note)
+{
+    $clientId = (int) $clientId;
+    $credits = (int) $credits;
+    $note = function_exists('billing_plain_line') ? billing_plain_line($note, 160) : trim((string) $note);
+    if ($clientId < 1 || $credits < 1 || $credits > 500000) {
+        return 'Enter a client and between 1 and 500,000 SMS credits.';
+    }
+    if ($note === '') {
+        return 'Write a short reason for this top-up.';
+    }
+    $stmt = $conn->prepare('SELECT id FROM client_users WHERE id = ?');
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $client = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$client) {
+        return 'That client was not found.';
+    }
+    billing_add_units($conn, $clientId, 'sms', $credits);
+    sms_remember_credit($conn, $clientId, $credits, $note);
+    return '';
+}
+
+function sms_admin_history($conn, $clientId, $find, $status)
+{
+    $clientId = (int) $clientId;
+    $find = function_exists('admin_find_text') ? admin_find_text($find) : trim((string) $find);
+    $allowed = array('sent', 'failed', 'queued', 'sending', 'scheduled');
+    if (!in_array($status, $allowed, true)) {
+        $status = '';
+    }
+    $sql = 'SELECT m.id, m.recipient, m.message_text, m.parts, m.status, m.source, m.created_at, c.name, c.email
+        FROM sms_messages m
+        JOIN client_users c ON c.id = m.client_id
+        WHERE 1 = 1';
+    $types = '';
+    $params = array();
+    if ($clientId > 0) {
+        $sql .= ' AND m.client_id = ?';
+        $types .= 'i';
+        $params[] = $clientId;
+    }
+    if ($status !== '') {
+        $sql .= ' AND m.status = ?';
+        $types .= 's';
+        $params[] = $status;
+    }
+    if ($find !== '') {
+        $sql .= ' AND (c.name LIKE ? OR c.email LIKE ? OR m.recipient LIKE ? OR m.message_text LIKE ?)';
+        $types .= 'ssss';
+        $like = '%' . $find . '%';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
+    $sql .= ' ORDER BY m.id DESC LIMIT 80';
+    $stmt = $conn->prepare($sql);
+    if ($types !== '') {
+        $bind = array($types);
+        foreach ($params as $index => $value) {
+            $bind[] = &$params[$index];
+        }
+        call_user_func_array(array($stmt, 'bind_param'), $bind);
+    }
+    $stmt->execute();
+    $rows = db_fetch_all($stmt);
+    $stmt->close();
+    return $rows;
 }
 
 function sms_insert_campaign($conn, $clientId, $name, $text, $sender, $count, $status, $when, $audience, $purpose, $list)
@@ -922,6 +1266,27 @@ function sms_insert_messages($conn, $clientId, $campaignId, $tokenId, $source, $
     $ids = array();
     foreach ($numbers as $number) {
         $recipient = $number;
+        $stmt->execute();
+        $ids[] = (int) $conn->insert_id;
+    }
+    $stmt->close();
+    return $ids;
+}
+
+function sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender, $messages)
+{
+    $status = 'queued';
+    $error = '';
+    $recipient = '';
+    $text = '';
+    $parts = 1;
+    $stmt = $conn->prepare('INSERT INTO sms_messages (client_id, campaign_id, token_id, source, sender_id, recipient, message_text, parts, status, error_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->bind_param('iiissssiss', $clientId, $campaignId, $tokenId, $source, $sender, $recipient, $text, $parts, $status, $error);
+    $ids = array();
+    foreach ($messages as $message) {
+        $recipient = $message['number'];
+        $text = $message['text'];
+        $parts = (int) $message['parts'];
         $stmt->execute();
         $ids[] = (int) $conn->insert_id;
     }
@@ -1028,34 +1393,35 @@ function sms_deliver_campaign($conn, $campaignId)
     }
     $sender = (string) $campaign['sender_id'];
     $parts = sms_message_parts($text);
-    $parsed = sms_collect_numbers((string) $campaign['recipients_list']);
-    if (!$parsed['ok']) {
+    $contacts = sms_contacts_from_stored((string) $campaign['recipients_list']);
+    $rendered = sms_render_messages($text, $contacts);
+    if (!$rendered['ok']) {
         $failed = 'failed';
         $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ?');
         $stmt->bind_param('si', $failed, $campaignId);
         $stmt->execute();
         $stmt->close();
-        return sms_result(false, $parsed['error']);
+        return sms_result(false, $rendered['error']);
     }
-    $numbers = $parsed['numbers'];
-    $existing = $conn->prepare('SELECT id, recipient, status FROM sms_messages WHERE campaign_id = ?');
+    $existing = $conn->prepare('SELECT id, recipient, status, message_text, parts FROM sms_messages WHERE campaign_id = ?');
     $existing->bind_param('i', $campaignId);
     $existing->execute();
     $rows = db_fetch_all($existing);
     $existing->close();
+    $queue = array();
     if ($rows) {
-        $pending = array();
-        $pendingIds = array();
         foreach ($rows as $row) {
             if ((string) $row['status'] === 'queued' || (string) $row['status'] === 'sending') {
-                $pending[] = (string) $row['recipient'];
-                $pendingIds[] = (int) $row['id'];
+                $queue[] = array(
+                    'id' => (int) $row['id'],
+                    'number' => (string) $row['recipient'],
+                    'text' => (string) $row['message_text'],
+                    'parts' => (int) $row['parts']
+                );
             }
         }
-        $numbers = $pending;
-        $ids = $pendingIds;
     } else {
-        $credits = $parts * count($numbers);
+        $credits = (int) $rendered['credits'];
         if (!sms_take_credits($conn, $clientId, $credits)) {
             $failed = 'failed';
             $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ?');
@@ -1064,7 +1430,19 @@ function sms_deliver_campaign($conn, $campaignId)
             $stmt->close();
             return sms_result(false, 'There are not enough SMS credits for this message.');
         }
-        $ids = sms_insert_messages($conn, $clientId, $campaignId, 0, 'dashboard', $sender, $text, $parts, $numbers);
+        $ids = sms_insert_rendered($conn, $clientId, $campaignId, 0, 'dashboard', $sender, $rendered['messages']);
+        foreach ($rendered['messages'] as $index => $message) {
+            $queue[] = array(
+                'id' => (int) $ids[$index],
+                'number' => $message['number'],
+                'text' => $message['text'],
+                'parts' => (int) $message['parts']
+            );
+        }
+    }
+    $numbers = array();
+    foreach ($queue as $item) {
+        $numbers[] = $item['number'];
     }
     if (!$numbers) {
         $sentCount = 0;
@@ -1095,37 +1473,51 @@ function sms_deliver_campaign($conn, $campaignId)
         ));
     }
     $failedNumbers = 0;
-    $offset = 0;
-    $total = count($numbers);
-    while ($offset < $total) {
-        $chunkNumbers = array_slice($numbers, $offset, 100);
-        $chunkIds = array_slice($ids, $offset, 100);
-        $offset += 100;
-        $sentIds = array();
-        $failIds = array();
-        $result = sms_vendor_send($conn, $chunkNumbers, $text, $sender);
-        if ($result['code'] !== '') {
-            sms_mark_messages($conn, $chunkIds, 'failed', $result['code']);
-            billing_add_units($conn, $clientId, 'sms', $parts * count($chunkNumbers));
-            $failedNumbers += count($chunkNumbers);
-            continue;
+    $creditsSent = 0;
+    $total = count($queue);
+    $groups = array();
+    foreach ($queue as $item) {
+        $key = $item['text'];
+        if (!isset($groups[$key])) {
+            $groups[$key] = array('parts' => (int) $item['parts'], 'numbers' => array(), 'ids' => array());
         }
-        $rejected = array();
-        foreach ($result['rejected'] as $rejectedNumber) {
-            $rejected[(string) $rejectedNumber] = true;
-        }
-        foreach ($chunkNumbers as $index => $number) {
-            if (isset($rejected[(string) $number])) {
-                $failIds[] = $chunkIds[$index];
-            } else {
-                $sentIds[] = $chunkIds[$index];
+        $groups[$key]['numbers'][] = $item['number'];
+        $groups[$key]['ids'][] = $item['id'];
+    }
+    foreach ($groups as $groupText => $group) {
+        $offset = 0;
+        $groupTotal = count($group['numbers']);
+        while ($offset < $groupTotal) {
+            $chunkNumbers = array_slice($group['numbers'], $offset, 100);
+            $chunkIds = array_slice($group['ids'], $offset, 100);
+            $offset += 100;
+            $sentIds = array();
+            $failIds = array();
+            $result = sms_vendor_send($conn, $chunkNumbers, $groupText, $sender);
+            if ($result['code'] !== '') {
+                sms_mark_messages($conn, $chunkIds, 'failed', $result['code']);
+                billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($chunkNumbers));
+                $failedNumbers += count($chunkNumbers);
+                continue;
             }
-        }
-        sms_mark_messages($conn, $sentIds, 'sent', '');
-        if ($failIds) {
-            sms_mark_messages($conn, $failIds, 'failed', 'not-accepted');
-            billing_add_units($conn, $clientId, 'sms', $parts * count($failIds));
-            $failedNumbers += count($failIds);
+            $rejected = array();
+            foreach ($result['rejected'] as $rejectedNumber) {
+                $rejected[(string) $rejectedNumber] = true;
+            }
+            foreach ($chunkNumbers as $index => $number) {
+                if (isset($rejected[(string) $number])) {
+                    $failIds[] = $chunkIds[$index];
+                } else {
+                    $sentIds[] = $chunkIds[$index];
+                }
+            }
+            sms_mark_messages($conn, $sentIds, 'sent', '');
+            $creditsSent += (int) $group['parts'] * count($sentIds);
+            if ($failIds) {
+                sms_mark_messages($conn, $failIds, 'failed', 'not-accepted');
+                billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($failIds));
+                $failedNumbers += count($failIds);
+            }
         }
     }
     $status = $failedNumbers === 0 ? 'sent' : ($failedNumbers === $total ? 'failed' : 'sent');
@@ -1148,7 +1540,7 @@ function sms_deliver_campaign($conn, $campaignId)
     return sms_result(true, '', array(
         'message' => $message,
         'count' => $total - $failedNumbers,
-        'credits' => $parts * ($total - $failedNumbers),
+        'credits' => $creditsSent,
         'balance' => (int) $balance['sms'],
         'campaign_id' => $campaignId
     ));
@@ -1169,9 +1561,13 @@ function sms_send($conn, $clientId, $job)
     if ($blocked !== '') {
         return sms_result(false, $blocked);
     }
-    $parsed = sms_collect_numbers(isset($job['numbers']) ? $job['numbers'] : '');
+    $parsed = sms_collect_contacts(isset($job['numbers']) ? $job['numbers'] : '');
     if (!$parsed['ok']) {
         return sms_result(false, $parsed['error']);
+    }
+    $rendered = sms_render_messages($text, $parsed['contacts']);
+    if (!$rendered['ok']) {
+        return sms_result(false, $rendered['error']);
     }
     $sender = sms_resolve_sender($conn, $clientId, isset($job['sender']) ? $job['sender'] : '');
     if ($sender['error'] !== '') {
@@ -1197,10 +1593,13 @@ function sms_send($conn, $clientId, $job)
     }
     $when = $schedule['stored'];
     $future = $schedule['future'];
-    $numbers = $parsed['numbers'];
+    $numbers = array();
+    foreach ($rendered['messages'] as $renderedMessage) {
+        $numbers[] = $renderedMessage['number'];
+    }
     $parts = sms_message_parts($text);
-    $credits = $parts * count($numbers);
-    $list = implode("\n", $numbers);
+    $credits = (int) $rendered['credits'];
+    $list = sms_store_contacts($parsed['contacts']);
     if ($future) {
         $balances = billing_unit_balances($conn, $clientId);
         if ((int) $balances['sms'] < $credits) {
@@ -1221,7 +1620,7 @@ function sms_send($conn, $clientId, $job)
     }
     $tokenId = (int) (isset($job['token_id']) ? $job['token_id'] : 0);
     $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'sending', '', $audience, $purpose, $list);
-    $messageIds = sms_insert_messages($conn, $clientId, $campaignId, $tokenId, $source, $sender['sender'], $text, $parts, $numbers);
+    $messageIds = sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender['sender'], $rendered['messages']);
     if (!sms_take_credits($conn, $clientId, $credits)) {
         sms_mark_messages($conn, $messageIds, 'failed', 'credits');
         $failed = 'failed';

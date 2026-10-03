@@ -142,6 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 if ($newId < 1) {
                     $error = 'The account could not be created. Refresh the page and try again.';
                 } else {
+                    billing_mail_client_event($conn, $newId, 'account');
                     $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
                     totp_open_gate($conn, 'client', array(
                         'id' => $newId,

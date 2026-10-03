@@ -318,6 +318,10 @@ body.portal-shell.bg-dark-950,
     min-height: 44px;
 }
 
+.portal-shell section[id] {
+    scroll-margin-top: 6rem;
+}
+
 .portal-shell .portal-topbar {
     border-color: var(--portal-line);
     background-color: rgba(255, 255, 255, 0.92);

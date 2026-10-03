@@ -186,6 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             } elseif ($stmt->execute()) {
                 auth_note_attempt($conn, 'contact');
                 auth_math_clear('contact');
+                billing_mail_named_event($conn, $formValues['email'], $formValues['name'], 'enquiry');
                 billing_notify($conn, 'New enquiry' . ($formValues['service'] !== '' ? ': ' . $formValues['service'] : ''), array(
                     'A visitor sent a message from the website.',
                     'Name: ' . $formValues['name'],

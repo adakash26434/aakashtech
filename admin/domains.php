@@ -5,7 +5,18 @@ require_once __DIR__ . '/../includes/domain-check.php';
 
 $notice = '';
 $error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['attach_domain'])) {
+    verify_csrf();
+    $error = domain_admin_attach(
+        $conn,
+        isset($_POST['domain_client']) ? (int) $_POST['domain_client'] : 0,
+        isset($_POST['domain_name']) ? $_POST['domain_name'] : ''
+    );
+    if ($error === '') {
+        $notice = 'Name added as active. The wallet was not charged. The year renews from the wallet.';
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
     verify_csrf();
     $requestId = isset($_POST['request_id']) ? (int) $_POST['request_id'] : 0;
     $decision = isset($_POST['decision']) ? (string) $_POST['decision'] : '';
@@ -14,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = $decision === 'active' ? 'Marked active. A paid year now shows in the client account and renews from the wallet.' : 'The request was declined. If it was already paid, that amount is back in the wallet.';
     }
 }
+$domainClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
 $find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $rows = array();
 try {
@@ -24,12 +36,35 @@ try {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Domain requests</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting requests stay in view. Older finished names are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Register a paid name yourself at the registry, then mark it active. Declining a paid request returns the amount to the wallet.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Waiting requests stay in view. Older finished names are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Register a paid name yourself at the registry, then mark it active. Declining a paid request returns the amount to the wallet. <a class="text-brand-400" href="manual.php#domain">नेपाली चरण</a></p>
 </div>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Domain, client, or email">
     <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
 </form>
+<section class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Add a name you already registered</h3></div>
+    <form method="POST" class="p-5 grid md:grid-cols-3 gap-3 items-end">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="domain_client">Client</label>
+            <select id="domain_client" name="domain_client" required class="form-input">
+                <option value="">Choose</option>
+                <?php if ($domainClients): ?>
+                    <?php while ($domainClient = $domainClients->fetch_assoc()): ?>
+                        <option value="<?= (int) $domainClient['id'] ?>"><?= e($domainClient['name']) ?> · <?= e($domainClient['email']) ?></option>
+                    <?php endwhile; ?>
+                <?php endif; ?>
+            </select>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="domain_name">Name</label>
+            <input id="domain_name" name="domain_name" required class="form-input" placeholder="shop.com.np">
+        </div>
+        <button type="submit" name="attach_domain" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Add as active</button>
+    </form>
+    <p class="px-5 pb-4 text-slate-500 text-xs">Use this when the name was registered at the office. The wallet is not charged now. The year still renews from the wallet.</p>
+</section>
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
 <?php if (!$rows): ?><div class="dash-panel"><div class="p-6 text-slate-400 text-sm"><?= $find === '' ? 'No domain request yet.' : 'No domain matches that search.' ?></div></div><?php endif; ?>

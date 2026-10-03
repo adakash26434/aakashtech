@@ -55,7 +55,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">SMS API</h1>
-    <p class="text-slate-500 text-sm">Create a token and call it from your website or app. People receive the SMS from Aakash Technologies. Your credits fall on each accepted message. <?= number_format((int) $apiBalance['sms']) ?> credits left.</p>
+    <p class="text-slate-500 text-sm">Create a token and call it from your website or app. People receive the SMS from Aakash Technologies. Your credits fall on each accepted message. <?= number_format((int) $apiBalance['sms']) ?> credits left. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
 </div>
 
 <?php if ($msg): ?>

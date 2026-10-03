@@ -125,6 +125,11 @@ $identity = billing_kyc_load($conn, $cid);
 $identityStatus = (string) $identity['status'];
 $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending' || $identityStatus === 'rejected' || billing_client_has_messaging($conn, $cid));
 ?>
+<?php if ((int) $unitBalances['sms'] > 0 && (int) $unitBalances['sms'] < 100): ?>
+    <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-200">
+        <?= number_format((int) $unitBalances['sms']) ?> SMS credits left. <a href="shop.php?service=bulk-sms" class="text-brand-300">Buy more</a> before a larger send is refused.
+    </div>
+<?php endif; ?>
 <?php if ($unpaidDomains > 0): ?>
     <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
         A domain request is waiting for the yearly bill. <a href="domains.php" class="text-brand-300">Pay from the wallet</a>
@@ -219,7 +224,16 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
         <div class="p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h2 class="font-heading font-semibold text-white text-base">Email</h2>
-                <p class="text-slate-500 text-sm">Opens the inbox at mail.the-domain after that name is pointed. Sign in with the mailbox the team sent.</p>
+                <p class="text-slate-500 text-sm">Opens the inbox at mail.the-domain after that name is pointed. Sign in with the mailbox address shown here and the password the team sent.</p>
+                <?php
+                $mailNames = array();
+                foreach ($mailAccounts as $mailNameRow) {
+                    foreach (mail_login_boxes($mailNameRow) as $mailAddress) {
+                        $mailNames[] = $mailAddress;
+                    }
+                }
+                ?>
+                <?php if ($mailNames): ?><p class="text-slate-300 text-xs mt-1"><?= e(implode(' · ', $mailNames)) ?></p><?php endif; ?>
             </div>
             <div class="flex flex-wrap gap-2">
                 <?php foreach ($mailAccounts as $mail): ?>

@@ -81,7 +81,7 @@ if ($find !== '') {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Wallet</h1>
-    <p class="text-slate-500 text-sm">Funds here pay for new services and automatic renewals.</p>
+    <p class="text-slate-500 text-sm">Funds here pay for new services and automatic renewals. <a class="text-brand-400" href="manual.php#wallet">नेपाली चरण</a></p>
 </div>
 <?php if ($forDomain && $amountValue !== '' && $amountValue !== '0'): ?>
     <div class="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">

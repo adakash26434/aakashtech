@@ -705,6 +705,11 @@ function site_sender_email()
     return 'noreply@aakashtechnologies.com.np';
 }
 
+function site_sender_name()
+{
+    return 'Aakash Tech';
+}
+
 function site_email_or_official($email)
 {
     $email = strtolower(trim((string) $email));
@@ -811,10 +816,9 @@ function billing_notify_send($conn, $subject, $lines, $isTest)
     if ($to === '') {
         return array('ok' => false, 'error' => 'No notification email is saved.');
     }
-    $public = site_public_settings($conn);
     $from = billing_mail_from_address($conn);
     $replyTo = billing_mail_reply_address($conn);
-    $fromName = isset($public['site_name']) ? (string) $public['site_name'] : 'Aakash Technologies';
+    $fromName = site_sender_name();
     $body = is_array($lines) ? implode("\n", $lines) : (string) $lines;
     $result = billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo);
     $stamp = date('Y-m-d H:i');
@@ -858,16 +862,353 @@ function billing_client_email($conn, $clientId)
 function billing_mail_person($conn, $to, $subject, $lines)
 {
     try {
-        $public = site_public_settings($conn);
         $from = billing_mail_from_address($conn);
         $replyTo = billing_mail_reply_address($conn);
-        $fromName = isset($public['site_name']) ? (string) $public['site_name'] : 'Aakash Technologies';
+        $fromName = site_sender_name();
         $body = is_array($lines) ? implode("\n", $lines) : (string) $lines;
         return billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo);
     } catch (Throwable $exception) {
         error_log('Client email could not be sent.');
         return array('ok' => false, 'error' => 'The email could not be sent.');
     }
+}
+
+function billing_mail_catalog()
+{
+    return array(
+        'account' => array(
+            'when' => 'Someone registers, or you create the account in Clients',
+            'subject' => 'Your account is ready',
+            'lines' => array(
+                'Your account is ready.',
+                'Sign in to the client portal with this email address.',
+                'Use the password you chose, or the password the team gave you. This email does not contain the password.'
+            )
+        ),
+        'paid' => array(
+            'when' => 'The client pays from the wallet and the service starts now',
+            'subject' => 'Payment received: {service}',
+            'lines' => array(
+                'Your payment of NPR {amount} is complete.',
+                'Service: {service}',
+                'It is active on your account. Open My Services in the client portal.'
+            )
+        ),
+        'booked' => array(
+            'when' => 'The client pays for a website or a training visit',
+            'subject' => 'Booking received: {service}',
+            'lines' => array(
+                'Your booking is saved.',
+                'Payment of NPR {amount} is complete.',
+                'Service: {service}',
+                'The team will confirm the next step. Open My Services to see the date, place, or website link when it is ready.'
+            )
+        ),
+        'office-service' => array(
+            'when' => 'You add a service that was sold at the office',
+            'subject' => 'Added to your account: {service}',
+            'lines' => array(
+                'The team added this to your account.',
+                'Service: {service}',
+                'Status: {status}',
+                'Payment was taken outside the wallet.',
+                'Open My Services in the client portal.'
+            )
+        ),
+        'topup-waiting' => array(
+            'when' => 'The client submits a wallet top-up',
+            'subject' => 'Wallet payment received',
+            'lines' => array(
+                'We received a wallet top-up of NPR {amount}.',
+                'It stays pending until the payment reference is confirmed.',
+                'The amount is not in the wallet yet.'
+            )
+        ),
+        'topup-done' => array(
+            'when' => 'You confirm that top-up',
+            'subject' => 'Wallet payment confirmed',
+            'lines' => array(
+                'NPR {amount} is now in your wallet.',
+                'You can pay for a service from the client portal.'
+            )
+        ),
+        'office-wallet' => array(
+            'when' => 'You record a cash or office payment on the wallet',
+            'subject' => 'Wallet payment recorded',
+            'lines' => array(
+                'NPR {amount} was added to your wallet.',
+                'Note: {note}'
+            )
+        ),
+        'topup-rejected' => array(
+            'when' => 'You reject a wallet top-up',
+            'subject' => 'Wallet payment was not added',
+            'lines' => array(
+                'The wallet top-up of NPR {amount} was not confirmed.',
+                'It was not added to the wallet.',
+                'If the money already left your account, reply to this email.'
+            )
+        ),
+        'domain-request' => array(
+            'when' => 'A domain name is requested',
+            'subject' => 'Domain request received: {domain}',
+            'lines' => array(
+                'We saved the request for {domain}.',
+                'The yearly bill is NPR {amount}.',
+                'Pay it from the wallet when the balance covers the year. Registration starts after that payment is confirmed.'
+            )
+        ),
+        'domain-paid' => array(
+            'when' => 'The client pays the domain year from the wallet',
+            'subject' => 'Domain payment received: {domain}',
+            'lines' => array(
+                'NPR {amount} was taken from the wallet for {domain}.',
+                'The name is waiting to be registered. You will get another email when it is active.'
+            )
+        ),
+        'domain-active' => array(
+            'when' => 'You mark a domain active',
+            'subject' => 'Domain active: {domain}',
+            'lines' => array(
+                '{domain} is marked Active.',
+                'The paid year starts now and renews from the wallet.',
+                'See it under My domains in the client panel.'
+            )
+        ),
+        'domain-closed' => array(
+            'when' => 'You close a domain request without registering it',
+            'subject' => 'Domain request closed: {domain}',
+            'lines' => array(
+                'The domain request for {domain} was not registered.',
+                '{refund}',
+                'Note: {note}'
+            )
+        ),
+        'renewed' => array(
+            'when' => 'A monthly or yearly service renews from the wallet',
+            'subject' => 'Renewal paid: {service}',
+            'lines' => array(
+                'NPR {amount} was taken from the wallet.',
+                'Service: {service}',
+                'It continues through {next}.'
+            )
+        ),
+        'renewal-waiting' => array(
+            'when' => 'A renewal cannot be paid because the wallet is short',
+            'subject' => 'Renewal is waiting: {service}',
+            'lines' => array(
+                '{service} could not renew today.',
+                'Add at least NPR {amount} to the wallet.',
+                'It tries again automatically. After the grace period the service pauses until the wallet can cover it.'
+            )
+        ),
+        'password' => array(
+            'when' => 'The client asks to reset a password',
+            'subject' => 'Reset your password',
+            'lines' => array(
+                'Use the link in the email to choose a new password. It works for 30 minutes.',
+                'If you did not ask for this, ignore the email. The current password stays in place.'
+            )
+        ),
+        'website-live' => array(
+            'when' => 'You publish a booked website',
+            'subject' => 'Your website is live: {service}',
+            'lines' => array(
+                'Your website is published.',
+                'Open it from My Services, or go to {url}.',
+                '{note}'
+            )
+        ),
+        'training-set' => array(
+            'when' => 'You confirm or complete a training visit',
+            'subject' => 'Visit update: {service}',
+            'lines' => array(
+                'Your visit is {status}.',
+                'Date: {date}',
+                '{place}'
+            )
+        ),
+        'hosting-ready' => array(
+            'when' => 'You turn on a hosting login',
+            'subject' => 'Hosting login is ready',
+            'lines' => array(
+                'The hosting login is ready in My Services.',
+                'Username: {user}',
+                'The password is the one the team sent. It is not written in this email.'
+            )
+        ),
+        'mailbox-ready' => array(
+            'when' => 'You turn on mailbox login',
+            'subject' => 'Mailbox login is ready',
+            'lines' => array(
+                'Your mailbox login is ready.',
+                'Addresses: {boxes}',
+                'Open the inbox from My Services. The password is the one the team sent. It is not written in this email.'
+            )
+        ),
+        'suspended' => array(
+            'when' => 'A service pauses because the wallet stayed short',
+            'subject' => 'Service paused: {service}',
+            'lines' => array(
+                '{service} is paused.',
+                'The wallet did not cover NPR {amount} before the grace period ended.',
+                'Add funds and it resumes on the next renewal check.'
+            )
+        ),
+        'refund' => array(
+            'when' => 'A domain order is returned to the wallet',
+            'subject' => 'Amount returned to your wallet',
+            'lines' => array(
+                'NPR {amount} was returned to your wallet.',
+                'Reason: {note}'
+            )
+        ),
+        'enquiry' => array(
+            'when' => 'A visitor sends the public contact form',
+            'subject' => 'We received your message',
+            'lines' => array(
+                'We received your message from the website.',
+                'A reply will come to this email address.'
+            )
+        ),
+        'ticket-opened' => array(
+            'when' => 'The client opens a support ticket',
+            'subject' => 'Support ticket received',
+            'lines' => array(
+                'We received your support ticket: {subject}',
+                'A reply will come by email and under Support in the client portal.'
+            )
+        ),
+        'ticket-reply' => array(
+            'when' => 'You reply to a support ticket',
+            'subject' => 'Reply on your support ticket',
+            'lines' => array(
+                'There is a reply on: {subject}',
+                '{reply}',
+                'Open Support in the client portal to read it.'
+            )
+        ),
+        'kyc-received' => array(
+            'when' => 'The client submits identity details',
+            'subject' => 'Identity details received',
+            'lines' => array(
+                'We received your identity details.',
+                'SMS and voice stay closed until they are approved. You will get an email when that decision is made.'
+            )
+        ),
+        'kyc-approved' => array(
+            'when' => 'You approve identity details',
+            'subject' => 'Identity approved',
+            'lines' => array(
+                'Your identity is approved.',
+                'You can send SMS from the SMS dashboard. A voice job is saved under Messages, and the team places the call.'
+            )
+        ),
+        'kyc-change' => array(
+            'when' => 'You send identity details back for a change',
+            'subject' => 'Identity needs a change',
+            'lines' => array(
+                'The identity submission was sent back.',
+                'Note: {note}',
+                'Update it in the client panel and submit again.'
+            )
+        ),
+        'contact-email' => array(
+            'when' => 'You change the client sign-in email',
+            'subject' => 'Sign-in email changed',
+            'lines' => array(
+                'The team changed the sign-in email for this account.',
+                'Sign in with {email}.',
+                'The password stays the same. This email does not contain it.'
+            )
+        ),
+        'contact-phone' => array(
+            'when' => 'You change the client mobile number',
+            'subject' => 'Mobile number changed',
+            'lines' => array(
+                'The team changed the mobile number on your account to {phone}.'
+            )
+        )
+    );
+}
+
+function billing_mail_fill($text, $map)
+{
+    $text = (string) $text;
+    if (!is_array($map)) {
+        return $text;
+    }
+    foreach ($map as $key => $value) {
+        $text = str_replace('{' . $key . '}', (string) $value, $text);
+    }
+    return $text;
+}
+
+function billing_mail_to_client($conn, $clientId, $subject, $lines)
+{
+    $clientId = (int) $clientId;
+    $stmt = $conn->prepare('SELECT name, email FROM client_users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return array('ok' => false, 'error' => 'The client could not be read.');
+    }
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    $email = $row ? trim((string) $row['email']) : '';
+    if (!billing_mail_ok($email)) {
+        return array('ok' => false, 'error' => 'That client has no email address.');
+    }
+    $name = $row && trim((string) $row['name']) !== '' ? trim((string) $row['name']) : 'there';
+    $site = site_sender_name();
+    $body = array('Hello ' . $name . ',', '');
+    foreach ((array) $lines as $line) {
+        $body[] = (string) $line;
+    }
+    $body[] = '';
+    $body[] = $site;
+    return billing_mail_person($conn, $email, $subject, $body);
+}
+
+function billing_mail_client_event($conn, $clientId, $key, $map = array())
+{
+    $catalog = billing_mail_catalog();
+    if (!isset($catalog[$key])) {
+        return array('ok' => false, 'error' => 'That email is not defined.');
+    }
+    $item = $catalog[$key];
+    $lines = array();
+    foreach ($item['lines'] as $line) {
+        $filled = trim(billing_mail_fill($line, $map));
+        if ($filled !== '') {
+            $lines[] = $filled;
+        }
+    }
+    return billing_mail_to_client($conn, $clientId, billing_mail_fill($item['subject'], $map), $lines);
+}
+
+function billing_mail_named_event($conn, $email, $name, $key, $map = array())
+{
+    $catalog = billing_mail_catalog();
+    if (!isset($catalog[$key]) || !billing_mail_ok($email)) {
+        return array('ok' => false, 'error' => 'That email could not be addressed.');
+    }
+    $item = $catalog[$key];
+    $lines = array();
+    foreach ($item['lines'] as $line) {
+        $filled = trim(billing_mail_fill($line, $map));
+        if ($filled !== '') {
+            $lines[] = $filled;
+        }
+    }
+    $who = trim((string) $name) !== '' ? trim((string) $name) : 'there';
+    $body = array('Hello ' . $who . ',', '');
+    foreach ($lines as $line) {
+        $body[] = $line;
+    }
+    $body[] = '';
+    $body[] = site_sender_name();
+    return billing_mail_person($conn, $email, billing_mail_fill($item['subject'], $map), $body);
 }
 
 function billing_notify_test($conn)
@@ -2138,6 +2479,7 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
     $stmt->execute();
     $stmt->close();
     $who = $kind === 'individual' ? $fullName : $orgName;
+    billing_mail_client_event($conn, $clientId, 'kyc-received');
     billing_notify($conn, 'Identity waiting for approval', array(
         'A client submitted identity details.',
         'Account: ' . ($kind === 'individual' ? 'Individual' : 'Organization'),
@@ -2178,20 +2520,10 @@ function billing_kyc_decide($conn, $clientId, $decision, $note)
     $stmt->bind_param('sssi', $status, $note, $reviewed, $clientId);
     $stmt->execute();
     $stmt->close();
-    $email = billing_client_email($conn, $clientId);
-    if ($email !== '') {
-        if ($decision === 'approve') {
-            billing_mail_person($conn, $email, 'Identity approved', array(
-                'Your identity is approved.',
-                'You can send SMS from the SMS dashboard. A voice job is saved under Messages, and the team places the call.'
-            ));
-        } else {
-            billing_mail_person($conn, $email, 'Identity needs a change', array(
-                'The identity submission was sent back.',
-                'Note: ' . $note,
-                'Update it in the client panel and submit again.'
-            ));
-        }
+    if ($decision === 'approve') {
+        billing_mail_client_event($conn, $clientId, 'kyc-approved');
+    } else {
+        billing_mail_client_event($conn, $clientId, 'kyc-change', array('note' => $note));
     }
     return '';
 }
@@ -3489,6 +3821,191 @@ function billing_save_slabs($conn, $posted, $starts = array())
     return '';
 }
 
+function billing_admin_create_client($conn, $name, $email, $phone, $company, $password)
+{
+    $name = billing_plain_line($name, 80);
+    $email = strtolower(trim((string) $email));
+    $phoneInput = trim((string) $phone);
+    $phone = $phoneInput === '' ? '' : (function_exists('auth_mobile_number') ? auth_mobile_number($phoneInput) : '');
+    $company = billing_plain_line($company, 120);
+    $password = (string) $password;
+    if ($name === '' || $email === '' || $password === '') {
+        return array('ok' => false, 'error' => 'Name, email, and a password are required.', 'id' => 0);
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return array('ok' => false, 'error' => 'Enter a valid email.', 'id' => 0);
+    }
+    if ($phone === '') {
+        return array('ok' => false, 'error' => 'Enter a 10-digit mobile number.', 'id' => 0);
+    }
+    if (strlen($password) < 8) {
+        return array('ok' => false, 'error' => 'Password must be at least 8 characters.', 'id' => 0);
+    }
+    $check = $conn->prepare('SELECT id FROM client_users WHERE email = ? LIMIT 1');
+    $check->bind_param('s', $email);
+    $check->execute();
+    $existing = db_fetch_assoc($check);
+    $check->close();
+    if ($existing) {
+        return array('ok' => false, 'error' => 'An account with this email already exists.', 'id' => 0);
+    }
+    $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+    $avatar = $colors[array_rand($colors)];
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->bind_param('ssssss', $name, $email, $hash, $phone, $company, $avatar);
+    $stmt->execute();
+    $id = (int) $conn->insert_id;
+    $stmt->close();
+    if ($id < 1) {
+        return array('ok' => false, 'error' => 'The account could not be created.', 'id' => 0);
+    }
+    billing_mail_client_event($conn, $id, 'account');
+    return array('ok' => true, 'error' => '', 'id' => $id);
+}
+
+function billing_client_save_profile($conn, $clientId, $name, $company, $address)
+{
+    $clientId = (int) $clientId;
+    $name = billing_plain_line($name, 80);
+    $company = billing_plain_line($company, 120);
+    $address = billing_plain_block($address, 300);
+    if ($clientId < 1 || $name === '') {
+        return 'Name is required.';
+    }
+    $stmt = $conn->prepare('UPDATE client_users SET name = ?, company = ?, address = ? WHERE id = ?');
+    if (!$stmt) {
+        return 'Failed to update profile.';
+    }
+    $stmt->bind_param('sssi', $name, $company, $address, $clientId);
+    $stmt->execute();
+    $stmt->close();
+    return '';
+}
+
+function billing_admin_set_contact($conn, $clientId, $email, $phone)
+{
+    $clientId = (int) $clientId;
+    $email = strtolower(trim((string) $email));
+    $phoneInput = trim((string) $phone);
+    $phone = function_exists('auth_mobile_number') ? auth_mobile_number($phoneInput) : '';
+    if ($clientId < 1) {
+        return 'Choose a client.';
+    }
+    if (!billing_mail_ok($email)) {
+        return 'Enter a valid email.';
+    }
+    if ($phone === '') {
+        return 'Enter a 10-digit mobile number.';
+    }
+    $stmt = $conn->prepare('SELECT email, phone FROM client_users WHERE id = ? LIMIT 1');
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return 'That client was not found.';
+    }
+    $check = $conn->prepare('SELECT id FROM client_users WHERE email = ? AND id != ? LIMIT 1');
+    $check->bind_param('si', $email, $clientId);
+    $check->execute();
+    $taken = db_fetch_assoc($check);
+    $check->close();
+    if ($taken) {
+        return 'An account with this email already exists.';
+    }
+    $oldEmail = strtolower(trim((string) $row['email']));
+    $oldPhone = (string) $row['phone'];
+    if ($oldEmail === $email && $oldPhone === $phone) {
+        return 'That email and mobile are already saved.';
+    }
+    $update = $conn->prepare('UPDATE client_users SET email = ?, phone = ? WHERE id = ?');
+    $update->bind_param('ssi', $email, $phone, $clientId);
+    $update->execute();
+    $update->close();
+    if ($oldEmail !== $email) {
+        if (function_exists('password_reset_clear')) {
+            password_reset_clear($conn, $clientId);
+        }
+        if (billing_mail_ok($oldEmail)) {
+            billing_mail_named_event($conn, $oldEmail, '', 'contact-email', array('email' => $email));
+        }
+        billing_mail_client_event($conn, $clientId, 'contact-email', array('email' => $email));
+    }
+    if ($oldPhone !== $phone) {
+        billing_mail_client_event($conn, $clientId, 'contact-phone', array('phone' => $phone));
+    }
+    return '';
+}
+
+function billing_admin_add_service($conn, $clientId, $planCode, $quantity, $detail)
+{
+    $clientId = (int) $clientId;
+    $plan = billing_find_plan($conn, (string) $planCode);
+    if ($clientId < 1 || !$plan) {
+        return 'Choose a client and a service.';
+    }
+    $check = $conn->prepare('SELECT id FROM client_users WHERE id = ?');
+    $check->bind_param('i', $clientId);
+    $check->execute();
+    $client = db_fetch_assoc($check);
+    $check->close();
+    if (!$client) {
+        return 'That client was not found.';
+    }
+    $needs = (string) $plan['needs_detail'];
+    $unitKind = (string) $plan['unit_kind'];
+    $quantity = (int) $quantity;
+    $unitQuantity = (int) $plan['unit_quantity'];
+    if ($needs === 'sms' || $needs === 'voice') {
+        if ($quantity < 1 || $quantity > 500000) {
+            return 'Enter how many SMS or voice calls to add, up to 500,000.';
+        }
+        $unitKind = $needs === 'sms' ? 'sms' : 'voice_calls';
+        $unitQuantity = $quantity;
+    }
+    $services = billing_service_definitions();
+    $service = isset($services[$plan['service_slug']]) ? $services[$plan['service_slug']] : array('title' => 'Service');
+    $today = date('Y-m-d');
+    $cycle = (string) $plan['billing_cycle'];
+    $autoRenew = $cycle === 'one_time' ? 0 : (int) $plan['auto_renew_default'];
+    $nextRenewal = $autoRenew ? billing_add_cycle($today, $cycle) : '';
+    $status = ($needs === 'website' || $needs === 'training') ? 'booked' : 'active';
+    $name = $service['title'] . ' — ' . $plan['name'];
+    $description = (string) $plan['summary'];
+    $detail = billing_plain_line($detail, 180);
+    $price = ($needs === 'sms' || $needs === 'voice') ? '0.00' : billing_money(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0));
+    $brief = array('Added by' => 'the team', 'Payment' => 'Taken outside the wallet');
+    if ($detail !== '') {
+        $brief['Detail'] = $detail;
+    }
+    $briefJson = json_encode($brief, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($briefJson === false) {
+        $briefJson = '';
+    }
+    $planCode = (string) $plan['code'];
+    $stmt = $conn->prepare('INSERT INTO client_services (client_id, service_name, description, status, start_date, end_date, price, plan_code, billing_cycle, auto_renew, next_renewal, detail_label, order_brief, unit_kind, unit_quantity) VALUES (?, ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?, NULLIF(?, \'\'), ?, ?, ?, ?)');
+    $stmt->bind_param('issssssssissssi', $clientId, $name, $description, $status, $today, $nextRenewal, $price, $planCode, $cycle, $autoRenew, $nextRenewal, $detail, $briefJson, $unitKind, $unitQuantity);
+    $ok = $stmt->execute();
+    $stmt->close();
+    if (!$ok) {
+        return 'The service could not be added.';
+    }
+    if ($unitKind === 'sms' && $unitQuantity > 0) {
+        billing_add_units($conn, $clientId, 'sms', $unitQuantity);
+        if (function_exists('sms_remember_credit')) {
+            sms_remember_credit($conn, $clientId, $unitQuantity, 'Added by the team');
+        }
+    } elseif ($unitKind === 'voice_calls' && $unitQuantity > 0) {
+        billing_add_units($conn, $clientId, 'voice_calls', $unitQuantity);
+    }
+    billing_mail_client_event($conn, $clientId, 'office-service', array(
+        'service' => $name,
+        'status' => $status === 'booked' ? 'Booked, waiting for the team' : 'Active'
+    ));
+    return '';
+}
+
 function billing_purchase($conn, $clientId, $plan, $post)
 {
     if (!is_array($plan) || empty($plan['code'])) {
@@ -3542,6 +4059,9 @@ function billing_purchase($conn, $clientId, $plan, $post)
 
     billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', $name, $serviceId);
     billing_add_units($conn, $clientId, $unitKind, $unitQuantity);
+    if ($unitKind === 'sms' && $unitQuantity > 0 && function_exists('sms_remember_credit')) {
+        sms_remember_credit($conn, $clientId, $unitQuantity, 'Bought from the wallet');
+    }
     billing_notify($conn, 'New order: ' . $name, array(
         'A client bought or booked a service.',
         'Service: ' . $name,
@@ -3550,6 +4070,10 @@ function billing_purchase($conn, $clientId, $plan, $post)
         'Detail: ' . billing_notify_clip($detail, 200),
         'Client: ' . billing_notify_client_label($conn, $clientId),
         'Open the admin panel.'
+    ));
+    billing_mail_client_event($conn, $clientId, $status === 'booked' ? 'booked' : 'paid', array(
+        'service' => $name,
+        'amount' => $price
     ));
     if ($plan['needs_detail'] === 'sms' || $plan['needs_detail'] === 'voice') {
         billing_form_guard_clear('order-' . $plan['code']);
@@ -3594,6 +4118,10 @@ function billing_refund_domain($conn, $serviceId)
     if (!$saved) {
         return 'The wallet was credited, but the order status could not be changed. Check this order before trying again.';
     }
+    billing_mail_client_event($conn, $clientId, 'refund', array(
+        'amount' => $price,
+        'note' => $note
+    ));
     return '';
 }
 
@@ -3623,6 +4151,7 @@ function billing_request_topup($conn, $clientId, $amount, $method, $reference)
         'Client: ' . billing_notify_client_label($conn, $clientId),
         'Open Admin → Billing and confirm it. Later renewals do not need this step.'
     ));
+    billing_mail_client_event($conn, (int) $clientId, 'topup-waiting', array('amount' => number_format($amount)));
     return '';
 }
 
@@ -3646,17 +4175,65 @@ function billing_approve_topup($conn, $entryId)
         return false;
     }
     billing_wallet_credit($conn, (int) $entry['client_id'], $entry['amount']);
+    billing_mail_client_event($conn, (int) $entry['client_id'], 'topup-done', array(
+        'amount' => number_format((float) $entry['amount'])
+    ));
     return true;
+}
+
+function billing_admin_wallet_credit($conn, $clientId, $amount, $note)
+{
+    $clientId = (int) $clientId;
+    $amount = (int) $amount;
+    $note = billing_plain_line($note, 160);
+    if ($clientId < 1) {
+        return 'Choose a client.';
+    }
+    if ($amount < 1 || $amount > 1000000) {
+        return 'Enter an amount from NPR 1 to NPR 1,000,000.';
+    }
+    if ($note === '') {
+        return 'Write where this payment was received, such as cash at the office.';
+    }
+    $check = $conn->prepare('SELECT id FROM client_users WHERE id = ?');
+    $check->bind_param('i', $clientId);
+    $check->execute();
+    $client = db_fetch_assoc($check);
+    $check->close();
+    if (!$client) {
+        return 'That client was not found.';
+    }
+    $method = 'office';
+    billing_record_entry($conn, $clientId, $amount, 'credit', 'topup', 'completed', $method, $note, 0);
+    billing_wallet_credit($conn, $clientId, $amount);
+    billing_mail_client_event($conn, $clientId, 'office-wallet', array(
+        'amount' => number_format($amount),
+        'note' => $note
+    ));
+    return '';
 }
 
 function billing_reject_topup($conn, $entryId)
 {
     $entryId = (int) $entryId;
-    $stmt = $conn->prepare("UPDATE wallet_entries SET status = 'rejected' WHERE id = ? AND status = 'pending'");
+    $stmt = $conn->prepare("SELECT client_id, amount FROM wallet_entries WHERE id = ? AND kind = 'topup' AND status = 'pending'");
     $stmt->bind_param('i', $entryId);
     $stmt->execute();
-    $changed = billing_affected($conn) === 1;
+    $entry = db_fetch_assoc($stmt);
     $stmt->close();
+    if (!$entry) {
+        return false;
+    }
+    $update = $conn->prepare("UPDATE wallet_entries SET status = 'rejected' WHERE id = ? AND status = 'pending'");
+    $update->bind_param('i', $entryId);
+    $update->execute();
+    $changed = billing_affected($conn) === 1;
+    $update->close();
+    if ($changed) {
+        billing_mail_client_event($conn, (int) $entry['client_id'], 'topup-rejected', array(
+            'amount' => number_format((float) $entry['amount'])
+        ));
+    }
     return $changed;
 }
 
@@ -3723,9 +4300,19 @@ function billing_process_renewals($conn, $clientId = null)
             $update->bind_param('ssssi', $active, $next, $next, $today, $serviceId);
             $update->execute();
             $update->close();
-            billing_add_units($conn, $ownerId, (string) ($row['unit_kind'] ?? ''), (int) ($row['unit_quantity'] ?? 0));
+            $renewKind = (string) ($row['unit_kind'] ?? '');
+            $renewQty = (int) ($row['unit_quantity'] ?? 0);
+            billing_add_units($conn, $ownerId, $renewKind, $renewQty);
+            if ($renewKind === 'sms' && $renewQty > 0 && function_exists('sms_remember_credit')) {
+                sms_remember_credit($conn, $ownerId, $renewQty, 'Renewed from the wallet');
+            }
             billing_record_entry($conn, $ownerId, $amount, 'debit', 'renewal', 'completed', 'wallet', (string) $row['service_name'], $serviceId);
             billing_log_renewal($conn, $serviceId, $ownerId, $amount, 'renewed', 'Renewed through ' . $next);
+            billing_mail_client_event($conn, $ownerId, 'renewed', array(
+                'service' => (string) $row['service_name'],
+                'amount' => billing_money($amount),
+                'next' => $next
+            ));
             $stats['renewed']++;
             continue;
         }
@@ -3739,6 +4326,10 @@ function billing_process_renewals($conn, $clientId = null)
             $update->execute();
             $update->close();
             billing_log_renewal($conn, $serviceId, $ownerId, $amount, 'waiting', 'Waiting for wallet funds until ' . $grace);
+            billing_mail_client_event($conn, $ownerId, 'renewal-waiting', array(
+                'service' => (string) $row['service_name'],
+                'amount' => billing_money($amount)
+            ));
             $stats['waiting']++;
             continue;
         }
@@ -3751,6 +4342,10 @@ function billing_process_renewals($conn, $clientId = null)
             $update->close();
             if ($status !== 'suspended') {
                 billing_log_renewal($conn, $serviceId, $ownerId, $amount, 'suspended', 'Suspended after the grace period. It resumes automatically when the wallet can cover renewal.');
+                billing_mail_client_event($conn, $ownerId, 'suspended', array(
+                    'service' => (string) $row['service_name'],
+                    'amount' => billing_money($amount)
+                ));
                 $stats['suspended']++;
             }
             continue;

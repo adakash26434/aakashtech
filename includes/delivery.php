@@ -52,6 +52,37 @@ function website_url_normalize($value)
     return $url;
 }
 
+function delivery_brief_value($row, $key)
+{
+    if (!is_array($row) || empty($row['order_brief'])) {
+        return '';
+    }
+    $decoded = json_decode((string) $row['order_brief'], true);
+    if (!is_array($decoded) || !isset($decoded[$key])) {
+        return '';
+    }
+    return billing_plain_line($decoded[$key], 180);
+}
+
+function delivery_merge_brief($row, $key, $value)
+{
+    $brief = array();
+    if (is_array($row) && !empty($row['order_brief'])) {
+        $decoded = json_decode((string) $row['order_brief'], true);
+        if (is_array($decoded)) {
+            $brief = $decoded;
+        }
+    }
+    $value = billing_plain_line($value, 180);
+    if ($value === '') {
+        unset($brief[$key]);
+    } else {
+        $brief[$key] = $value;
+    }
+    $json = json_encode($brief, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return $json === false ? '' : $json;
+}
+
 function website_url($row)
 {
     if (!is_array($row)) {
@@ -89,10 +120,10 @@ function website_for_client($conn, $clientId, $serviceId)
     return $row;
 }
 
-function website_save($conn, $serviceId, $url)
+function website_save($conn, $serviceId, $url, $note = '')
 {
     $serviceId = (int) $serviceId;
-    $stmt = $conn->prepare('SELECT id, plan_code, status FROM client_services WHERE id = ?');
+    $stmt = $conn->prepare('SELECT * FROM client_services WHERE id = ?');
     $stmt->bind_param('i', $serviceId);
     $stmt->execute();
     $row = db_fetch_assoc($stmt);
@@ -107,13 +138,22 @@ function website_save($conn, $serviceId, $url)
     if ($url === '') {
         return 'Enter the website address on the client’s own domain, starting with https://.';
     }
+    $briefJson = delivery_merge_brief($row, 'Note', $note);
+    if ($briefJson === '') {
+        return 'The website note could not be saved.';
+    }
     $user = 'open';
     $pass = '';
     $status = 'active';
-    $update = $conn->prepare('UPDATE client_services SET panel_user = ?, panel_pass = ?, panel_host = ?, status = ? WHERE id = ?');
-    $update->bind_param('ssssi', $user, $pass, $url, $status, $serviceId);
+    $update = $conn->prepare('UPDATE client_services SET panel_user = ?, panel_pass = ?, panel_host = ?, status = ?, order_brief = ? WHERE id = ?');
+    $update->bind_param('sssssi', $user, $pass, $url, $status, $briefJson, $serviceId);
     $update->execute();
     $update->close();
+    billing_mail_client_event($conn, (int) $row['client_id'], 'website-live', array(
+        'service' => (string) $row['service_name'],
+        'url' => $url,
+        'note' => billing_plain_line($note, 180)
+    ));
     return '';
 }
 
@@ -238,10 +278,10 @@ function training_date($row)
     return $parsed->format('Y-m-d');
 }
 
-function training_save($conn, $serviceId, $date, $done)
+function training_save($conn, $serviceId, $date, $done, $place = '')
 {
     $serviceId = (int) $serviceId;
-    $stmt = $conn->prepare('SELECT id, plan_code, status FROM client_services WHERE id = ?');
+    $stmt = $conn->prepare('SELECT * FROM client_services WHERE id = ?');
     $stmt->bind_param('i', $serviceId);
     $stmt->execute();
     $row = db_fetch_assoc($stmt);
@@ -253,12 +293,22 @@ function training_save($conn, $serviceId, $date, $done)
     if ($date === '') {
         return 'Enter the visit date.';
     }
+    $briefJson = delivery_merge_brief($row, 'Place', $place);
+    if ($briefJson === '') {
+        return 'The visit place could not be saved.';
+    }
     $user = $done ? 'done' : 'confirmed';
     $pass = '';
-    $update = $conn->prepare('UPDATE client_services SET panel_user = ?, panel_pass = ?, panel_host = ? WHERE id = ?');
-    $update->bind_param('sssi', $user, $pass, $date, $serviceId);
+    $update = $conn->prepare('UPDATE client_services SET panel_user = ?, panel_pass = ?, panel_host = ?, order_brief = ? WHERE id = ?');
+    $update->bind_param('ssssi', $user, $pass, $date, $briefJson, $serviceId);
     $update->execute();
     $update->close();
+    billing_mail_client_event($conn, (int) $row['client_id'], 'training-set', array(
+        'service' => (string) $row['service_name'],
+        'status' => $done ? 'complete' : 'confirmed',
+        'date' => date('M j, Y', strtotime($date)),
+        'place' => billing_plain_line($place, 180)
+    ));
     return '';
 }
 

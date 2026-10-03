@@ -12,6 +12,7 @@ $navItems = [
     'sms-line.php'   => ['SMS line', 'radio'],
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
     'settings.php'   => ['Settings', 'settings'],
+    'manual.php'     => ['मार्गदर्शन', 'book-open'],
 ];
 $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Menu';
 ?>
@@ -76,10 +77,14 @@ $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Men
         <div class="hidden lg:block">
             <span class="text-slate-500 text-sm"><?= e($adminIdentity['name']) ?> · Admin</span>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 shrink-0">
+            <a href="manual.php" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition" aria-label="मार्गदर्शन">
+                <i class="portal-icon" data-lucide="book-open" aria-hidden="true"></i>
+                <span class="hidden sm:inline">मार्गदर्शन</span>
+            </a>
             <a href="../index.php" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-brand-400 text-sm flex items-center gap-2 transition">
                 <i class="portal-icon" data-lucide="external-link" aria-hidden="true"></i>
-                View Site
+                <span class="hidden sm:inline">View Site</span>
             </a>
         </div>
     </header>

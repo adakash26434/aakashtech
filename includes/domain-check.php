@@ -612,6 +612,59 @@ function domain_pay_request($conn, $clientId, $requestId)
         'Client: ' . billing_notify_client_label($conn, $clientId),
         'Register the name, then mark it Active in Admin → Domains.'
     ));
+    billing_mail_client_event($conn, $clientId, 'domain-paid', array(
+        'domain' => $row['domain_name'],
+        'amount' => $price
+    ));
+    return '';
+}
+
+function domain_admin_attach($conn, $clientId, $name)
+{
+    $clientId = (int) $clientId;
+    $split = domain_whois_split($name);
+    if ($clientId < 1 || !$split) {
+        return 'Choose a client and a .com or Nepal name, such as shop.com.np.';
+    }
+    $check = $conn->prepare('SELECT id, name FROM client_users WHERE id = ?');
+    $check->bind_param('i', $clientId);
+    $check->execute();
+    $client = db_fetch_assoc($check);
+    $check->close();
+    if (!$client) {
+        return 'That client was not found.';
+    }
+    if (domain_request_open($conn, $split['domain'])) {
+        return 'That name already has a request.';
+    }
+    $bill = domain_year_bill($conn, $split['tld']);
+    if ((float) $bill['total'] <= 0) {
+        return 'The yearly domain price is not set yet.';
+    }
+    $holderKind = 'individual';
+    $holderName = billing_plain_line($client['name'], 200);
+    $holderAddress = 'Registered at the office';
+    $document = '';
+    $status = 'paid';
+    $price = $bill['total'];
+    $domain = $split['domain'];
+    $tld = $split['tld'];
+    $stmt = $conn->prepare('INSERT INTO domain_requests (client_id, domain_name, tld, holder_kind, holder_name, holder_address, document_path, price, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->bind_param('issssssss', $clientId, $domain, $tld, $holderKind, $holderName, $holderAddress, $document, $price, $status);
+    $stmt->execute();
+    $requestId = (int) $conn->insert_id;
+    $stmt->close();
+    if ($requestId < 1) {
+        return 'The name could not be saved.';
+    }
+    $marked = domain_mark_request($conn, $requestId, 'active', '');
+    if ($marked !== '') {
+        $drop = $conn->prepare('DELETE FROM domain_requests WHERE id = ? AND status = \'paid\'');
+        $drop->bind_param('i', $requestId);
+        $drop->execute();
+        $drop->close();
+        return $marked;
+    }
     return '';
 }
 
@@ -704,14 +757,9 @@ function domain_mark_request($conn, $requestId, $decision, $note)
         $link->bind_param('ii', $serviceId, $requestId);
         $link->execute();
         $link->close();
-        $email = billing_client_email($conn, (int) $row['client_id']);
-        if ($email !== '') {
-            billing_mail_person($conn, $email, 'Domain active: ' . $row['domain_name'], array(
-                $row['domain_name'] . ' is marked Active.',
-                'The paid year starts now and renews from the wallet.',
-                'See it under My domains in the client panel.'
-            ));
-        }
+        billing_mail_client_event($conn, (int) $row['client_id'], 'domain-active', array(
+            'domain' => $row['domain_name']
+        ));
         return '';
     }
     if ($decision === 'declined') {
@@ -732,17 +780,14 @@ function domain_mark_request($conn, $requestId, $decision, $note)
             billing_wallet_credit($conn, (int) $row['client_id'], $row['price']);
             billing_record_entry($conn, (int) $row['client_id'], $row['price'], 'credit', 'refund', 'completed', 'wallet', 'Domain not registered: ' . $row['domain_name'], 0);
         }
-        $email = billing_client_email($conn, (int) $row['client_id']);
-        if ($email !== '') {
-            $refundLine = ($row['status'] === 'paid' && (float) $row['price'] > 0)
-                ? 'The amount was returned to the wallet.'
-                : 'It was not charged.';
-            billing_mail_person($conn, $email, 'Domain request closed: ' . $row['domain_name'], array(
-                'The domain request for ' . $row['domain_name'] . ' was not registered.',
-                $refundLine,
-                'Note: ' . $note
-            ));
-        }
+        $refundLine = ($row['status'] === 'paid' && (float) $row['price'] > 0)
+            ? 'The amount was returned to the wallet.'
+            : 'It was not charged.';
+        billing_mail_client_event($conn, (int) $row['client_id'], 'domain-closed', array(
+            'domain' => $row['domain_name'],
+            'refund' => $refundLine,
+            'note' => $note
+        ));
         return '';
     }
     return 'That decision is not available.';

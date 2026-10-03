@@ -20,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
         $stmt = $conn->prepare("INSERT INTO support_tickets (client_id, subject, description, priority) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $cid, $subject, $desc, $priority);
         if ($stmt->execute()) {
+            billing_mail_client_event($conn, (int) $cid, 'ticket-opened', array(
+                'subject' => billing_notify_clip($subject, 160)
+            ));
             billing_notify($conn, 'Support ticket: ' . $subject, array(
                 'A client opened a support ticket.',
                 'Subject: ' . $subject,
@@ -69,7 +72,7 @@ if ($find !== '') {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Support</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Open tickets stay in view. Older tickets are in the latest 40.' : 'Matches for “' . e($find) . '”.' ?></p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Open tickets stay in view. Older tickets are in the latest 40.' : 'Matches for “' . e($find) . '”.' ?> <a class="text-brand-400" href="manual.php#support">नेपाली चरण</a></p>
 </div>
 
 <?php if ($msg): ?>

@@ -52,7 +52,7 @@ if ($find !== '') {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Messages</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest messages, with waiting voice jobs kept in view.' : 'Matches for “' . e($find) . '”.' ?> Place a voice job on your own voice line, then mark it placed. That uses the client’s voice credits.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest messages, with waiting voice jobs kept in view.' : 'Matches for “' . e($find) . '”.' ?> Place a voice job on your own voice line, then mark it placed. That uses the client’s voice credits. <a class="text-brand-400" href="manual.php#voice">नेपाली चरण</a></p>
 </div>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or message name">

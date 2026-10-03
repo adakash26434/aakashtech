@@ -23,7 +23,7 @@ try {
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Identity</h1>
-    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Pending checks stay in view. Older decisions are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Approve the person or organization before they can send SMS, save a voice job, or create an API token.</p>
+    <p class="text-slate-500 text-sm"><?= $find === '' ? 'Pending checks stay in view. Older decisions are in the latest 80.' : 'Matches for “' . e($find) . '”.' ?> Approve the person or organization before they can send SMS, save a voice job, or create an API token. <a class="text-brand-400" href="manual.php#kyc">नेपाली चरण</a></p>
 </div>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Name, organization, or email">

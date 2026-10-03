@@ -15,6 +15,9 @@ $mail_logins = 0;
 $paid_domains = 0;
 $pending_kyc = 0;
 $waiting_voice = 0;
+$sms_stock_short = 0;
+$sms_clients_holding = 0;
+$renewing_soon = 0;
 $recent_inquiries = false;
 $recent_clients = false;
 try {
@@ -36,6 +39,19 @@ try {
     $paid_domains = $dashCount("SELECT COUNT(*) as c FROM domain_requests WHERE status = 'paid'");
     $pending_kyc = $dashCount("SELECT COUNT(*) as c FROM client_kyc WHERE status = 'pending'");
     $waiting_voice = $dashCount("SELECT COUNT(*) as c FROM sms_campaigns WHERE channel = 'voice' AND status IN ('draft','scheduled')");
+    $smsSaved = sms_vendor_stock_saved($conn);
+    $sms_clients_holding = sms_clients_holding($conn);
+    if ($smsSaved['balance'] !== null && (int) $smsSaved['balance'] < $sms_clients_holding) {
+        $sms_stock_short = $sms_clients_holding - (int) $smsSaved['balance'];
+    }
+    $soonDate = date('Y-m-d', strtotime('+14 days'));
+    $todayDate = date('Y-m-d');
+    $soonStmt = $conn->prepare("SELECT COUNT(*) as c FROM client_services WHERE auto_renew = 1 AND status IN ('active','past_due') AND next_renewal IS NOT NULL AND next_renewal != '' AND next_renewal <= ? AND next_renewal >= ?");
+    $soonStmt->bind_param('ss', $soonDate, $todayDate);
+    $soonStmt->execute();
+    $soonRow = db_fetch_assoc($soonStmt);
+    $soonStmt->close();
+    $renewing_soon = $soonRow ? (int) $soonRow['c'] : 0;
     $trains = training_plans();
     $bookedStmt = $conn->prepare("SELECT COUNT(*) as c FROM client_services WHERE status = 'booked' AND NOT (plan_code IN (?,?,?,?) AND IFNULL(panel_user, '') IN ('confirmed','done'))");
     $bookedStmt->bind_param('ssss', $trains[0], $trains[1], $trains[2], $trains[3]);
@@ -103,6 +119,16 @@ try {
 <?php if ((int) $paid_domains > 0): ?>
     <a href="domains.php" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
         <?= (int) $paid_domains ?> paid domain<?= (int) $paid_domains === 1 ? '' : 's' ?> waiting. Register the name, then mark it active.
+    </a>
+<?php endif; ?>
+<?php if ((int) $sms_stock_short > 0): ?>
+    <a href="sms-line.php" class="mb-6 block p-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+        Clients still hold <?= number_format((int) $sms_clients_holding) ?> SMS, and the bulk line has less. Buy more from the vendor before those sends fail.
+    </a>
+<?php endif; ?>
+<?php if ((int) $renewing_soon > 0): ?>
+    <a href="billing.php" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
+        <?= (int) $renewing_soon ?> hosting, domain, or mailbox year<?= (int) $renewing_soon === 1 ? '' : 's' ?> renew within 14 days. The wallet must cover them.
     </a>
 <?php endif; ?>
 <?php if ((int) $waiting_voice > 0): ?>
