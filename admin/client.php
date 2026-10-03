@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
@@ -17,6 +18,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
     } elseif (isset($_POST['reset_authenticator'])) {
         totp_clear($conn, 'client', $id);
         flash('client_notice', 'Authenticator reset. The client sets it up again on the next sign-in.');
+    } elseif (isset($_POST['open_portal'])) {
+        $opened = client_office_open($conn, $id);
+        if ($opened === '') {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            header('Location: ../client/index.php');
+            exit;
+        }
+        flash('client_error', $opened);
+    } elseif (isset($_POST['email_reset'])) {
+        $lookup = $conn->prepare('SELECT email, status FROM client_users WHERE id = ? LIMIT 1');
+        $lookup->bind_param('i', $id);
+        $lookup->execute();
+        $resetRow = db_fetch_assoc($lookup);
+        $lookup->close();
+        if (!$resetRow || (string) $resetRow['status'] !== 'active') {
+            flash('client_error', 'Activate the account before emailing a reset link.');
+        } else {
+            password_reset_request($conn, (string) $resetRow['email']);
+            flash('client_notice', 'A reset link was emailed. It works for 30 minutes. The current password stays until they choose a new one.');
+        }
+    } elseif (isset($_POST['set_password'])) {
+        $newPassword = isset($_POST['new_password']) ? (string) $_POST['new_password'] : '';
+        $again = isset($_POST['new_password_again']) ? (string) $_POST['new_password_again'] : '';
+        if ($newPassword !== $again) {
+            flash('client_error', 'The two passwords do not match.');
+        } else {
+            $passwordError = client_admin_set_password($conn, $id, $newPassword);
+            if ($passwordError === '') {
+                flash('client_notice', 'Password saved. Tell the client: ' . $newPassword . '. It is shown once and is not written in the email.');
+            } else {
+                flash('client_error', $passwordError);
+            }
+        }
     } elseif (isset($_POST['set_contact'])) {
         $contactError = billing_admin_set_contact(
             $conn,
@@ -93,6 +129,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
         } else {
             flash('client_error', $taken['error']);
         }
+    }
+    while (ob_get_level() > 0) {
+        ob_end_clean();
     }
     header('Location: client.php?id=' . $id . '&tab=' . $goTab);
     exit;
@@ -238,6 +277,36 @@ $problem = flash('client_error');
             </form>
         </section>
     </div>
+    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <section class="dash-panel">
+            <div class="dash-panel-header"><h2 class="font-heading font-semibold text-white">Open this portal</h2></div>
+            <form method="POST" class="p-5 space-y-3">
+                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
+                <p class="text-slate-400 text-sm">Look at the client portal without their password or authenticator code. A bar at the top shows this is the office view. Leave it to come back here.</p>
+                <button type="submit" name="open_portal" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open client portal</button>
+            </form>
+        </section>
+        <section class="dash-panel">
+            <div class="dash-panel-header"><h2 class="font-heading font-semibold text-white">Password</h2></div>
+            <div class="p-5 space-y-4">
+                <form method="POST" class="space-y-3">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
+                    <p class="text-slate-400 text-sm">Email a link when they still have the inbox. They choose the new password. The link works for 30 minutes.</p>
+                    <button type="submit" name="email_reset" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl">Email a reset link</button>
+                </form>
+                <form method="POST" class="space-y-3 border-t border-slate-800 pt-4">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
+                    <p class="text-slate-400 text-sm">Set a password when they are at the office. It is shown once on this page so you can tell them. The email says the password changed and does not include it.</p>
+                    <input name="new_password" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="New password, at least 8 characters">
+                    <input name="new_password_again" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="Type it again">
+                    <button type="submit" name="set_password" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save password</button>
+                </form>
+            </div>
+        </section>
+    </div>
     </div>
     <div x-show="tab==='wallet'" x-cloak>
     <div class="grid lg:grid-cols-2 gap-6 mb-6">
@@ -302,7 +371,7 @@ $problem = flash('client_error');
                 <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
                 <p class="text-white text-2xl font-heading font-bold"><?= number_format((int) $units['sms']) ?> <span class="text-slate-400 text-sm font-medium">SMS left on this account</span></p>
                 <p class="text-slate-500 text-xs">Used <?= number_format((int) $figures['used']) ?>. Voice calls left: <?= number_format((int) $units['voice_calls']) ?>.<?php if ($bulkLeft !== null): ?> The bulk line you buy from still has <?= number_format((int) $bulkLeft) ?> SMS.<?php endif; ?></p>
-                <p class="text-slate-400 text-sm">This adds texts, not wallet money. If the payment never arrives, use Take back on that row. Texts they already sent cannot come back.</p>
+                <p class="text-slate-400 text-sm">This adds texts, not wallet money. If the payment never arrives, use Take back on that row. Texts they already sent cannot come back. Until identity is approved, the client can send only 100 SMS in total.</p>
                 <div class="flex flex-wrap gap-2">
                     <?php foreach (array(500, 1000, 2000, 5000, 10000) as $quick): ?>
                         <button type="button" class="px-3 py-1.5 rounded-full border border-slate-700 text-sm text-slate-300 hover:text-white" @click="credits='<?= (int) $quick ?>'"><?= number_format($quick) ?></button>

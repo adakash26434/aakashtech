@@ -319,6 +319,8 @@ CREATE TABLE IF NOT EXISTS client_kyc (
     doc_registration VARCHAR(255) DEFAULT '',
     doc_tax     VARCHAR(255) DEFAULT '',
     doc_authority VARCHAR(255) DEFAULT '',
+    doc_identity_back VARCHAR(255) DEFAULT '',
+    doc_clearance VARCHAR(255) DEFAULT '',
     admin_note  TEXT,
     submitted_at DATETIME DEFAULT NULL,
     reviewed_at DATETIME DEFAULT NULL,

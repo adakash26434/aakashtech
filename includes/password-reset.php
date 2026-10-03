@@ -56,7 +56,7 @@ function password_reset_request($conn, $email)
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return;
     }
-    $stmt = $conn->prepare('SELECT id, status FROM client_users WHERE email = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT id, status FROM client_users WHERE LOWER(email) = ? LIMIT 1');
     if (!$stmt) {
         return;
     }
@@ -130,6 +130,36 @@ function password_reset_consume($conn, $token, $password)
     password_reset_clear($conn, $clientId);
     if (!$changed) {
         return 'This link has expired. Ask for a new one.';
+    }
+    return '';
+}
+
+function client_admin_set_password($conn, $clientId, $password)
+{
+    $clientId = (int) $clientId;
+    $password = (string) $password;
+    if ($clientId < 1) {
+        return 'That client was not found.';
+    }
+    if (strlen($password) < 8 || strlen($password) > 72) {
+        return 'Use a password of 8 to 72 characters.';
+    }
+    $active = 'active';
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $conn->prepare('UPDATE client_users SET password = ? WHERE id = ? AND status = ?');
+    if (!$stmt) {
+        return 'The password could not be saved.';
+    }
+    $stmt->bind_param('sis', $hash, $clientId, $active);
+    $stmt->execute();
+    $changed = (int) $conn->affected_rows > 0;
+    $stmt->close();
+    if (!$changed) {
+        return 'Activate the account before setting a password.';
+    }
+    password_reset_clear($conn, $clientId);
+    if (function_exists('billing_mail_client_event')) {
+        billing_mail_client_event($conn, $clientId, 'password-office', array());
     }
     return '';
 }

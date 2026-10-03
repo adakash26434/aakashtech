@@ -904,6 +904,15 @@ function billing_mail_catalog()
                 'The team will confirm the next step. Open My Services to see the date, place, or website link when it is ready.'
             )
         ),
+        'sms-ready' => array(
+            'when' => 'You add SMS credits on a client account',
+            'subject' => 'SMS credits are on your account',
+            'lines' => array(
+                '{credits} SMS credits are on your account.',
+                'Open Send SMS in the client portal and write the message.',
+                'Note: {note}'
+            )
+        ),
         'office-service' => array(
             'when' => 'You add a service that was sold at the office',
             'subject' => 'Added to your account: {service}',
@@ -1000,6 +1009,15 @@ function billing_mail_catalog()
                 '{service} could not renew today.',
                 'Add at least NPR {amount} to the wallet.',
                 'It tries again automatically. After the grace period the service pauses until the wallet can cover it.'
+            )
+        ),
+        'password-office' => array(
+            'when' => 'You set a new password for a client',
+            'subject' => 'Your password was changed',
+            'lines' => array(
+                'The team set a new password on your account.',
+                'Sign in with the password they gave you. It is not written in this email.',
+                'After you sign in, you can change it from Profile.'
             )
         ),
         'password' => array(
@@ -2272,11 +2290,14 @@ function billing_ensure_kyc_table($conn)
             doc_registration TEXT DEFAULT '',
             doc_tax TEXT DEFAULT '',
             doc_authority TEXT DEFAULT '',
+            doc_identity_back TEXT DEFAULT '',
+            doc_clearance TEXT DEFAULT '',
             admin_note TEXT DEFAULT '',
             submitted_at TEXT DEFAULT NULL,
             reviewed_at TEXT DEFAULT NULL,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
+        billing_kyc_columns($conn);
         return;
     }
     billing_exec($conn, "CREATE TABLE IF NOT EXISTS client_kyc (
@@ -2298,11 +2319,29 @@ function billing_ensure_kyc_table($conn)
         doc_registration VARCHAR(255) DEFAULT '',
         doc_tax VARCHAR(255) DEFAULT '',
         doc_authority VARCHAR(255) DEFAULT '',
+        doc_identity_back VARCHAR(255) DEFAULT '',
+        doc_clearance VARCHAR(255) DEFAULT '',
         admin_note TEXT,
         submitted_at DATETIME DEFAULT NULL,
         reviewed_at DATETIME DEFAULT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    billing_kyc_columns($conn);
+}
+
+function billing_kyc_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'client_kyc'));
+    if (!$present) {
+        return;
+    }
+    $definition = DB_DRIVER === 'sqlite' ? "TEXT DEFAULT ''" : "VARCHAR(255) DEFAULT ''";
+    foreach (array('doc_identity_back', 'doc_clearance') as $name) {
+        if (isset($present[$name])) {
+            continue;
+        }
+        billing_exec($conn, 'ALTER TABLE client_kyc ADD COLUMN ' . $name . ' ' . $definition);
+    }
 }
 
 function billing_kyc_blank()
@@ -2326,6 +2365,8 @@ function billing_kyc_blank()
         'doc_registration' => '',
         'doc_tax' => '',
         'doc_authority' => '',
+        'doc_identity_back' => '',
+        'doc_clearance' => '',
         'admin_note' => '',
         'submitted_at' => '',
         'reviewed_at' => ''
@@ -2401,7 +2442,7 @@ function billing_kyc_unlink($clientId, $relative)
 function billing_kyc_store_file($clientId, $slot, $file)
 {
     $clientId = (int) $clientId;
-    $slots = array('identity' => true, 'registration' => true, 'tax' => true, 'authority' => true);
+    $slots = array('identity' => true, 'identity_back' => true, 'registration' => true, 'tax' => true, 'authority' => true, 'clearance' => true);
     if (!isset($slots[$slot])) {
         return array('ok' => false, 'error' => 'That document is not accepted.');
     }
@@ -2480,63 +2521,71 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
     $contactNumber = '';
     $docs = array(
         'identity' => (string) $current['doc_identity'],
+        'identity_back' => (string) $current['doc_identity_back'],
         'registration' => (string) $current['doc_registration'],
         'tax' => (string) $current['doc_tax'],
-        'authority' => (string) $current['doc_authority']
+        'authority' => (string) $current['doc_authority'],
+        'clearance' => (string) $current['doc_clearance']
     );
     if ($kind === 'individual') {
         $fullName = billing_plain_line(isset($post['full_name']) ? $post['full_name'] : '', 160);
-        $idKind = billing_kyc_id_kind(isset($post['id_kind']) ? $post['id_kind'] : '');
+        $idKind = 'national_id';
         $idNumber = billing_kyc_reference(isset($post['id_number']) ? $post['id_number'] : '', 40);
         if (strlen($fullName) < 3) {
-            return 'Enter the name as it appears on the identity document.';
+            return 'Enter the name as it appears on the citizenship certificate.';
         }
-        if (strlen($idNumber) < 3) {
-            return 'Enter the citizenship or National Identity number.';
+        if (strlen($idNumber) < 5) {
+            return 'Enter the National Identity Card number.';
         }
     } else {
         $orgName = billing_plain_line(isset($post['org_name']) ? $post['org_name'] : '', 200);
         $registration = billing_kyc_reference(isset($post['registration_number']) ? $post['registration_number'] : '', 40);
         $tax = billing_kyc_reference(isset($post['tax_number']) ? $post['tax_number'] : '', 40);
-        $contactName = billing_plain_line(isset($post['contact_name']) ? $post['contact_name'] : '', 160);
-        $contactKind = billing_kyc_id_kind(isset($post['contact_id_kind']) ? $post['contact_id_kind'] : '');
-        $contactNumber = billing_kyc_reference(isset($post['contact_id_number']) ? $post['contact_id_number'] : '', 40);
         if (strlen($orgName) < 2) {
-            return 'Enter the organization name.';
+            return 'Enter the company name.';
         }
         if (strlen($registration) < 3) {
-            return 'Enter the organization registration number.';
+            return 'Enter the company registration number.';
         }
         if (strlen($tax) < 3) {
-            return 'Enter the PAN or VAT number.';
-        }
-        if (strlen($contactName) < 3 || strlen($contactNumber) < 3) {
-            return 'Enter the authorized person and that person\'s citizenship or National Identity number.';
+            return 'Enter the PAN number.';
         }
     }
-    $needed = $kind === 'individual' ? array('identity') : array('registration', 'tax', 'authority');
+    $needed = $kind === 'individual' ? array('identity', 'identity_back') : array('registration', 'tax', 'clearance');
     $labels = array(
-        'identity' => 'identity document',
-        'registration' => 'registration certificate',
-        'tax' => 'PAN or VAT certificate',
-        'authority' => 'authorized person\'s identity document'
+        'identity' => 'citizenship certificate, front',
+        'identity_back' => 'citizenship certificate, back',
+        'registration' => 'company registration certificate',
+        'tax' => 'PAN certificate',
+        'clearance' => 'latest tax clearance'
     );
+    $fresh = array();
     foreach ($needed as $slot) {
         $stored = billing_kyc_store_file($clientId, $slot, isset($files['doc_' . $slot]) ? $files['doc_' . $slot] : array());
         if (!$stored['ok']) {
+            foreach ($fresh as $path) {
+                billing_kyc_unlink($clientId, $path);
+            }
             return $stored['error'];
         }
         if ($stored['path']) {
-            if ($docs[$slot] !== '' && $docs[$slot] !== $stored['path']) {
-                billing_kyc_unlink($clientId, $docs[$slot]);
-            }
-            $docs[$slot] = $stored['path'];
+            $fresh[$slot] = $stored['path'];
         }
-        if ($docs[$slot] === '' || billing_kyc_safe_path($clientId, $docs[$slot]) === '') {
+        $kept = isset($fresh[$slot]) ? $fresh[$slot] : $docs[$slot];
+        if ($kept === '' || billing_kyc_safe_path($clientId, $kept) === '') {
+            foreach ($fresh as $path) {
+                billing_kyc_unlink($clientId, $path);
+            }
             return 'Upload the ' . $labels[$slot] . '.';
         }
     }
-    $drop = $kind === 'individual' ? array('registration', 'tax', 'authority') : array('identity');
+    foreach ($fresh as $slot => $path) {
+        if ($docs[$slot] !== '' && $docs[$slot] !== $path) {
+            billing_kyc_unlink($clientId, $docs[$slot]);
+        }
+        $docs[$slot] = $path;
+    }
+    $drop = $kind === 'individual' ? array('registration', 'tax', 'authority', 'clearance') : array('identity', 'identity_back');
     foreach ($drop as $slot) {
         if ($docs[$slot] !== '') {
             billing_kyc_unlink($clientId, $docs[$slot]);
@@ -2548,11 +2597,11 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
     $submitted = date('Y-m-d H:i:s');
     $exists = (int) $current['client_id'] > 0 && $current['status'] !== '';
     if ($exists) {
-        $stmt = $conn->prepare('UPDATE client_kyc SET account_kind = ?, status = ?, purpose = ?, full_name = ?, id_kind = ?, id_number = ?, address = ?, org_name = ?, registration_number = ?, tax_number = ?, contact_name = ?, contact_id_kind = ?, contact_id_number = ?, doc_identity = ?, doc_registration = ?, doc_tax = ?, doc_authority = ?, admin_note = ?, submitted_at = ? WHERE client_id = ?');
-        $stmt->bind_param('sssssssssssssssssssi', $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $note, $submitted, $clientId);
+        $stmt = $conn->prepare('UPDATE client_kyc SET account_kind = ?, status = ?, purpose = ?, full_name = ?, id_kind = ?, id_number = ?, address = ?, org_name = ?, registration_number = ?, tax_number = ?, contact_name = ?, contact_id_kind = ?, contact_id_number = ?, doc_identity = ?, doc_registration = ?, doc_tax = ?, doc_authority = ?, doc_identity_back = ?, doc_clearance = ?, admin_note = ?, submitted_at = ? WHERE client_id = ?');
+        $stmt->bind_param('sssssssssssssssssssssi', $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $docs['identity_back'], $docs['clearance'], $note, $submitted, $clientId);
     } else {
-        $stmt = $conn->prepare('INSERT INTO client_kyc (client_id, account_kind, status, purpose, full_name, id_kind, id_number, address, org_name, registration_number, tax_number, contact_name, contact_id_kind, contact_id_number, doc_identity, doc_registration, doc_tax, doc_authority, admin_note, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->bind_param('isssssssssssssssssss', $clientId, $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $note, $submitted);
+        $stmt = $conn->prepare('INSERT INTO client_kyc (client_id, account_kind, status, purpose, full_name, id_kind, id_number, address, org_name, registration_number, tax_number, contact_name, contact_id_kind, contact_id_number, doc_identity, doc_registration, doc_tax, doc_authority, doc_identity_back, doc_clearance, admin_note, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->bind_param('isssssssssssssssssssss', $clientId, $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $docs['identity_back'], $docs['clearance'], $note, $submitted);
     }
     $stmt->execute();
     $stmt->close();
@@ -2645,9 +2694,11 @@ function billing_kyc_send($conn, $clientId, $slot)
 {
     $map = array(
         'identity' => 'doc_identity',
+        'identity_back' => 'doc_identity_back',
         'registration' => 'doc_registration',
         'tax' => 'doc_tax',
-        'authority' => 'doc_authority'
+        'authority' => 'doc_authority',
+        'clearance' => 'doc_clearance'
     );
     if (!isset($map[$slot])) {
         http_response_code(404);

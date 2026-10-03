@@ -270,14 +270,17 @@ try {
                     <input type="email" name="email" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
                 </div>
                 <div>
-                    <label class="block text-slate-300 text-sm font-medium mb-2">Password</label>
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <label class="block text-slate-300 text-sm font-medium">Password</label>
+                        <a href="forgot-password.php" class="text-brand-400 text-sm">Forgot password?</a>
+                    </div>
                     <input type="password" name="password" required autocomplete="current-password" class="form-input" placeholder="••••••••">
+                    <p class="text-slate-500 text-xs mt-2">Reset sends a link to this email. The link works for 30 minutes.</p>
                 </div>
                 <button type="submit" name="login" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Sign In
                 </button>
                 <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
-                <p class="text-center"><a href="forgot-password.php" class="text-brand-400 text-sm">Forgot password</a></p>
             </form>
             <p class="text-center text-slate-600 text-sm mt-6">
                 Don't have an account? <a href="?action=register" class="text-brand-400 hover:text-brand-300 font-medium">Register here</a><br>

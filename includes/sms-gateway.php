@@ -298,7 +298,23 @@ function sms_result($ok, $error, $extra = array())
     ), $extra, array('ok' => $ok, 'error' => $ok ? '' : $error));
 }
 
-function sms_client_gate($conn, $clientId)
+function sms_office_credit($conn, $clientId)
+{
+    sms_credit_columns($conn);
+    $clientId = (int) $clientId;
+    $bought = 'Bought from the wallet';
+    $stmt = $conn->prepare('SELECT id FROM sms_credit_notes WHERE client_id = ? AND credits > 0 AND note <> ? AND (reversed_at IS NULL OR reversed_at = \'\') LIMIT 1');
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('is', $clientId, $bought);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    return (bool) $row;
+}
+
+function sms_client_gate($conn, $clientId, $identityRequired = false)
 {
     $clientId = (int) $clientId;
     $stmt = $conn->prepare('SELECT status FROM client_users WHERE id = ?');
@@ -309,10 +325,58 @@ function sms_client_gate($conn, $clientId)
     if (!$row || (string) $row['status'] !== 'active') {
         return 'This account cannot send SMS.';
     }
-    if (!billing_kyc_approved($conn, $clientId)) {
-        return 'Identity has to be approved before SMS can be sent.';
+    if ($identityRequired && !billing_kyc_approved($conn, $clientId)) {
+        return 'Identity has to be approved before an API token can be created.';
     }
     return '';
+}
+
+function sms_unverified_cap()
+{
+    return 100;
+}
+
+function sms_unverified_used($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    $used = 0;
+    $stmt = $conn->prepare('SELECT COALESCE(SUM(parts), 0) AS used_credits FROM sms_messages WHERE client_id = ? AND status IN (\'sent\', \'queued\', \'sending\', \'scheduled\')');
+    if ($stmt) {
+        $stmt->bind_param('i', $clientId);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        $used += $row ? (int) $row['used_credits'] : 0;
+    }
+    $waiting = $conn->prepare('SELECT message_content, recipients_count FROM sms_campaigns WHERE client_id = ? AND channel = \'sms\' AND status = \'scheduled\'');
+    if ($waiting) {
+        $waiting->bind_param('i', $clientId);
+        $waiting->execute();
+        foreach (db_fetch_all($waiting) as $job) {
+            $used += sms_message_parts((string) $job['message_content']) * (int) $job['recipients_count'];
+        }
+        $waiting->close();
+    }
+    return $used;
+}
+
+function sms_unverified_block($conn, $clientId, $credits)
+{
+    $clientId = (int) $clientId;
+    $credits = (int) $credits;
+    if ($credits < 1 || billing_kyc_approved($conn, $clientId)) {
+        return '';
+    }
+    $cap = sms_unverified_cap();
+    $used = sms_unverified_used($conn, $clientId);
+    if ($used + $credits <= $cap) {
+        return '';
+    }
+    $room = $cap - $used;
+    if ($room < 0) {
+        $room = 0;
+    }
+    return 'More than ' . number_format($cap) . ' SMS needs KYC. ' . number_format($room) . ' are still open on this account. Please update KYC, then try again.';
 }
 
 function sms_line($conn)
@@ -1406,6 +1470,12 @@ function sms_admin_grant($conn, $clientId, $credits, $note)
     }
     billing_add_units($conn, $clientId, 'sms', $credits);
     sms_remember_credit($conn, $clientId, $credits, $note);
+    if (function_exists('billing_mail_client_event')) {
+        billing_mail_client_event($conn, $clientId, 'sms-ready', array(
+            'credits' => number_format($credits),
+            'note' => $note
+        ));
+    }
     return '';
 }
 
@@ -1763,7 +1833,8 @@ function sms_deliver_campaign($conn, $campaignId)
 function sms_send($conn, $clientId, $job)
 {
     $clientId = (int) $clientId;
-    $gate = sms_client_gate($conn, $clientId);
+    $source = (isset($job['source']) && $job['source'] === 'api') ? 'api' : 'dashboard';
+    $gate = sms_client_gate($conn, $clientId, $source === 'api');
     if ($gate !== '') {
         return sms_result(false, $gate);
     }
@@ -1787,7 +1858,6 @@ function sms_send($conn, $clientId, $job)
     if ($sender['error'] !== '') {
         return sms_result(false, $sender['error']);
     }
-    $source = (isset($job['source']) && $job['source'] === 'api') ? 'api' : 'dashboard';
     $audience = isset($job['audience']) ? (string) $job['audience'] : '';
     $purpose = isset($job['purpose']) ? (string) $job['purpose'] : '';
     if ($source === 'dashboard') {
@@ -1813,6 +1883,12 @@ function sms_send($conn, $clientId, $job)
     }
     $parts = sms_message_parts($text);
     $credits = (int) $rendered['credits'];
+    if ($source !== 'api') {
+        $identityBlock = sms_unverified_block($conn, $clientId, $credits);
+        if ($identityBlock !== '') {
+            return sms_result(false, $identityBlock);
+        }
+    }
     $list = sms_store_contacts($parsed['contacts']);
     if ($future) {
         $balances = billing_unit_balances($conn, $clientId);
@@ -1905,7 +1981,7 @@ function sms_api_origin()
 function sms_create_token($conn, $clientId, $label, $allowedIps)
 {
     $clientId = (int) $clientId;
-    $gate = sms_client_gate($conn, $clientId);
+    $gate = sms_client_gate($conn, $clientId, true);
     if ($gate !== '') {
         return array('ok' => false, 'error' => $gate, 'token' => '');
     }

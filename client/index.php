@@ -164,11 +164,11 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
 <?php if ($showIdentity): ?>
     <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-100">
         <?php if ($identityStatus === 'pending'): ?>
-            Identity is with the team. SMS, a voice job, and an API token stay closed until it is approved.
+            KYC is with the team. More than 100 SMS stays closed until it is approved.
         <?php elseif ($identityStatus === 'rejected'): ?>
-            Identity was sent back. <a href="kyc.php" class="text-brand-300">Update it</a>
+            KYC was sent back. Please update KYC before sending more than 100 SMS. <a href="kyc.php" class="text-brand-300">Update KYC</a>
         <?php else: ?>
-            SMS, a voice job, and an API token stay closed until your identity is approved. <a href="kyc.php" class="text-brand-300">Submit identity</a>
+            More than 100 SMS needs KYC. Please update KYC. <a href="kyc.php" class="text-brand-300">Update KYC</a>
         <?php endif; ?>
     </div>
 <?php endif; ?>
@@ -290,10 +290,10 @@ $showIdentity = $identityStatus !== 'approved' && ($identityStatus === 'pending'
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
         <div><p class="text-white font-medium text-sm">Voice jobs</p><p class="text-slate-500 text-xs">Save the script. The team places the call.</p></div>
     </a>
-    <?php elseif ($messagingActive && $identityStatus === 'approved'): ?>
+    <?php elseif ($messagingActive): ?>
     <a href="sms-portal.php" class="dash-action-card group">
         <div class="dash-action-icon bg-purple-500/20 group-hover:bg-purple-500/30"><svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-        <div><p class="text-white font-medium text-sm">Send SMS</p><p class="text-slate-500 text-xs">Dashboard, logs, and API token</p></div>
+        <div><p class="text-white font-medium text-sm">Send SMS</p><p class="text-slate-500 text-xs"><?= $identityStatus === 'approved' ? 'Dashboard, logs, and API token' : 'Up to 100 SMS before KYC' ?></p></div>
     </a>
     <?php elseif ($messagingActive || $identityStatus === 'pending' || $identityStatus === 'rejected'): ?>
     <a href="kyc.php" class="dash-action-card group">

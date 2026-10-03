@@ -208,19 +208,61 @@ function require_client() {
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
+    if (!empty($_SESSION['client_view_admin']) && !client_office_view()) {
+        auth_drop_role('client');
+        header('Location: ' . $prefix . 'login.php');
+        exit;
+    }
     if (!auth_account_is_active('client')) {
         auth_drop_role('client');
         flash('login_error', 'Your account is suspended. Contact support.');
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
-    if (!$conn || !auth_password_still_current($conn, 'client')) {
+    if (!client_office_view() && (!$conn || !auth_password_still_current($conn, 'client'))) {
         auth_drop_role('client');
         flash('login_error', 'The password changed. Sign in again.');
         header('Location: ' . $prefix . 'login.php');
         exit;
     }
-    totp_require_enrolled('client');
+    if (!client_office_view()) {
+        totp_require_enrolled('client');
+    }
+}
+
+function client_office_view()
+{
+    $adminId = isset($_SESSION['admin_id']) ? (int) $_SESSION['admin_id'] : 0;
+    $viewId = isset($_SESSION['client_view_admin']) ? (int) $_SESSION['client_view_admin'] : 0;
+    return $adminId > 0 && $viewId === $adminId && is_admin_logged_in();
+}
+
+function client_office_open($conn, $clientId)
+{
+    $clientId = (int) $clientId;
+    if (!is_admin_logged_in()) {
+        return 'Sign in on the admin side first.';
+    }
+    $stmt = $conn->prepare('SELECT id, name, email, password, status FROM client_users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return 'That account could not be opened.';
+    }
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $row = db_fetch_assoc($stmt);
+    $stmt->close();
+    if (!$row) {
+        return 'That client was not found.';
+    }
+    if ((string) $row['status'] !== 'active') {
+        return 'Activate the account before opening the client portal.';
+    }
+    $_SESSION['client_id'] = (int) $row['id'];
+    $_SESSION['client_name'] = (string) $row['name'];
+    $_SESSION['client_email'] = (string) $row['email'];
+    $_SESSION['client_view_admin'] = (int) $_SESSION['admin_id'];
+    auth_remember_password('client', (string) $row['password']);
+    return '';
 }
 
 function admin_logout() {
@@ -230,6 +272,12 @@ function admin_logout() {
 }
 
 function client_logout() {
+    if (client_office_view()) {
+        $id = (int) (isset($_SESSION['client_id']) ? $_SESSION['client_id'] : 0);
+        auth_drop_role('client');
+        header('Location: ../admin/client.php?id=' . $id);
+        exit;
+    }
     auth_end_session();
     header('Location: login.php');
     exit;
@@ -640,7 +688,7 @@ function auth_drop_role($role) {
         unset($_SESSION['admin_id'], $_SESSION['admin_name'], $_SESSION['admin_email'], $_SESSION['admin_role']);
         return;
     }
-    unset($_SESSION['client_id'], $_SESSION['client_name'], $_SESSION['client_email'], $_SESSION['client_next']);
+    unset($_SESSION['client_id'], $_SESSION['client_name'], $_SESSION['client_email'], $_SESSION['client_next'], $_SESSION['client_view_admin'], $_SESSION['client_password_seal']);
 }
 
 function auth_end_session() {

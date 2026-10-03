@@ -9,6 +9,8 @@ $msg = '';
 $err = '';
 $balances = billing_unit_balances($conn, $cid);
 $kycReady = billing_kyc_approved($conn, $cid);
+$sendOpen = true;
+$unverifiedRoom = $kycReady ? null : max(0, sms_unverified_cap() - sms_unverified_used($conn, $cid));
 $route = sms_client_route($conn, $cid);
 $audiences = billing_audiences();
 $purposes = billing_purposes();
@@ -198,8 +200,8 @@ $schedStmt->execute();
 $scheduledRows = db_fetch_all($schedStmt);
 $schedStmt->close();
 
-$templates = $kycReady ? sms_templates($conn, $cid) : array();
-$numberLists = $kycReady ? sms_number_lists($conn, $cid) : array();
+$templates = $sendOpen ? sms_templates($conn, $cid) : array();
+$numberLists = $sendOpen ? sms_number_lists($conn, $cid) : array();
 $composer = array(
     'text' => $values['message_content'],
     'numbers' => $values['numbers'],
@@ -279,15 +281,18 @@ $phoneName = $route['choose_sender'] ? '' : $route['sender'];
     </div>
 <?php endif; ?>
 
-<?php if (!$kycReady): ?>
+<?php if (!$sendOpen): ?>
     <div class="dash-panel mb-6">
         <div class="p-6">
             <h2 class="font-heading font-semibold text-white text-lg mb-1">Identity first</h2>
-            <p class="text-slate-400 text-sm mb-4">SMS credit can be bought before identity is approved. Sending, logs of new messages, and API tokens stay closed until then.</p>
+            <p class="text-slate-400 text-sm mb-4">This account can send <?= number_format((int) $unverifiedRoom) ?> more SMS before identity is approved. A send over 100 SMS in total needs identity, so a new account cannot be used for a large blast.</p>
             <a href="kyc.php" class="inline-block px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit identity</a>
         </div>
     </div>
 <?php else: ?>
+    <?php if (!$kycReady): ?>
+        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">More than 100 SMS needs KYC. <?= number_format((int) $unverifiedRoom) ?> SMS are still open on this account. Please update KYC. <a href="kyc.php" class="text-brand-300">Update KYC</a></div>
+    <?php endif; ?>
     <?php if (!$route['connected']): ?>
         <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">SMS credits stay on this account. Sending opens when the line is connected.</div>
     <?php elseif ((int) $balances['sms'] < 1): ?>

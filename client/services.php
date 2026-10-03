@@ -139,7 +139,7 @@ $balance = billing_balance($conn, $cid);
                     <?php if ($status === 'booked' && !in_array((string) $s['plan_code'], website_plans(), true) && !in_array((string) $s['plan_code'], training_plans(), true)): ?>
                         <p class="text-blue-300 text-xs mt-3">Booked. The team builds or delivers this from the details above.</p>
                     <?php elseif (!empty($s['unit_kind']) && $s['unit_kind'] === 'sms'): ?>
-                        <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="sms-portal.php" class="text-brand-300">Send SMS from this account</a>. Credits fall when a message is sent.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before SMS can be sent.<?php endif; ?></p>
+                        <p class="text-slate-400 text-xs mt-3"><a href="sms-portal.php" class="text-brand-300">Send SMS from this account</a>. Credits fall when a message is sent.<?php if (!$kycApproved): ?> More than 100 SMS needs <a href="kyc.php" class="text-brand-300">identity</a>.<?php endif; ?></p>
                     <?php elseif (!empty($s['unit_kind']) && ($s['unit_kind'] === 'voice_calls' || $s['unit_kind'] === 'voice_minutes')): ?>
                         <p class="text-slate-400 text-xs mt-3"><?php if ($kycApproved): ?><a href="campaigns.php" class="text-brand-300">Save the voice job</a>. Credits are used when the team places the call.<?php else: ?><a href="kyc.php" class="text-brand-300">Submit identity</a> before a voice job can be saved.<?php endif; ?></p>
                     <?php endif; ?>

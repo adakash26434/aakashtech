@@ -59,28 +59,30 @@ try {
                 <div><dt class="text-slate-500">Account</dt><dd class="text-white"><?= $kind === 'organization' ? 'Organization' : 'Individual' ?></dd></div>
                 <?php if ($kind === 'individual'): ?>
                     <div><dt class="text-slate-500">Name</dt><dd class="text-white"><?= e($row['full_name']) ?></dd></div>
-                    <div><dt class="text-slate-500"><?= e(billing_kyc_id_label($row['id_kind'])) ?></dt><dd class="text-white"><?= e($row['id_number']) ?></dd></div>
+                    <div><dt class="text-slate-500">National Identity Card number</dt><dd class="text-white"><?= e($row['id_number']) ?></dd></div>
                 <?php else: ?>
-                    <div><dt class="text-slate-500">Organization</dt><dd class="text-white"><?= e($row['org_name']) ?></dd></div>
+                    <div><dt class="text-slate-500">Company</dt><dd class="text-white"><?= e($row['org_name']) ?></dd></div>
                     <div><dt class="text-slate-500">Registration</dt><dd class="text-white"><?= e($row['registration_number']) ?></dd></div>
-                    <div><dt class="text-slate-500">PAN or VAT</dt><dd class="text-white"><?= e($row['tax_number']) ?></dd></div>
-                    <div><dt class="text-slate-500">Authorized person</dt><dd class="text-white"><?= e($row['contact_name']) ?> · <?= e($row['contact_id_number']) ?></dd></div>
+                    <div><dt class="text-slate-500">PAN</dt><dd class="text-white"><?= e($row['tax_number']) ?></dd></div>
                 <?php endif; ?>
                 <div class="sm:col-span-2"><dt class="text-slate-500">Address</dt><dd class="text-white"><?= e($row['address']) ?></dd></div>
                 <div class="sm:col-span-2"><dt class="text-slate-500">Use</dt><dd class="text-white"><?= e($row['purpose']) ?></dd></div>
             </dl>
             <div class="flex flex-wrap gap-3 text-sm mb-4">
                 <?php if ($kind === 'individual' && $row['doc_identity'] !== ''): ?>
-                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=identity">Identity document</a>
+                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=identity">Citizenship, front</a>
+                <?php endif; ?>
+                <?php if ($kind === 'individual' && !empty($row['doc_identity_back'])): ?>
+                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=identity_back">Citizenship, back</a>
                 <?php endif; ?>
                 <?php if ($kind === 'organization' && $row['doc_registration'] !== ''): ?>
                     <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=registration">Registration</a>
                 <?php endif; ?>
                 <?php if ($kind === 'organization' && $row['doc_tax'] !== ''): ?>
-                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=tax">PAN or VAT</a>
+                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=tax">PAN certificate</a>
                 <?php endif; ?>
-                <?php if ($kind === 'organization' && $row['doc_authority'] !== ''): ?>
-                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=authority">Authorized person</a>
+                <?php if ($kind === 'organization' && !empty($row['doc_clearance'])): ?>
+                    <a class="text-brand-400" href="kyc-file.php?client=<?= $clientId ?>&slot=clearance">Tax clearance</a>
                 <?php endif; ?>
             </div>
             <?php if ($status === 'pending' || $status === 'approved'): ?>

@@ -105,3 +105,12 @@ $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Men
         </div>
     </header>
     <main class="flex-1 p-4 lg:p-8">
+        <?php if (function_exists('client_office_view') && client_office_view()): ?>
+            <div class="mb-4 p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-100 text-sm flex flex-wrap items-center justify-between gap-3">
+                <p>Office view of <?= e(get_client_name()) ?>. The client is not signed in here. Their password and authenticator were not used.</p>
+                <form method="POST" action="logout.php">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm rounded-xl">Back to admin</button>
+                </form>
+            </div>
+        <?php endif; ?>

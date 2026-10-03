@@ -552,6 +552,9 @@ function totp_require_enrolled($kind)
     if (!$conn || ($kind !== 'admin' && $kind !== 'client')) {
         return;
     }
+    if ($kind === 'client' && function_exists('client_office_view') && client_office_view()) {
+        return;
+    }
     $id = $kind === 'admin' ? (int) (isset($_SESSION['admin_id']) ? $_SESSION['admin_id'] : 0) : (int) (isset($_SESSION['client_id']) ? $_SESSION['client_id'] : 0);
     if ($id < 1) {
         return;

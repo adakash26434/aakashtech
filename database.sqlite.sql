@@ -243,6 +243,8 @@ CREATE TABLE IF NOT EXISTS client_kyc (
     doc_registration TEXT DEFAULT '',
     doc_tax TEXT DEFAULT '',
     doc_authority TEXT DEFAULT '',
+    doc_identity_back TEXT DEFAULT '',
+    doc_clearance TEXT DEFAULT '',
     admin_note TEXT DEFAULT '',
     submitted_at TEXT DEFAULT NULL,
     reviewed_at TEXT DEFAULT NULL,
