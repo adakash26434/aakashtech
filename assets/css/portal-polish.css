@@ -2,12 +2,12 @@
 :root { --pp-ring: 0 0 0 3px rgba(11,139,122,.35); --pp-ease: cubic-bezier(.22,1,.36,1); }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-::selection { background: #0b8b7a; color: #fff; }
+::selection { background: var(--brand-500); color: #fff; }
 
 /* Focus and touch targets */
 .portal-shell a:focus-visible, .portal-shell button:focus-visible, .portal-shell input:focus-visible,
 .portal-shell select:focus-visible, .portal-shell textarea:focus-visible, .portal-shell summary:focus-visible {
-    outline: 2px solid #087365; outline-offset: 2px; box-shadow: var(--pp-ring);
+    outline: 2px solid var(--brand-600); outline-offset: 2px; box-shadow: var(--pp-ring);
 }
 .portal-shell button, .portal-shell .btn, .portal-shell a.button { min-height: 40px; transition: transform .2s var(--pp-ease), box-shadow .2s var(--pp-ease), background-color .2s; }
 .portal-shell button:not(:disabled):active { transform: scale(.98); }
@@ -16,7 +16,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 
 /* Forms: clear invalid state, comfortable fields, no iOS zoom */
 .portal-shell input:not([type=checkbox]):not([type=radio]), .portal-shell select, .portal-shell textarea { font-size: 16px; border-radius: 12px; transition: border-color .2s, box-shadow .2s; }
-.portal-shell input:focus, .portal-shell select:focus, .portal-shell textarea:focus { border-color: #0b8b7a; box-shadow: var(--pp-ring); outline: none; }
+.portal-shell input:focus, .portal-shell select:focus, .portal-shell textarea:focus { border-color: var(--brand-500); box-shadow: var(--pp-ring); outline: none; }
 .portal-shell input:user-invalid, .portal-shell textarea:user-invalid, .portal-shell select:user-invalid { border-color: #b42318; }
 .portal-shell textarea { resize: vertical; }
 
@@ -49,14 +49,14 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 
 /* Declaration box: readable on the light portal (was dark grey with low contrast) */
 .portal-shell .use-declaration { background: #f1f7f5; border: 1px solid #a8dfd0; }
-.portal-shell .use-declaration-title { color: #102b35; font-size: 15px; font-weight: 700; }
+.portal-shell .use-declaration-title { color: var(--ink-900); font-size: 15px; font-weight: 700; }
 .portal-shell .use-declaration-text { color: #25434b; font-size: 15px; line-height: 1.7; }
-.portal-shell .use-declaration input[type="checkbox"] { width: 22px; height: 22px; accent-color: #0b8b7a; flex: none; }
+.portal-shell .use-declaration input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--brand-500); flex: none; }
 
 /* Safety net: this portal was built dark-first and re-skinned light. Any leftover pale-text or dark-fill
    Tailwind class that portal.css did not map is forced to a readable colour here. */
 .portal-shell .text-slate-100, .portal-shell .text-slate-200, .portal-shell .text-gray-100, .portal-shell .text-gray-200 { color: #25434b; }
-.portal-shell [class*="bg-slate-900"], .portal-shell [class*="bg-slate-950"], .portal-shell [class*="bg-gray-900"] { background-color: #f1f7f5; color: #102b35; border-color: #dce8e4; }
-.portal-shell [class*="bg-slate-800"]:not(button):not(a):not([class*="bg-brand"]), .portal-shell [class*="bg-slate-700"]:not(button):not(a) { background-color: #eaf3f0; color: #102b35; }
+.portal-shell [class*="bg-slate-900"], .portal-shell [class*="bg-slate-950"], .portal-shell [class*="bg-gray-900"] { background-color: #f1f7f5; color: var(--ink-900); border-color: #dce8e4; }
+.portal-shell [class*="bg-slate-800"]:not(button):not(a):not([class*="bg-brand"]), .portal-shell [class*="bg-slate-700"]:not(button):not(a) { background-color: #eaf3f0; color: var(--ink-900); }
 .portal-shell ::placeholder { color: #6d8388; opacity: 1; }
-.portal-shell input, .portal-shell select, .portal-shell textarea { color: #102b35; }
+.portal-shell input, .portal-shell select, .portal-shell textarea { color: var(--ink-900); }

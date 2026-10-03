@@ -1,0 +1,25 @@
+/* Aakash Technologies — DESIGN TOKENS. The single source of truth for the public site, client portal and admin.
+   Change a value here and every page follows. (Tailwind's palette lives in assets/js/tailwind-config.js and must match.) */
+:root {
+    /* Brand */
+    --brand-50: #e5f5f0; --brand-100: #d2eee6; --brand-200: #a8dfd0; --brand-300: #79cdb7;
+    --brand-400: #43b39a; --brand-500: #0b8b7a; --brand-600: #087365; --brand-700: #075e54;
+    --accent-gold: #edb65e;
+    /* Ink and surfaces */
+    --ink-900: #102b35; --ink-700: #25434b; --ink-500: #4a626a; --ink-400: #6d8388;
+    --surface: #ffffff; --surface-paper: #fbfdfc; --surface-wash: #f1f7f5; --line: #dce8e4;
+    /* Status */
+    --ok: #08734f; --ok-bg: #dcf3e8; --warn: #8a5a00; --warn-bg: #fff3d6;
+    --bad: #b42318; --bad-bg: #fde8e6; --info: #0b5ea8; --info-bg: #e3f0fb;
+    /* Type */
+    --font-heading: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", sans-serif;
+    --text-sm: 14px; --text-base: 16px; --text-lg: 18px;
+    /* Shape, space, depth */
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 999px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
+    --control-h: 48px; --tap-min: 44px;
+    --shadow-sm: 0 2px 8px rgba(16, 43, 53, .06); --shadow-md: 0 12px 32px rgba(16, 43, 53, .10);
+    --ring: 0 0 0 3px rgba(11, 139, 122, .35);
+    --icon-size: 20px; --icon-stroke: 1.75;
+}

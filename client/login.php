@@ -218,17 +218,13 @@ try {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../assets/css/tokens.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/portal.css">
-    <script>
-        tailwind.config = { theme: { extend: {
-            fontFamily: { heading: ['Space Grotesk', 'sans-serif'], body: ['Inter', 'sans-serif'] },
-            colors: {
-                brand: { 50:'#e5f5f0',100:'#d2eee6',200:'#a8dfd0',300:'#79cdb7',400:'#43b39a',500:'#0b8b7a',600:'#087365',700:'#075e54' },
-                dark: { 200:'#536b63',300:'#344b44',700:'#e5f5f0',800:'#d2eee6',900:'#ffffff',950:'#f4f8f6' }
-            }
-        }}}
-    </script>
+    <link rel="stylesheet" href="../assets/css/portal-polish.css">
+    <link rel="stylesheet" href="../assets/css/ui-shared.css">
+    <script src="../assets/js/tailwind-config.js"></script>
+    <script defer src="../assets/js/forms.js"></script>
 </head>
 <body class="portal-shell portal-auth font-body bg-dark-950 text-slate-300 min-h-screen flex items-center justify-center relative overflow-hidden">
     <div class="absolute inset-0 z-0">

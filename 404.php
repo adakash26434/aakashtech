@@ -38,11 +38,14 @@ if ($docRoot !== false && strpos(__DIR__, $docRoot) === 0) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/tokens.css">
     <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/polish.css">
+    <link rel="stylesheet" href="assets/css/ui-shared.css">
     <script defer src="https://unpkg.com/lucide@0.383.0"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="assets/js/site.js"></script>
+    <script defer src="assets/js/forms.js"></script>
 </head>
 <body class="site-public font-body antialiased">
     <?php include __DIR__ . '/includes/site-header.php'; ?>

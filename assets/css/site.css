@@ -1,6 +1,6 @@
 :root {
     color-scheme: light;
-    --site-ink: #102b35;
+    --site-ink: var(--ink-900);
     --site-ink-soft: #25434b;
     --site-muted: #4a626a;
     --site-faint: #6d8388;
@@ -10,9 +10,9 @@
     --site-paper: #fbfdfc;
     --site-wash: #f1f7f5;
     --site-line: #dce8e4;
-    --site-teal: #0b8b7a;
-    --site-teal-dark: #087365;
-    --site-teal-pale: #e5f5f0;
+    --site-teal: var(--brand-500);
+    --site-teal-dark: var(--brand-600);
+    --site-teal-pale: var(--brand-50);
     --site-gold: #edb65e;
     --site-shadow: 0 24px 64px rgba(20, 55, 61, 0.1);
     --site-heading: "Space Grotesk", sans-serif;
@@ -335,7 +335,7 @@ body.site-public textarea {
 }
 
 .button--primary:hover {
-    background: linear-gradient(135deg, #087365 0%, #054d45 100%);
+    background: linear-gradient(135deg, var(--brand-600) 0%, #054d45 100%);
     box-shadow: 0 12px 24px rgba(11, 139, 122, 0.3);
 }
 
@@ -543,7 +543,7 @@ body.site-public textarea {
 
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
     .hero h1 span {
-        background-image: linear-gradient(110deg, #087365 0%, #087365 35%, #7ddec8 50%, #087365 65%, #087365 100%);
+        background-image: linear-gradient(110deg, var(--brand-600) 0%, var(--brand-600) 35%, #7ddec8 50%, var(--brand-600) 65%, var(--brand-600) 100%);
         background-size: 220% 100%;
         -webkit-background-clip: text;
         background-clip: text;
@@ -2154,7 +2154,7 @@ a.contact-method:hover strong {
 .site-footer {
     padding: 58px 0 0;
     color: #d4e0dc;
-    background: #102b35;
+    background: var(--ink-900);
 }
 
 .footer-main {
@@ -2197,7 +2197,7 @@ a.contact-method:hover strong {
     height: 40px;
     display: grid;
     place-items: center;
-    color: #102b35;
+    color: var(--ink-900);
     background: #a4ddc8;
     border-radius: 12px;
     transition: transform 160ms ease, background 160ms ease;
@@ -3066,14 +3066,14 @@ a.contact-method:hover strong {
 
 .ask-line--you {
     margin-left: 28px;
-    color: #102b35;
-    background: #e5f5f0;
+    color: var(--ink-900);
+    background: var(--brand-50);
 }
 
 .ask-line--ai,
 .ask-line--wait {
     margin-right: 18px;
-    color: #102b35;
+    color: var(--ink-900);
     background: #f4f8f6;
 }
 

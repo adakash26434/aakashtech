@@ -8,7 +8,7 @@
     --type-body: 15px;
     --type-label: 13px;
     --type-input: 16px;
-    --portal-brand: #0b8b7a;
+    --portal-brand: var(--brand-500);
     --portal-brand-dark: #075e54;
 }
 
@@ -149,7 +149,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-shell [class~="hover:from-brand-400"]:hover {
-    background-image: linear-gradient(90deg, #087365, #075e54);
+    background-image: linear-gradient(90deg, var(--brand-600), #075e54);
 }
 
 .portal-shell [class~="bg-slate-800"],
@@ -270,7 +270,7 @@ body.portal-shell.bg-dark-950,
 
 .domain-steps li.is-done { color: #075e54; }
 .domain-steps li.is-done::before,
-.domain-steps li.is-current::before { background: #0b8b7a; }
+.domain-steps li.is-current::before { background: var(--brand-500); }
 .domain-steps li.is-current { color: #16343a; font-weight: 600; }
 
 .portal-shell .form-input {
@@ -422,7 +422,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .field-hint--ok {
-    color: #087365;
+    color: var(--brand-600);
 }
 
 .portal-shell .portal-icon {
@@ -466,11 +466,11 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell::-webkit-scrollbar-thumb,
 .portal-shell *::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #43b39a, #087365);
+    background: linear-gradient(180deg, #43b39a, var(--brand-600));
 }
 
 .portal-shell::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #0b8b7a, #075e54);
+    background: linear-gradient(180deg, var(--brand-500), #075e54);
 }
 
 .portal-shell .dash-panel.overflow-hidden {
