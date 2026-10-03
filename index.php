@@ -273,11 +273,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="hero-copy">
                     <div class="eyebrow reveal">
                         <span class="eyebrow-dot" aria-hidden="true"></span>
-                        For cooperatives, companies, parties, and personal work
+                        <?= site_escape($publicSite['home_eyebrow']) ?>
                     </div>
-                    <h1 class="reveal font-heading">Bulk SMS.<br>Voice calls.<br>Hosting and <span>servers.</span></h1>
+                    <h1 class="reveal font-heading"><?= site_hero_title_html($publicSite['home_title']) ?></h1>
                     <p class="hero-lede reveal">
-                        Send the AGM, election, school, or festival notice, then keep the domain, the mail, and the website with the same company. The rate is on the page. The bill adds 13% VAT before you pay.
+                        <?= site_escape($publicSite['home_lede']) ?>
                     </p>
                     <div class="hero-actions reveal">
                         <a class="button button--primary" href="#services">
@@ -344,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
 
         <div class="service-ribbon" aria-label="<?= site_escape($siteName) ?> service categories">
             <div class="wrap service-ribbon-inner">
-                <div class="ribbon-lead">Buy what you need. Recurring plans renew themselves.</div>
+                <div class="ribbon-lead"><?= site_escape($publicSite['home_ribbon']) ?></div>
                 <div class="ribbon-item"><i data-lucide="message-square-text" aria-hidden="true"></i> Bulk SMS</div>
                 <div class="ribbon-item"><i data-lucide="phone-call" aria-hidden="true"></i> Voice calls</div>
                 <div class="ribbon-item"><i data-lucide="globe" aria-hidden="true"></i> Domains</div>
@@ -377,9 +377,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         <section id="services" class="section services-section">
             <div class="wrap">
                 <div class="section-heading section-heading--center reveal">
-                    <span class="section-kicker">What we do</span>
-                    <h2 class="font-heading">Read the rate. Buy it, or book it.</h2>
-                    <p>Open a service and see the rate before you create an account. Check a domain name, or open WHOIS check up to see who holds it. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers hosting, domain email, the website, and field training.</p>
+                    <span class="section-kicker"><?= site_escape($publicSite['home_services_kicker']) ?></span>
+                    <h2 class="font-heading"><?= site_escape($publicSite['home_services_heading']) ?></h2>
+                    <p><?= site_escape($publicSite['home_services_text']) ?></p>
                 </div>
 
                 <div class="service-grid">
@@ -422,8 +422,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
 
                 <div class="about-copy">
                     <span class="section-kicker reveal">Why <?= site_escape($siteName) ?></span>
-                    <h2 class="reveal font-heading">The rate is on the page. The order is the brief.</h2>
-                    <p class="reveal">A cooperative can send the notice, register the name, host the site, open domain email, and train the people from one account. Companies, parties, schools, and personal use follow the same path.</p>
+                    <h2 class="reveal font-heading"><?= site_escape($publicSite['home_about_heading']) ?></h2>
+                    <p class="reveal"><?= site_escape($publicSite['home_about_text']) ?></p>
 
                     <ul class="value-list">
                         <li class="reveal">
@@ -447,8 +447,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             <div class="wrap process-layout">
                 <div class="process-heading reveal">
                     <span class="section-kicker">How we work</span>
-                    <h2 class="font-heading">Buy it, then let it renew.</h2>
-                    <p>Create a client account, add wallet funds, and choose a plan. The first top-up is confirmed once. After that, checkout and renewals use the wallet.</p>
+                    <h2 class="font-heading"><?= site_escape($publicSite['home_process_heading']) ?></h2>
+                    <p><?= site_escape($publicSite['home_process_text']) ?></p>
                 </div>
 
                 <div class="process-steps">
@@ -475,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
             <div class="wrap contact-layout">
                 <div class="contact-copy reveal">
                     <span class="section-kicker">Get in touch</span>
-                    <h2 class="font-heading">Rates and orders are already online.</h2>
+                    <h2 class="font-heading"><?= site_escape($publicSite['home_contact_heading']) ?></h2>
                     <?php
                     $mailHref = site_mail_href($siteEmail, $siteName);
                     $chatChannels = site_chat_channels($publicSite);

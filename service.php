@@ -36,6 +36,9 @@ $siteTagline = $publicSite['footer_tagline'];
 $siteFooter = $publicSite['footer_text'];
 $siteLogo = $publicSite['logo_path'];
 $overrides = $conn ? billing_catalog_overrides($conn) : array();
+if ($conn) {
+    $page = billing_public_page($conn, $slug);
+}
 $service = billing_saved_service_view($conn, $slug, $overrides);
 $servicePoster = $conn ? site_service_poster($conn, $slug) : '';
 
@@ -134,10 +137,11 @@ $navBase = 'index.php';
                             <?php endforeach; ?>
                         </ol>
                     <?php endif; ?>
-                    <?php if (!empty($guide['notes'])): ?>
+                    <?php $publicNotes = !empty($page['points_saved']) ? $page['points'] : (isset($guide['notes']) ? $guide['notes'] : array()); ?>
+                    <?php if ($publicNotes): ?>
                         <h2 class="detail-subhead font-heading">Worth knowing</h2>
                         <ul class="detail-points">
-                            <?php foreach ($guide['notes'] as $note): ?>
+                            <?php foreach ($publicNotes as $note): ?>
                                 <li><?= service_escape($note) ?></li>
                             <?php endforeach; ?>
                         </ul>

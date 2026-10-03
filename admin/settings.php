@@ -99,6 +99,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_homepage'])) {
+    verify_csrf();
+    $homeFields = array(
+        'home_eyebrow' => 180,
+        'home_title' => 240,
+        'home_lede' => 600,
+        'home_ribbon' => 180,
+        'home_services_kicker' => 80,
+        'home_services_heading' => 160,
+        'home_services_text' => 800,
+        'home_about_heading' => 180,
+        'home_about_text' => 800,
+        'home_process_heading' => 180,
+        'home_process_text' => 800,
+        'home_contact_heading' => 180
+    );
+    $homeValues = array();
+    $homeMissing = false;
+    foreach ($homeFields as $key => $limit) {
+        $value = substr(trim(isset($_POST[$key]) ? (string) $_POST[$key] : ''), 0, $limit);
+        if ($value === '') {
+            $homeMissing = true;
+        }
+        $homeValues[$key] = $value;
+    }
+    if ($homeMissing) {
+        $err = 'Fill every homepage line. Nothing was saved.';
+    } else {
+        foreach ($homeValues as $key => $value) {
+            billing_set_setting($conn, $key, $value);
+        }
+        $msg = 'Homepage text saved. The public site uses it now.';
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_legal'])) {
     verify_csrf();
     $privacy = !empty($_POST['restore_privacy']) ? '' : site_legal_plain(isset($_POST['privacy_policy']) ? $_POST['privacy_policy'] : '', 12000);
@@ -218,7 +253,7 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Settings</h1>
-    <p class="text-slate-500 text-sm">Logo, public contact details, and the inbox that receives new requests. <a class="text-brand-400" href="manual.php#settings">नेपाली चरण</a></p>
+        <p class="text-slate-500 text-sm">Logo, public contact details, the homepage lines, and the inbox that receives new requests. <a class="text-brand-400" href="manual.php#settings">नेपाली चरण</a></p>
 </div>
 
 <?php if ($msg): ?>
@@ -230,7 +265,9 @@ $deepseekSaved = billing_setting($conn, 'ai_deepseek_key') !== '';
 
 <?php
 $settingsTab = 'mail';
-if (isset($_POST['save_legal'])) {
+if (isset($_POST['save_homepage'])) {
+    $settingsTab = 'home';
+} elseif (isset($_POST['save_legal'])) {
     $settingsTab = 'legal';
 } elseif (isset($_POST['save_ai'])) {
     $settingsTab = 'assistant';
@@ -243,6 +280,7 @@ if (isset($_POST['save_legal'])) {
     <button type="button" @click="tab='mail'" :class="tab==='mail' ? 'is-on' : ''">Mail</button>
     <button type="button" @click="tab='legal'" :class="tab==='legal' ? 'is-on' : ''">Privacy</button>
     <button type="button" @click="tab='assistant'" :class="tab==='assistant' ? 'is-on' : ''">Assistant</button>
+    <button type="button" @click="tab='home'" :class="tab==='home' ? 'is-on' : ''">Homepage</button>
     <button type="button" @click="tab='site'" :class="tab==='site' ? 'is-on' : ''">Site</button>
 </div>
 <div x-show="tab==='mail'">
@@ -347,6 +385,64 @@ if (isset($_POST['save_legal'])) {
         </div>
         <p class="text-slate-500 text-xs">The key stays on the server. It is not shown again and it is not printed on the website. Gemini uses gemini-2.5-flash. DeepSeek uses deepseek-chat. Choose Off to hide the assistant.</p>
         <button type="submit" name="save_ai" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save assistant</button>
+    </form>
+</div>
+</div>
+<div x-show="tab==='home'" x-cloak>
+<div class="dash-panel mb-6">
+    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Homepage</h3></div>
+    <form method="POST" class="p-5 space-y-4">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <p class="text-slate-400 text-sm">These lines are the public front page. The title uses one line per row. Service cards and prices stay under Services.</p>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_eyebrow">Small line above the title</label>
+            <input id="home_eyebrow" name="home_eyebrow" maxlength="180" required class="form-input" value="<?= e($settings['home_eyebrow']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_title">Title, one line per row</label>
+            <textarea id="home_title" name="home_title" maxlength="240" rows="3" required class="form-input"><?= e($settings['home_title']) ?></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_lede">Opening paragraph</label>
+            <textarea id="home_lede" name="home_lede" maxlength="600" rows="3" required class="form-input"><?= e($settings['home_lede']) ?></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_ribbon">Strip under the title</label>
+            <input id="home_ribbon" name="home_ribbon" maxlength="180" required class="form-input" value="<?= e($settings['home_ribbon']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_services_kicker">Services label</label>
+            <input id="home_services_kicker" name="home_services_kicker" maxlength="80" required class="form-input" value="<?= e($settings['home_services_kicker']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_services_heading">Services heading</label>
+            <input id="home_services_heading" name="home_services_heading" maxlength="160" required class="form-input" value="<?= e($settings['home_services_heading']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_services_text">Services paragraph</label>
+            <textarea id="home_services_text" name="home_services_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_services_text']) ?></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_about_heading">About heading</label>
+            <input id="home_about_heading" name="home_about_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_about_heading']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_about_text">About paragraph</label>
+            <textarea id="home_about_text" name="home_about_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_about_text']) ?></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_process_heading">How we work heading</label>
+            <input id="home_process_heading" name="home_process_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_process_heading']) ?>">
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_process_text">How we work paragraph</label>
+            <textarea id="home_process_text" name="home_process_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_process_text']) ?></textarea>
+        </div>
+        <div>
+            <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_contact_heading">Contact heading</label>
+            <input id="home_contact_heading" name="home_contact_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_contact_heading']) ?>">
+        </div>
+        <button type="submit" name="save_homepage" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save homepage</button>
     </form>
 </div>
 </div>

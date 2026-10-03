@@ -12,7 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_public_service']
         $slug,
         isset($_POST['title']) ? $_POST['title'] : '',
         isset($_POST['description']) ? $_POST['description'] : '',
-        isset($_POST['features']) ? $_POST['features'] : ''
+        isset($_POST['features']) ? $_POST['features'] : '',
+        isset($_POST['kicker']) ? $_POST['kicker'] : '',
+        isset($_POST['lead']) ? $_POST['lead'] : '',
+        isset($_POST['points']) ? $_POST['points'] : ''
     );
     if ($saveError !== '') {
         $err = $saveError;
@@ -254,16 +257,31 @@ if (isset($_POST['save_poster'])) {
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Public service text</h3></div>
     <div class="p-5 space-y-6">
-        <p class="text-slate-500 text-sm">These words appear on the homepage cards and as the heading on each service page. Tags are separated by commas.</p>
+        <p class="text-slate-500 text-sm">The title, summary, and tags are the homepage card. The kicker, opening line, and points are the public service page. One point per line. Leave a page field blank to keep the prepared text.</p>
         <?php foreach ($posterServices as $slug => $service): ?>
-            <?php $view = billing_saved_service_view($conn, $slug, $serviceOverrides); ?>
+            <?php
+            $view = billing_saved_service_view($conn, $slug, $serviceOverrides);
+            $pageCopy = billing_public_page($conn, $slug);
+            $guides = billing_service_guide();
+            $guideNotes = isset($guides[$slug]['notes']) ? $guides[$slug]['notes'] : array();
+            $pointText = !empty($pageCopy['points_saved']) ? implode("\n", $pageCopy['points']) : implode("\n", $guideNotes);
+            ?>
             <form method="POST" action="" class="space-y-3 border-t border-slate-800 pt-5 first:border-0 first:pt-0">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="service_slug" value="<?= e($slug) ?>">
                 <p class="text-white text-sm font-medium"><?= e($view['title']) ?></p>
+                <label class="block text-slate-500 text-xs">Card title</label>
                 <input type="text" name="title" maxlength="120" required class="form-input" value="<?= e($view['title']) ?>">
+                <label class="block text-slate-500 text-xs">Card summary</label>
                 <textarea name="description" maxlength="500" rows="3" class="form-input"><?= e($view['summary']) ?></textarea>
+                <label class="block text-slate-500 text-xs">Tags, separated by commas</label>
                 <input type="text" name="features" maxlength="300" class="form-input" value="<?= e(implode(', ', $view['tags'])) ?>">
+                <label class="block text-slate-500 text-xs">Page kicker</label>
+                <input type="text" name="kicker" maxlength="160" class="form-input" value="<?= e($pageCopy['kicker']) ?>">
+                <label class="block text-slate-500 text-xs">Opening line on the service page</label>
+                <textarea name="lead" maxlength="600" rows="3" class="form-input"><?= e($pageCopy['lead']) ?></textarea>
+                <label class="block text-slate-500 text-xs">Page points, one per line</label>
+                <textarea name="points" maxlength="2000" rows="6" class="form-input"><?= e($pointText) ?></textarea>
                 <button type="submit" name="save_public_service" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save text</button>
             </form>
         <?php endforeach; ?>

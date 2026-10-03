@@ -249,6 +249,66 @@ function billing_page_copy()
     );
 }
 
+function site_hero_title_html($text)
+{
+    $lines = preg_split('/\r\n|\r|\n/', trim((string) $text));
+    if (!is_array($lines)) {
+        $lines = array();
+    }
+    $clean = array();
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line !== '') {
+            $clean[] = $line;
+        }
+    }
+    if (!$clean) {
+        return '';
+    }
+    $last = count($clean) - 1;
+    $html = array();
+    foreach ($clean as $index => $line) {
+        $safe = htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        if ($index === $last && preg_match('/^(.*\s)(\S+)$/u', $line, $match)) {
+            $safe = htmlspecialchars($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<span>' . htmlspecialchars($match[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>';
+        }
+        $html[] = $safe;
+    }
+    return implode('<br>', $html);
+}
+
+function billing_public_page($conn, $slug)
+{
+    $pages = billing_page_copy();
+    $page = isset($pages[$slug]) ? $pages[$slug] : array('kicker' => '', 'lead' => '', 'points' => array(), 'after' => array(), 'examples' => array());
+    if (!$conn) {
+        return $page;
+    }
+    $kicker = trim(billing_setting($conn, 'service_kicker_' . $slug));
+    $lead = trim(billing_setting($conn, 'service_lead_' . $slug));
+    $points = trim(billing_setting($conn, 'service_points_' . $slug));
+    if ($kicker !== '') {
+        $page['kicker'] = $kicker;
+    }
+    if ($lead !== '') {
+        $page['lead'] = $lead;
+    }
+    if ($points !== '') {
+        $lines = array();
+        foreach (preg_split('/\r\n|\r|\n/', $points) as $line) {
+            $line = trim((string) $line);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+        }
+        if ($lines) {
+            $page['points'] = $lines;
+            $page['points_saved'] = true;
+        }
+    }
+    return $page;
+}
+
 function billing_service_guide()
 {
     return array(
@@ -1722,6 +1782,18 @@ function site_public_defaults()
         'linkedin_url' => '',
         'footer_tagline' => 'Practical technology for businesses ready to grow.',
         'footer_text' => 'Designed and built in Nepal.',
+        'home_eyebrow' => 'For cooperatives, companies, parties, and personal work',
+        'home_title' => "Bulk SMS.\nVoice calls.\nHosting and servers.",
+        'home_lede' => 'Send the AGM, election, school, or festival notice, then keep the domain, the mail, and the website with the same company. The rate is on the page. The bill adds 13% VAT before you pay.',
+        'home_ribbon' => 'Buy what you need. Recurring plans renew themselves.',
+        'home_services_kicker' => 'What we do',
+        'home_services_heading' => 'Read the rate. Buy it, or book it.',
+        'home_services_text' => 'Open a service and see the rate before you create an account. Check a domain name, or open WHOIS check up to see who holds it. SMS and voice let you type a quantity and see the bill with 13% VAT. The same account covers hosting, domain email, the website, and field training.',
+        'home_about_heading' => 'The rate is on the page. The order is the brief.',
+        'home_about_text' => 'A cooperative can send the notice, register the name, host the site, open domain email, and train the people from one account. Companies, parties, schools, and personal use follow the same path.',
+        'home_process_heading' => 'Buy it, then let it renew.',
+        'home_process_text' => 'Create a client account, add wallet funds, and choose a plan. The first top-up is confirmed once. After that, checkout and renewals use the wallet.',
+        'home_contact_heading' => 'Rates and orders are already online.',
         'privacy_policy' => '',
         'cookie_policy' => '',
         'logo_path' => '',
@@ -1790,6 +1862,14 @@ function site_public_settings($conn)
         }
     } catch (Throwable $exception) {
         return $settings;
+    }
+    foreach ($settings as $key => $value) {
+        if (strpos($key, 'home_') !== 0) {
+            continue;
+        }
+        if (isset($stored[$key]) && trim($stored[$key]) !== '') {
+            $settings[$key] = $stored[$key];
+        }
     }
     $managed = isset($stored['public_details_managed']) && $stored['public_details_managed'] === '1';
     if (!$managed) {
@@ -3013,7 +3093,7 @@ function billing_service_view($slug, $override)
     return $service;
 }
 
-function billing_save_public_service($conn, $slug, $title, $description, $features)
+function billing_save_public_service($conn, $slug, $title, $description, $features, $kicker = '', $lead = '', $points = '')
 {
     $known = billing_service_definitions();
     if (!isset($known[$slug])) {
@@ -3022,6 +3102,9 @@ function billing_save_public_service($conn, $slug, $title, $description, $featur
     $title = substr(trim((string) $title), 0, 120);
     $description = substr(trim((string) $description), 0, 500);
     $features = substr(trim((string) $features), 0, 300);
+    $kicker = substr(trim((string) $kicker), 0, 160);
+    $lead = substr(trim((string) $lead), 0, 600);
+    $points = substr(trim((string) $points), 0, 2000);
     if ($title === '') {
         return 'The public title is required.';
     }
@@ -3036,6 +3119,9 @@ function billing_save_public_service($conn, $slug, $title, $description, $featur
         $stmt->execute();
         $stmt->close();
         billing_set_setting($conn, 'service_text_' . $slug, '1');
+        billing_set_setting($conn, 'service_kicker_' . $slug, $kicker);
+        billing_set_setting($conn, 'service_lead_' . $slug, $lead);
+        billing_set_setting($conn, 'service_points_' . $slug, $points);
         return '';
     }
     $icon = 'code';
@@ -3052,6 +3138,9 @@ function billing_save_public_service($conn, $slug, $title, $description, $featur
     $stmt->execute();
     $stmt->close();
     billing_set_setting($conn, 'service_text_' . $slug, '1');
+    billing_set_setting($conn, 'service_kicker_' . $slug, $kicker);
+    billing_set_setting($conn, 'service_lead_' . $slug, $lead);
+    billing_set_setting($conn, 'service_points_' . $slug, $points);
     return '';
 }
 
