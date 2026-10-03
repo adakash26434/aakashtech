@@ -451,7 +451,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     </div>
                     <?php $historyPhone = preg_replace('/[^0-9+]/', '', (string) $row['recipient']); ?>
                     <p class="text-slate-300 text-sm mt-1">To <?php if ($historyPhone !== ''): ?><a class="hover:text-brand-300" href="tel:<?= e($historyPhone) ?>"><?= e($row['recipient']) ?></a><?php else: ?><?= e($row['recipient']) ?><?php endif; ?></p>
-                    <p class="text-slate-200 text-sm mt-2 whitespace-pre-wrap"><?= e($row['message_text']) ?></p>
+                    <p class="text-slate-700 text-sm mt-2 whitespace-pre-wrap"><?= e($row['message_text']) ?></p>
                     <?php if (isset($row['error_text']) && trim((string) $row['error_text']) !== ''): ?><p class="text-slate-500 text-xs mt-1"><?= e($row['error_text']) ?></p><?php endif; ?>
                 </article>
             <?php endforeach; ?>

@@ -52,3 +52,11 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .portal-shell .use-declaration-title { color: #102b35; font-size: 15px; font-weight: 700; }
 .portal-shell .use-declaration-text { color: #25434b; font-size: 15px; line-height: 1.7; }
 .portal-shell .use-declaration input[type="checkbox"] { width: 22px; height: 22px; accent-color: #0b8b7a; flex: none; }
+
+/* Safety net: this portal was built dark-first and re-skinned light. Any leftover pale-text or dark-fill
+   Tailwind class that portal.css did not map is forced to a readable colour here. */
+.portal-shell .text-slate-100, .portal-shell .text-slate-200, .portal-shell .text-gray-100, .portal-shell .text-gray-200 { color: #25434b; }
+.portal-shell [class*="bg-slate-900"], .portal-shell [class*="bg-slate-950"], .portal-shell [class*="bg-gray-900"] { background-color: #f1f7f5; color: #102b35; border-color: #dce8e4; }
+.portal-shell [class*="bg-slate-800"]:not(button):not(a):not([class*="bg-brand"]), .portal-shell [class*="bg-slate-700"]:not(button):not(a) { background-color: #eaf3f0; color: #102b35; }
+.portal-shell ::placeholder { color: #6d8388; opacity: 1; }
+.portal-shell input, .portal-shell select, .portal-shell textarea { color: #102b35; }
