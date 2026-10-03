@@ -1,0 +1,48 @@
+/* Aakash Technologies — client + admin portal polish. Loaded after portal.css; refines only. */
+:root { --pp-ring: 0 0 0 3px rgba(11,139,122,.35); --pp-ease: cubic-bezier(.22,1,.36,1); }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+::selection { background: #0b8b7a; color: #fff; }
+
+/* Focus and touch targets */
+.portal-shell a:focus-visible, .portal-shell button:focus-visible, .portal-shell input:focus-visible,
+.portal-shell select:focus-visible, .portal-shell textarea:focus-visible, .portal-shell summary:focus-visible {
+    outline: 2px solid #087365; outline-offset: 2px; box-shadow: var(--pp-ring);
+}
+.portal-shell button, .portal-shell .btn, .portal-shell a.button { min-height: 40px; transition: transform .2s var(--pp-ease), box-shadow .2s var(--pp-ease), background-color .2s; }
+.portal-shell button:not(:disabled):active { transform: scale(.98); }
+.portal-shell button:disabled, .portal-shell button.is-busy { opacity: .6; cursor: progress; }
+@media (max-width: 720px) { .portal-shell button, .portal-shell select, .portal-shell input:not([type=checkbox]):not([type=radio]) { min-height: 44px; } }
+
+/* Forms: clear invalid state, comfortable fields, no iOS zoom */
+.portal-shell input:not([type=checkbox]):not([type=radio]), .portal-shell select, .portal-shell textarea { font-size: 16px; border-radius: 12px; transition: border-color .2s, box-shadow .2s; }
+.portal-shell input:focus, .portal-shell select:focus, .portal-shell textarea:focus { border-color: #0b8b7a; box-shadow: var(--pp-ring); outline: none; }
+.portal-shell input:user-invalid, .portal-shell textarea:user-invalid, .portal-shell select:user-invalid { border-color: #b42318; }
+.portal-shell textarea { resize: vertical; }
+
+/* Cards and sections */
+.portal-shell .card, .portal-shell section[class*="rounded"] { transition: box-shadow .25s var(--pp-ease), border-color .2s; }
+.portal-shell .card:hover { box-shadow: 0 12px 32px rgba(16,43,53,.08); }
+
+/* Tables: sticky head, zebra-free hover, scroll instead of overflow, tabular numbers */
+.portal-shell table { font-variant-numeric: tabular-nums; }
+.portal-shell table thead th { position: sticky; top: 0; z-index: 2; backdrop-filter: blur(6px); }
+.portal-shell .overflow-x-auto, .portal-shell .table-wrap { -webkit-overflow-scrolling: touch; }
+@media (max-width: 760px) {
+    .portal-shell table { display: block; overflow-x: auto; white-space: nowrap; max-width: 100%; }
+    .portal-shell table td, .portal-shell table th { padding: 10px 12px; }
+}
+
+/* Status words become readable pills wherever the app marks them */
+.portal-shell [class*="status-"], .portal-shell .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.6; }
+
+/* SMS composer: calmer numbers box, clearer send button, safer sticky bar */
+.portal-shell .sms-actionbar { box-shadow: 0 -12px 30px rgba(16,43,53,.1); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.portal-shell #sms-send button[name="send_sms"], .portal-shell #sms-send button[type="submit"] { box-shadow: 0 10px 24px rgba(11,139,122,.28); }
+.portal-shell textarea.sms-numbers, .portal-shell #sms-text { min-height: 11rem; }
+.portal-shell .sms-count-chip { font-variant-numeric: tabular-nums; }
+
+/* Safe-area and small screens */
+@media (max-width: 720px) { .portal-shell main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+@media print { .portal-shell aside, .portal-shell .sms-actionbar, .portal-shell button { display: none !important; } }
