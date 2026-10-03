@@ -1651,16 +1651,19 @@ function sms_admin_usage($conn, $find = '')
         }
     }
     $stmt = $conn->prepare('SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left, COALESCE(sent.used_credits, 0) AS sms_used ' . $from . ' ORDER BY sms_used DESC, c.id DESC LIMIT 100');
-    if ($types !== '') {
-        $bind = array($types);
-        foreach ($params as $index => $unused) {
-            $bind[] = &$params[$index];
+    $rows = array();
+    if ($stmt) {
+        if ($types !== '') {
+            $bind = array($types);
+            foreach ($params as $index => $unused) {
+                $bind[] = &$params[$index];
+            }
+            call_user_func_array(array($stmt, 'bind_param'), $bind);
         }
-        call_user_func_array(array($stmt, 'bind_param'), $bind);
+        $stmt->execute();
+        $rows = db_fetch_all($stmt);
+        $stmt->close();
     }
-    $stmt->execute();
-    $rows = db_fetch_all($stmt);
-    $stmt->close();
     return array('rows' => $rows, 'clients' => $clients, 'used' => $used, 'left' => $left);
 }
 
@@ -1729,6 +1732,9 @@ function sms_admin_history($conn, $clientId, $find, $status)
     }
     $sql .= ' ORDER BY m.id DESC LIMIT 80';
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return array();
+    }
     if ($types !== '') {
         $bind = array($types);
         foreach ($params as $index => $value) {

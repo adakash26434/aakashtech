@@ -72,29 +72,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
     $note = billing_plain_line(isset($_POST['admin_note']) ? $_POST['admin_note'] : '', 180);
     if ($senderId > 0) {
         $stmt = $conn->prepare('UPDATE sms_sender_names SET status = ?, admin_note = ? WHERE id = ?');
-        $stmt->bind_param('ssi', $decision, $note, $senderId);
-        $stmt->execute();
-        $stmt->close();
-        $msg = $decision === 'approved' ? 'Sender name approved.' : 'Sender name rejected.';
+        if ($stmt) {
+            $stmt->bind_param('ssi', $decision, $note, $senderId);
+            $stmt->execute();
+            $stmt->close();
+            $msg = $decision === 'approved' ? 'Sender name approved.' : 'Sender name rejected.';
+        } else {
+            $err = 'That sender name could not be updated.';
+        }
     }
 }
 
-$line = sms_line($conn);
-$storedKey = (string) sms_line_secret($conn)['token'];
-$tokenSet = $storedKey !== '';
-$tokenTail = $tokenSet ? substr($storedKey, -4) : '';
-$endpoint = billing_setting($conn, 'sms_line_endpoint');
-$vendorLabel = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
-$senders = $conn->query('SELECT s.*, c.name AS client_name, c.email AS client_email FROM sms_sender_names s JOIN client_users c ON c.id = s.client_id ORDER BY s.id DESC LIMIT 50');
+$line = array('provider' => '', 'sender' => '', 'sender_mode' => 'fixed', 'connected' => false);
+$storedKey = '';
+$tokenSet = false;
+$tokenTail = '';
+$endpoint = '';
+$vendorLabel = '';
+$senders = false;
 $usageFind = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $historyClient = isset($_GET['client']) ? (int) $_GET['client'] : 0;
 $historyStatus = isset($_GET['status']) ? (string) $_GET['status'] : '';
-$usage = sms_admin_usage($conn, $usageFind);
-$history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
-$vendorStock = sms_vendor_stock($conn, false);
-$clientsHolding = sms_clients_holding($conn);
-$grantClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
-$creditNotes = $conn->query('SELECT n.id, n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
+$usage = array('rows' => array(), 'clients' => 0, 'used' => 0, 'left' => 0);
+$history = array();
+$vendorStock = array('balance' => null, 'checked' => '', 'error' => '', 'label' => '');
+$clientsHolding = 0;
+$grantClients = false;
+$creditNotes = false;
+try {
+    sms_credit_columns($conn);
+    $line = sms_line($conn);
+    $storedKey = (string) sms_line_secret($conn)['token'];
+    $tokenSet = $storedKey !== '';
+    $tokenTail = $tokenSet ? substr($storedKey, -4) : '';
+    $endpoint = billing_setting($conn, 'sms_line_endpoint');
+    $vendorLabel = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
+    $senders = $conn->query('SELECT s.*, c.name AS client_name, c.email AS client_email FROM sms_sender_names s JOIN client_users c ON c.id = s.client_id ORDER BY s.id DESC LIMIT 50');
+    $usage = sms_admin_usage($conn, $usageFind);
+    $history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
+    $vendorStock = sms_vendor_stock($conn, false);
+    $clientsHolding = sms_clients_holding($conn);
+    $grantClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
+    $creditNotes = $conn->query('SELECT n.id, n.credits, n.note, n.created_at, n.reversed_at, c.id AS client_id, c.name, c.email FROM sms_credit_notes n JOIN client_users c ON c.id = n.client_id ORDER BY n.id DESC LIMIT 40');
+} catch (Throwable $exception) {
+    error_log('SMS line page could not be loaded.');
+    if ($err === '') {
+        $err = 'The SMS line page could not load every figure. Refresh once.';
+    }
+}
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">SMS line</h1>
@@ -403,7 +428,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                     <?php $historyPhone = preg_replace('/[^0-9+]/', '', (string) $row['recipient']); ?>
                     <p class="text-slate-300 text-sm mt-1">To <?php if ($historyPhone !== ''): ?><a class="hover:text-brand-300" href="tel:<?= e($historyPhone) ?>"><?= e($row['recipient']) ?></a><?php else: ?><?= e($row['recipient']) ?><?php endif; ?></p>
                     <p class="text-slate-200 text-sm mt-2 whitespace-pre-wrap"><?= e($row['message_text']) ?></p>
-                    <?php if (trim((string) $row['error_text']) !== ''): ?><p class="text-slate-500 text-xs mt-1"><?= e($row['error_text']) ?></p><?php endif; ?>
+                    <?php if (isset($row['error_text']) && trim((string) $row['error_text']) !== ''): ?><p class="text-slate-500 text-xs mt-1"><?= e($row['error_text']) ?></p><?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </div>
