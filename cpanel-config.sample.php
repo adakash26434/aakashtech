@@ -23,4 +23,8 @@ return array(
     'cipher_key' => '',
 
     'cron_key' => '',
+
+    // Secret for SMS delivery reports. Provider callback: https://YOUR-SITE/api/sms-dlr.php?key=THIS_VALUE
+    // Generate one with: php -r "echo bin2hex(random_bytes(16));"
+    'dlr_key' => '',
 );

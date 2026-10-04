@@ -345,6 +345,9 @@ CREATE TABLE IF NOT EXISTS sms_messages (
     parts INTEGER DEFAULT 1,
     status TEXT DEFAULT 'queued',
     error_text TEXT DEFAULT '',
+    delivery TEXT DEFAULT '',
+    delivery_at TEXT DEFAULT NULL,
+    provider_ref TEXT DEFAULT '',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     sent_at TEXT DEFAULT NULL
 );

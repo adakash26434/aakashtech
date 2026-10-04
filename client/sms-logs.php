@@ -292,6 +292,7 @@ function sms_log_reason($code)
                             <td class="px-4 py-3 text-slate-400 text-xs"><?= e($row['source'] === 'api' ? 'API' : 'Dashboard') ?></td>
                             <td class="px-4 py-3 text-sm">
                                 <span class="sms-state sms-state-<?= e(in_array($row['status'], array('sent', 'failed'), true) ? $row['status'] : 'wait') ?>" style="margin-left:0"><?= e(ucfirst($row['status'])) ?></span>
+                                <?php if ($row['status'] === 'sent' && isset($row['delivery']) && $row['delivery'] === 'delivered'): ?><span class="pill pill--ok" style="margin-top:4px">Delivered</span><?php elseif ($row['status'] === 'sent' && isset($row['delivery']) && $row['delivery'] === 'failed'): ?><span class="pill pill--bad" style="margin-top:4px" title="The phone network could not deliver this message">Not delivered</span><?php endif; ?>
                                 <?php if ($reason !== ''): ?><span class="block text-slate-500 text-xs"><?= e($reason) ?></span><?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm whitespace-nowrap"><a href="sms-portal.php?reuse=<?= (int) $row['id'] ?>" class="text-brand-400 text-xs">Send again</a></td>

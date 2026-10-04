@@ -36,5 +36,14 @@ foreach (glob($root . '/includes/billing/*.php') as $module) {
     }
 }
 check('billing modules resolve two levels up to the project root', realpath($root . '/includes/billing/../..') === $root);
+// Delivery reports
+$conn->query("INSERT INTO sms_messages (client_id, recipient, message_text, parts, status, sent_at) VALUES ($cid, '9841000001', 'hi', 1, 'sent', '" . date('Y-m-d H:i:s') . "')");
+$mid = (int) $conn->insert_id;
+check('status words map', sms_dlr_normalise_status('DELIVRD') === 'delivered' && sms_dlr_normalise_status('Undelivered') === 'failed' && sms_dlr_normalise_status('queued') === '');
+check('unknown number updates nothing', sms_dlr_apply($conn, '9800000000', 'delivered') === false);
+check('delivered report matches +977 format', sms_dlr_apply($conn, '+9779841000001', 'delivered', 'ref-1') === true);
+$r = $conn->query("SELECT status, delivery, provider_ref FROM sms_messages WHERE id = $mid")->fetch_assoc();
+check('delivery stored, sent status untouched', $r['status'] === 'sent' && $r['delivery'] === 'delivered' && $r['provider_ref'] === 'ref-1');
+check('same message is not reported twice', sms_dlr_apply($conn, '9841000001', 'failed') === false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

@@ -77,6 +77,7 @@ function sms_ensure_tables($conn)
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
         sms_credit_columns($conn);
+        sms_delivery_columns($conn);
         sms_list_columns($conn);
         return;
     }
@@ -154,6 +155,7 @@ function sms_ensure_tables($conn)
         INDEX idx_sms_credit_client (client_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     sms_credit_columns($conn);
+    sms_delivery_columns($conn);
     sms_list_columns($conn);
     sms_widen_list_columns($conn);
 }
@@ -194,6 +196,24 @@ function sms_widen_list_columns($conn)
     if ($ok) {
         billing_set_setting($conn, 'sms_lists_widened', '1');
     }
+}
+
+/**
+ * Delivery report columns. status stays 'sent' / 'failed' (what the provider accepted);
+ * delivery records what the phone network later reported: '', 'delivered' or 'failed'.
+ */
+function sms_delivery_columns($conn)
+{
+    $present = array_flip(billing_table_columns($conn, 'sms_messages'));
+    if (!$present || isset($present['delivery'])) {
+        return;
+    }
+    $text = 'VARCHAR(12) DEFAULT \'\'';
+    $ref = 'VARCHAR(64) DEFAULT \'\'';
+    $when = DB_DRIVER === 'sqlite' ? 'TEXT DEFAULT NULL' : 'DATETIME DEFAULT NULL';
+    billing_exec($conn, 'ALTER TABLE sms_messages ADD COLUMN delivery ' . $text);
+    billing_exec($conn, 'ALTER TABLE sms_messages ADD COLUMN delivery_at ' . $when);
+    billing_exec($conn, 'ALTER TABLE sms_messages ADD COLUMN provider_ref ' . $ref);
 }
 
 function sms_credit_columns($conn)

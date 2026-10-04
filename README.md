@@ -199,3 +199,8 @@ Brand colours live in `assets/css/tokens.css` and `tailwind.config.js`; keep the
 
 ### Code layout: SMS
 `includes/sms-gateway.php` is a small loader for `includes/sms/`: `core.php` (tables, templates, lists), `accounts.php` (identity gate, senders, credits), `contacts.php` (typed/CSV/Excel numbers), `vendor.php` (upstream provider), `delivery.php` (sending, schedule, queue), `logs.php` (history), `api.php` (public API), `voice.php`. Files in a sub-folder must use `dirname(__DIR__, 2)` to reach the project root.
+
+### SMS delivery reports
+When the phone network confirms delivery, the provider can call your site. In `cpanel-config.local.php` set `'dlr_key' => 'a-long-random-secret'`, then in the provider panel set the delivery-report (callback) URL to
+`https://YOUR-SITE/api/sms-dlr.php?key=a-long-random-secret`.
+The client SMS log then shows a green **Delivered** or red **Not delivered** badge next to *Sent*. Reports never change the sent/failed status or credits. Check with your provider that they offer delivery callbacks; if they do not, nothing changes and the badge simply stays hidden.

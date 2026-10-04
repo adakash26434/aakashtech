@@ -102,7 +102,8 @@ function billing_table_columns($conn, $table)
         'support_tickets' => true,
         'client_kyc' => true,
         'sms_credit_notes' => true,
-        'sms_number_lists' => true
+        'sms_number_lists' => true,
+        'sms_messages' => true
     );
     if (!isset($allowed[$table])) {
         throw new InvalidArgumentException('Unknown table.');

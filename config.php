@@ -121,6 +121,7 @@ define('ESEWA_ID', cpanel_setting($cpanel, 'esewa_id', 'ESEWA_ID', ''));
 define('KHALTI_ID', cpanel_setting($cpanel, 'khalti_id', 'KHALTI_ID', ''));
 define('BANK_DETAILS', cpanel_setting($cpanel, 'bank_details', 'BANK_DETAILS', ''));
 define('CRON_KEY', cpanel_setting($cpanel, 'cron_key', 'CRON_KEY', ''));
+define('SMS_DLR_KEY', cpanel_setting($cpanel, 'dlr_key', 'SMS_DLR_KEY', ''));
 define('SITE_URL', rtrim(cpanel_setting($cpanel, 'site_url', 'SITE_URL', ''), '/'));
 define('PANEL_CIPHER_KEY', strtolower(cpanel_setting($cpanel, 'cipher_key', 'PANEL_CIPHER_KEY', '')));
 define('ADMIN_EMAIL', cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''));

@@ -249,7 +249,7 @@ function sms_message_page($conn, $clientId, $status, $search, $campaignId, $page
     foreach ($where as $piece) {
         $aliased[] = 'm.' . $piece;
     }
-    $stmt = $conn->prepare('SELECT m.id, m.recipient, m.sender_id, m.message_text, m.parts, m.status, m.source, m.error_text, m.created_at, m.sent_at, c.campaign_name FROM sms_messages m LEFT JOIN sms_campaigns c ON c.id = m.campaign_id WHERE ' . implode(' AND ', $aliased) . ' ORDER BY m.created_at DESC, m.id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
+    $stmt = $conn->prepare('SELECT m.id, m.recipient, m.sender_id, m.message_text, m.parts, m.status, m.source, m.error_text, m.delivery, m.created_at, m.sent_at, c.campaign_name FROM sms_messages m LEFT JOIN sms_campaigns c ON c.id = m.campaign_id WHERE ' . implode(' AND ', $aliased) . ' ORDER BY m.created_at DESC, m.id DESC LIMIT ' . ($perPage + 1) . ' OFFSET ' . $offset);
     $bind = array($types);
     foreach ($params as $key => $unused) {
         $bind[] = &$params[$key];

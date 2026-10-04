@@ -10,5 +10,6 @@ require_once __DIR__ . '/sms/contacts.php';
 require_once __DIR__ . '/sms/vendor.php';
 require_once __DIR__ . '/sms/delivery.php';
 require_once __DIR__ . '/sms/logs.php';
+require_once __DIR__ . '/sms/report.php';
 require_once __DIR__ . '/sms/api.php';
 require_once __DIR__ . '/sms/voice.php';
