@@ -216,3 +216,6 @@ The client SMS log then shows a green **Delivered** or red **Not delivered** bad
 
 ### Scripts are self-hosted
 Alpine.js (3.14.9) and Lucide icons (0.383.0) are served from `assets/vendor/`, pinned to exact versions, so pages no longer depend on unpkg or jsDelivr being reachable and a CDN change can never alter the site. To upgrade, replace the file and update the version in its name and in the `<script>` tags.
+
+### Fonts
+Inter and Space Grotesk (Latin) are self-hosted in `assets/fonts/` and declared in `assets/css/fonts.css`; there are no Google Fonts requests. Nepali text uses the device's Devanagari font through the fallback stack in `assets/css/tokens.css`.

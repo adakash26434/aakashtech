@@ -60,3 +60,12 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .portal-shell [class*="bg-slate-800"]:not(button):not(a):not([class*="bg-brand"]), .portal-shell [class*="bg-slate-700"]:not(button):not(a) { background-color: #eaf3f0; color: var(--ink-900); }
 .portal-shell ::placeholder { color: #6d8388; opacity: 1; }
 .portal-shell input, .portal-shell select, .portal-shell textarea { color: var(--ink-900); }
+
+/* Manuals (Nepali guides): readable line height for Devanagari, jump links that stay in view */
+.portal-shell nav[aria-label="खण्ड"], .portal-shell nav[aria-label="Sections"] { position: sticky; top: 0; z-index: 5; padding: 10px 0; background: var(--surface-paper, #fbfdfc); border-bottom: 1px solid var(--line, #dce8e4); }
+.portal-shell nav[aria-label="खण्ड"] a, .portal-shell nav[aria-label="Sections"] a { min-height: 40px; display: inline-flex; align-items: center; transition: background-color .2s, border-color .2s; }
+.portal-shell nav[aria-label="खण्ड"] a:hover, .portal-shell nav[aria-label="Sections"] a:hover { background: var(--brand-50, #e5f5f0); border-color: var(--brand-500, #0b8b7a); }
+.portal-shell section.dash-panel[id] { scroll-margin-top: 84px; }
+.portal-shell section.dash-panel[id] :is(li, p) { line-height: 1.85; font-size: 15px; max-width: 78ch; }
+.portal-shell section.dash-panel[id] :is(ol, ul) { padding-bottom: 4px; }
+.portal-shell section.dash-panel[id] code { background: var(--surface-wash, #f1f7f5); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
