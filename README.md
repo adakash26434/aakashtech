@@ -183,6 +183,8 @@ public_html/
 - Set a strong admin password before enabling admin sign-in
 
 ### Tests
+`php tests/admin-pages-test.php` does the same for every admin page (and checks sub-folder file paths). Add `--hash` to print a fingerprint per page; run it on two versions of the code and `diff` the output to prove a refactor changed nothing visible.
+
 `php tests/pages-test.php` opens every client page as a logged-in client (office view) and fails on any PHP error, so a broken include or path shows up before deploy.
 
 `php tests/money-test.php` checks wallet debit, top-up approval, rollback and SMS credit rules on a temporary SQLite file. Run it before deploying any change to `includes/billing.php`.
@@ -209,3 +211,5 @@ The client SMS log then shows a green **Delivered** or red **Not delivered** bad
 
 ### Code layout: big pages
 `client/sms-portal.php` keeps only the page markup. Its form handling is in `client/includes/sms-portal-actions.php`, its styles in `assets/css/sms-portal.css` and its script in `assets/js/sms-portal.js`. `client/login.php` loads `assets/js/client-login.js`.
+
+`admin/settings.php`, `client.php`, `billing.php` and `sms-line.php` keep their markup; the form handling lives in `admin/includes/<page>-actions.php`.
