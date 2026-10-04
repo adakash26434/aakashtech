@@ -45,5 +45,16 @@ check('delivered report matches +977 format', sms_dlr_apply($conn, '+97798410000
 $r = $conn->query("SELECT status, delivery, provider_ref FROM sms_messages WHERE id = $mid")->fetch_assoc();
 check('delivery stored, sent status untouched', $r['status'] === 'sent' && $r['delivery'] === 'delivered' && $r['provider_ref'] === 'ref-1');
 check('same message is not reported twice', sms_dlr_apply($conn, '9841000001', 'failed') === false);
+// Changing the vendor key must never show the old account's stock
+billing_set_setting($conn, 'sms_line_provider', 'aakash');
+billing_set_setting($conn, 'sms_line_token', 'OLD-KEY-12345678');
+billing_set_setting($conn, 'sms_vendor_balance', '5000');
+billing_set_setting($conn, 'sms_vendor_balance_for', sms_vendor_fingerprint($conn));
+check('stock shows for the account it belongs to', sms_vendor_stock_saved($conn)['balance'] === 5000);
+check('saving a new key clears the old stock', sms_save_line($conn, array('sms_line_provider' => 'aakash', 'sms_line_token' => 'NEW-KEY-87654321')) === '' && sms_vendor_stock_saved($conn)['balance'] === null);
+billing_set_setting($conn, 'sms_vendor_balance', '9999');
+check('a stale number from another key is ignored', sms_vendor_stock_saved($conn)['balance'] === null);
+billing_set_setting($conn, 'sms_vendor_balance_for', sms_vendor_fingerprint($conn));
+check('saving the same key keeps the cache', sms_save_line($conn, array('sms_line_provider' => 'aakash', 'sms_line_token' => 'NEW-KEY-87654321')) === '' && sms_vendor_stock_saved($conn)['balance'] === 9999);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

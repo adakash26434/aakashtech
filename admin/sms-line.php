@@ -11,6 +11,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_line'])) {
     $saved = sms_save_line($conn, $_POST);
     if ($saved === '') {
         $msg = 'SMS line saved. Clients send from this site and do not see these details.';
+        $fresh = sms_vendor_stock($conn, true);
+        if ($fresh['balance'] !== null && $fresh['error'] === '') {
+            $msg .= ' This account has ' . number_format((int) $fresh['balance']) . ' SMS left.';
+        } elseif ($fresh['label'] !== '') {
+            $err = 'The key was saved, but the provider did not accept it: ' . ($fresh['error'] !== '' ? $fresh['error'] : 'balance could not be read') . ' Check the key and try again.';
+        }
     } else {
         $err = $saved;
     }

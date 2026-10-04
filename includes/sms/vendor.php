@@ -339,12 +339,35 @@ function sms_line_balance($conn)
     return array('ok' => true, 'error' => '', 'balance' => $balance);
 }
 
+/**
+ * Identifies which vendor account the cached stock belongs to. Change the provider, the API key
+ * or the send address and the fingerprint changes, so an old account's balance is never shown
+ * for the new one. Only a short hash is stored; the key itself is not.
+ */
+function sms_vendor_fingerprint($conn)
+{
+    return substr(hash('sha256', billing_setting($conn, 'sms_line_provider') . '|' . billing_setting($conn, 'sms_line_token') . '|' . billing_setting($conn, 'sms_line_endpoint')), 0, 16);
+}
+
+function sms_vendor_cache_clear($conn)
+{
+    billing_set_setting($conn, 'sms_vendor_balance', '');
+    billing_set_setting($conn, 'sms_vendor_checked', '');
+    billing_set_setting($conn, 'sms_vendor_balance_for', '');
+}
+
+function sms_vendor_cache_valid($conn)
+{
+    return billing_setting($conn, 'sms_vendor_balance_for') === sms_vendor_fingerprint($conn);
+}
+
 function sms_vendor_stock($conn, $force = false)
 {
     $line = sms_line($conn);
     $label = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
-    $saved = billing_setting($conn, 'sms_vendor_balance');
-    $checked = billing_setting($conn, 'sms_vendor_checked');
+    $mine = sms_vendor_cache_valid($conn);
+    $saved = $mine ? billing_setting($conn, 'sms_vendor_balance') : '';
+    $checked = $mine ? billing_setting($conn, 'sms_vendor_checked') : '';
     $balance = ($saved !== '' && is_numeric($saved)) ? (int) $saved : null;
     $age = $checked !== '' ? time() - (int) strtotime($checked) : 999999;
     if (!$line['connected']) {
@@ -358,6 +381,7 @@ function sms_vendor_stock($conn, $force = false)
         $now = date('Y-m-d H:i:s');
         billing_set_setting($conn, 'sms_vendor_balance', (string) (int) $live['balance']);
         billing_set_setting($conn, 'sms_vendor_checked', $now);
+        billing_set_setting($conn, 'sms_vendor_balance_for', sms_vendor_fingerprint($conn));
         return array('balance' => (int) $live['balance'], 'checked' => $now, 'error' => '', 'label' => $label);
     }
     return array(
@@ -371,7 +395,7 @@ function sms_vendor_stock($conn, $force = false)
 function sms_vendor_stock_saved($conn)
 {
     $line = sms_line($conn);
-    $saved = billing_setting($conn, 'sms_vendor_balance');
+    $saved = sms_vendor_cache_valid($conn) ? billing_setting($conn, 'sms_vendor_balance') : '';
     $label = $line['provider'] === 'aakash' ? 'Aakash SMS' : ($line['provider'] === 'sparrow' ? 'Sparrow SMS' : '');
     if (!$line['connected'] || $saved === '' || !is_numeric($saved)) {
         return array('balance' => null, 'label' => $label);
@@ -428,6 +452,7 @@ function sms_save_line($conn, $post)
     if ($token !== '' && (strlen($token) < 8 || strlen($token) > 200)) {
         return 'That API key does not look complete.';
     }
+    $before = sms_vendor_fingerprint($conn);
     billing_set_setting($conn, 'sms_line_provider', $provider);
     billing_set_setting($conn, 'sms_line_sender', $sender);
     billing_set_setting($conn, 'sms_line_sender_mode', $mode);
@@ -437,6 +462,9 @@ function sms_save_line($conn, $post)
     }
     if ($provider === '') {
         billing_set_setting($conn, 'sms_line_token', '');
+    }
+    if (sms_vendor_fingerprint($conn) !== $before) {
+        sms_vendor_cache_clear($conn);
     }
     return '';
 }
