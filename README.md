@@ -196,3 +196,6 @@ Brand colours live in `assets/css/tokens.css` and `tailwind.config.js`; keep the
 ### Code layout: billing
 `includes/billing.php` is now a small loader. The code lives in `includes/billing/`:
 `core.php` (helpers, settings), `schema.php` (tables), `catalog.php` (plans, prices, pricing pages), `wallet.php` (wallet, units, ledger, top-ups, transactions), `kyc.php` (identity), `mail.php` (e-mail), `site.php` (public settings, logos), `orders.php` (purchases, refunds, renewals). Other files keep using `require 'includes/billing.php'` as before.
+
+### Code layout: SMS
+`includes/sms-gateway.php` is a small loader for `includes/sms/`: `core.php` (tables, templates, lists), `accounts.php` (identity gate, senders, credits), `contacts.php` (typed/CSV/Excel numbers), `vendor.php` (upstream provider), `delivery.php` (sending, schedule, queue), `logs.php` (history), `api.php` (public API), `voice.php`. Files in a sub-folder must use `dirname(__DIR__, 2)` to reach the project root.

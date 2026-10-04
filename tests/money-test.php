@@ -28,5 +28,13 @@ check('take units within balance', billing_take_units($conn, $cid, 'sms', 4) && 
 billing_add_units($conn, $cid, 'sms', 50);
 check('low-credit alert fires below 100', @billing_low_sms_alert($conn, $cid) === true);
 check('low-credit alert only once a day', @billing_low_sms_alert($conn, $cid) === false);
+$root = realpath(dirname(__DIR__));
+foreach (glob($root . '/includes/billing/*.php') as $module) {
+    $code = file_get_contents($module);
+    if (strpos($code, 'dirname(__DIR__)') !== false && strpos($code, 'dirname(__DIR__, 2)') === false) {
+        check('module paths resolve to project root: ' . basename($module), false);
+    }
+}
+check('billing modules resolve two levels up to the project root', realpath($root . '/includes/billing/../..') === $root);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

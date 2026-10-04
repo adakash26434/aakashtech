@@ -286,7 +286,7 @@ function site_public_file($path, $pattern)
     if (!preg_match($pattern, $path)) {
         return '';
     }
-    $full = dirname(__DIR__) . '/' . $path;
+    $full = dirname(__DIR__, 2) . '/' . $path;
     return is_file($full) ? $path : '';
 }
 
@@ -336,7 +336,7 @@ function site_poster_file($path)
     if (!preg_match('/^uploads\/service-poster-[a-z0-9-]+\.(png|jpe?g|webp|gif)$/', $path)) {
         return '';
     }
-    $full = dirname(__DIR__) . '/' . $path;
+    $full = dirname(__DIR__, 2) . '/' . $path;
     return is_file($full) ? $path : '';
 }
 
@@ -397,12 +397,12 @@ function site_store_poster($file, $slug)
     if ((int) $image[0] < 1 || (int) $image[1] < 1 || (int) $image[0] > 4000 || (int) $image[1] > 4000) {
         return array('ok' => false, 'error' => 'Use a photo no larger than 4000 pixels on a side.');
     }
-    $dir = dirname(__DIR__) . '/uploads';
+    $dir = dirname(__DIR__, 2) . '/uploads';
     if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
         return array('ok' => false, 'error' => 'The uploads folder could not be created.');
     }
     $relative = 'uploads/service-poster-' . $slug . '.' . $imageTypes[$image[2]];
-    $target = dirname(__DIR__) . '/' . $relative;
+    $target = dirname(__DIR__, 2) . '/' . $relative;
     foreach (glob($dir . '/service-poster-' . $slug . '.*') as $old) {
         if (is_file($old)) {
             unlink($old);
@@ -443,12 +443,12 @@ function site_store_logo($file)
         return array('ok' => false, 'error' => 'Use a logo no larger than 4000 pixels on a side.');
     }
     $types[$mime] = $imageTypes[$image[2]];
-    $dir = dirname(__DIR__) . '/uploads';
+    $dir = dirname(__DIR__, 2) . '/uploads';
     if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
         return array('ok' => false, 'error' => 'The uploads folder could not be created.');
     }
     $relative = 'uploads/site-logo.' . $types[$mime];
-    $target = dirname(__DIR__) . '/' . $relative;
+    $target = dirname(__DIR__, 2) . '/' . $relative;
     foreach (glob($dir . '/site-logo.*') as $old) {
         if (is_file($old)) {
             unlink($old);
@@ -489,12 +489,12 @@ function site_store_notice_image($file)
         return array('ok' => false, 'error' => 'Use a notice image no larger than 4000 pixels on a side.');
     }
     $types[$mime] = $imageTypes[$image[2]];
-    $dir = dirname(__DIR__) . '/uploads';
+    $dir = dirname(__DIR__, 2) . '/uploads';
     if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
         return array('ok' => false, 'error' => 'The uploads folder could not be created.');
     }
     $relative = 'uploads/site-notice.' . $types[$mime];
-    $target = dirname(__DIR__) . '/' . $relative;
+    $target = dirname(__DIR__, 2) . '/' . $relative;
     foreach (glob($dir . '/site-notice.*') as $old) {
         if (is_file($old)) {
             unlink($old);

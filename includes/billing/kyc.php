@@ -163,7 +163,7 @@ function billing_kyc_safe_path($clientId, $relative)
     if (!preg_match('#^uploads/kyc/' . $clientId . '/[a-f0-9]{32}\.(pdf|jpg|png|webp)$#', $relative)) {
         return '';
     }
-    $full = dirname(__DIR__) . '/' . $relative;
+    $full = dirname(__DIR__, 2) . '/' . $relative;
     return is_file($full) ? $full : '';
 }
 
@@ -215,7 +215,7 @@ function billing_kyc_store_file($clientId, $slot, $file)
         }
         $ext = $imageTypes[$image[2]];
     }
-    $dir = dirname(__DIR__) . '/uploads/kyc/' . $clientId;
+    $dir = dirname(__DIR__, 2) . '/uploads/kyc/' . $clientId;
     if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
         return array('ok' => false, 'error' => 'The document folder could not be created.');
     }
@@ -224,7 +224,7 @@ function billing_kyc_store_file($clientId, $slot, $file)
         file_put_contents($guard, "Require all denied\nDeny from all\n");
     }
     $relative = 'uploads/kyc/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__) . '/' . $relative)) {
+    if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__, 2) . '/' . $relative)) {
         return array('ok' => false, 'error' => 'The document could not be saved.');
     }
     return array('ok' => true, 'path' => $relative);
