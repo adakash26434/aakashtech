@@ -247,3 +247,6 @@ Client: **Delivery report** in the sidebar. Admin: **SMS report**. Both show the
 - If a send is cut off while handing messages to the line, those messages are **not sent again** and their credits are returned (reason: "Could not confirm it was sent").
 - Sends that stop part way are finished or returned automatically within a minute whenever a client opens any portal page, so a missing cron job cannot leave credits held. (Still add the cron jobs; they are faster.)
 - When the phone network reports a message as not delivered, its credit is returned once. Switch this on or off on the admin SMS line page. It needs delivery reports from the provider.
+
+### Service pages (Buy, Checkout, My Services)
+Shared look for every service lives in `assets/css/service-ui.css` (colours from `tokens.css`). Plan numbers and wording (VAT bill, wallet cover, saving, cost per mailbox, identity note) come from `includes/shop-view.php`, with tests in `tests/money-test.php`. **Buy a service** shows: how buying works, a tab per service with plan counts, one card per plan with the real price and 13% VAT bill, a badge only when it is true (offer saving, lowest cost per mailbox), whether the wallet covers the plan or how much to add, and the SMS/voice rate ladder.

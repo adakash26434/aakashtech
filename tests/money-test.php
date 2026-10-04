@@ -120,5 +120,22 @@ $conn->query("UPDATE sms_messages SET delivery = '' WHERE delivery <> ''");
 $none = sms_report($conn, $cid, date('Y-m-d'), date('Y-m-d'));
 check('with no confirmations the rate is empty and the page explains it', $none['rate'] === null && $none['insights'][0]['title'] === 'Waiting for network confirmation');
 check('prefix to carrier map', sms_carrier_for('9779841000001') === 'NTC' && sms_carrier_for('9811000000') === 'Ncell' && sms_carrier_for('9611000000') === 'Smart Cell');
+// Shop helpers
+require_once $root . '/includes/shop-view.php';
+$plans = billing_load_plans($conn);
+$byCode = array(); foreach ($plans as $pl) { $byCode[$pl['code']] = $pl; }
+$f = shop_plan_facts($byCode['email-5'], 10000);
+check('shop: the VAT bill is price plus 13%', abs($f['bill']['total'] - 7500 * 1.13) < 0.01);
+check('shop: wallet that covers the bill is said to cover it', $f['covered'] === true && $f['short_by'] == 0.0);
+$f = shop_plan_facts($byCode['email-5'], 1000);
+check('shop: a short wallet says by how much', $f['covered'] === false && abs($f['short_by'] - (7500 * 1.13 - 1000)) < 0.01);
+check('shop: mailbox plans show the price per mailbox', shop_plan_facts($byCode['email-10'], 0)['per_unit'] === 1400.0 && shop_plan_facts($byCode['email-1'], 0)['per_unit'] === 1800.0);
+$emailPlans = array($byCode['email-1'], $byCode['email-5'], $byCode['email-10']);
+check('shop: best value is the cheapest per mailbox', shop_best_value_code($emailPlans) === 'email-10');
+check('shop: no best-value badge when there is nothing to compare', shop_best_value_code(array($byCode['web-company'], $byCode['web-news'])) === '');
+$offerPlan = $byCode['domain-com']; $offerPlan['offer_price'] = 1800;
+check('shop: an offer shows the real saving', shop_plan_facts($offerPlan, 0)['save_percent'] === 25 && shop_plan_facts($offerPlan, 0)['selling'] == 1800.0);
+check('shop: slab services have no flat price', shop_plan_facts($byCode['sms-slab'], 0)['priced'] === false);
+check('shop: identity note appears for SMS until approved', shop_identity_note($conn, $cid, array('bulk-sms')) !== '' && shop_identity_note($conn, $cid, array('domain-registration')) === '');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
