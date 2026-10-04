@@ -1,0 +1,60 @@
+.sms-log-clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+.sms-credit-bar { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #e7f6f3; color: #075e54; font-size: 13px; font-weight: 600; }
+.sms-credit-bar.is-short { background: #fde8e8; color: #9f1239; }
+.sms-preview { margin-top: 10px; max-width: 280px; padding: 14px 14px 12px; border-radius: 18px; background: #f4f8f6; border: 1px solid #dfe9e4; }
+.sms-preview-label { margin: 0 0 6px; color: #4d675f; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.sms-preview p:last-child { margin: 0; color: #183b31; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+.sms-review { margin-bottom: 12px; padding: 14px; border-radius: 16px; background: #e7f6f3; color: #183b31; }
+.sms-review p { margin: 0; }
+.sms-head-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sms-head-pill { display: inline-flex; align-items: baseline; gap: 5px; padding: 5px 12px; border: 1px solid #dfe9e4; border-radius: 999px; background: #fff; color: #4d675f; font-size: 13px; }
+.sms-head-pill strong { color: #183b31; font-size: 15px; }
+.sms-head-pill.is-main { background: #e7f6f3; border-color: #c4e6dd; }
+.sms-head-pill.is-main strong { color: #075e54; }
+.sms-head-link { padding: 5px 4px; color: #075e54; font-size: 13px; font-weight: 600; }
+.sms-step { min-width: 0; }
+.sms-step-head { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-bottom: 10px; }
+.sms-step-no { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #087365; color: #fff; font-size: 13px; font-weight: 700; }
+.sms-step-no.is-soft { background: #d7efe9; color: #075e54; }
+.sms-step-title { color: #183b31; font-size: 15px; font-weight: 700; }
+.sms-count-chip { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: #f1f6f3; color: #4d675f; font-size: 12px; font-weight: 600; }
+.sms-count-chip.is-on { background: #dcf3e8; color: #08734f; }
+.sms-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.portal-shell .sms-tool-select { width: auto; min-width: 12rem; max-width: 16rem; min-height: 42px; font-size: 14px; }
+.sms-clear { margin-left: auto; border: 0; background: transparent; color: #b42318; font-size: 13px; font-weight: 600; cursor: pointer; }
+.portal-shell textarea.sms-numbers { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; line-height: 1.6; }
+.sms-more { border: 1px solid #dfe9e4; border-radius: 16px; padding: 12px 16px; background: #fbfdfc; }
+.sms-more[open] { padding-bottom: 16px; }
+.sms-more-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.sms-more-head::-webkit-details-marker { display: none; }
+.sms-more-head .sms-step-title { flex: 1 1 0; min-width: 0; }
+.sms-more-hint { color: #4d675f; font-size: 13px; }
+@media (max-width: 640px) {
+    .sms-more-hint { flex-basis: 100%; padding-left: 36px; }
+    .portal-shell .sms-tool-select { min-width: 0; flex: 1 1 8rem; }
+    .sms-actionbar { margin: 0 -20px -20px; padding: 12px 16px; }
+    .sms-actionbar > div:last-child { width: 100%; }
+    .sms-actionbar > div:last-child button[type="submit"], .sms-actionbar > div:last-child button.bg-brand-500 { flex: 1; }
+}
+.sms-actionbar { position: sticky; bottom: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -20px -20px; padding: 14px 20px; border-top: 1px solid #dfe9e4; border-radius: 0 0 16px 16px; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(6px); box-shadow: 0 -8px 20px rgba(24, 59, 49, 0.05); }
+.sms-actionbar-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; color: #4d675f; font-size: 14px; }
+.sms-actionbar-sum strong { color: #183b31; font-size: 17px; }
+.sms-actionbar-left.is-short { color: #b42318; font-weight: 700; }
+.sms-actionbar-note { flex-basis: 100%; color: #b42318; font-size: 13px; font-weight: 600; }
+.sms-review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0; }
+.sms-review-grid dt { color: #4d675f; font-size: 12px; }
+.sms-review-grid dd { margin: 2px 0 0; color: #183b31; font-size: 15px; font-weight: 700; }
+.sms-upload-open { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border: 1px solid #b7cdc4; border-radius: 12px; background: #f7fbf9; color: #075e54; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sms-upload-open:hover { background: #e7f6f3; }
+.sms-upload-shade { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 32, 27, 0.55); }
+.sms-upload-box { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 22px; border-radius: 20px; background: #fff; color: #183b31; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25); }
+.sms-upload-title { margin: 0; font-size: 18px; font-weight: 700; color: #183b31; }
+.sms-upload-close { border: 0; background: transparent; color: #4d675f; font-size: 26px; line-height: 1; cursor: pointer; }
+.sms-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; padding: 30px 16px; border: 2px dashed #b7cdc4; border-radius: 16px; background: #f7fbf9; text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.sms-drop:hover, .sms-drop.is-over { border-color: #128c7e; background: #e7f6f3; }
+.sms-drop.is-busy { opacity: 0.7; cursor: progress; }
+.sms-drop-icon { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; background: #d7efe9; color: #075e54; font-size: 22px; }
+.sms-drop-main { color: #075e54; font-size: 15px; font-weight: 700; }
+.sms-upload-tips { margin: 14px 0 0; padding-left: 18px; color: #4d675f; font-size: 12px; line-height: 1.55; list-style: disc; }
+.sms-upload-samples { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e3ece8; font-size: 13px; color: #4d675f; }
+.sms-upload-samples a { color: #075e54; font-weight: 700; }

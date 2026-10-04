@@ -204,3 +204,6 @@ Brand colours live in `assets/css/tokens.css` and `tailwind.config.js`; keep the
 When the phone network confirms delivery, the provider can call your site. In `cpanel-config.local.php` set `'dlr_key' => 'a-long-random-secret'`, then in the provider panel set the delivery-report (callback) URL to
 `https://YOUR-SITE/api/sms-dlr.php?key=a-long-random-secret`.
 The client SMS log then shows a green **Delivered** or red **Not delivered** badge next to *Sent*. Reports never change the sent/failed status or credits. Check with your provider that they offer delivery callbacks; if they do not, nothing changes and the badge simply stays hidden.
+
+### Code layout: big pages
+`client/sms-portal.php` keeps only the page markup. Its form handling is in `client/includes/sms-portal-actions.php`, its styles in `assets/css/sms-portal.css` and its script in `assets/js/sms-portal.js`. `client/login.php` loads `assets/js/client-login.js`.
