@@ -12,7 +12,6 @@ ob_start();
     <meta name="robots" content="noindex, nofollow">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/css/tokens.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/portal.css">
@@ -22,7 +21,7 @@ ob_start();
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="../assets/js/portal.js"></script>
     <script defer src="../assets/js/forms.js"></script>
-    <script src="../assets/js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../assets/css/tailwind.css">
 </head>
 <body class="portal-shell font-body bg-dark-950 text-slate-300 antialiased" x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
     <!-- Mobile overlay -->

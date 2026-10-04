@@ -1,8 +1,0 @@
-/* Shared Tailwind palette for every page. Keep in sync with assets/css/tokens.css. */
-tailwind.config = { theme: { extend: {
-    fontFamily: { heading: ['Space Grotesk', 'sans-serif'], body: ['Inter', 'sans-serif'] },
-    colors: {
-        brand: { 50:'#e5f5f0',100:'#d2eee6',200:'#a8dfd0',300:'#79cdb7',400:'#43b39a',500:'#0b8b7a',600:'#087365',700:'#075e54' },
-        dark: { 200:'#536b63',300:'#344b44',700:'#e5f5f0',800:'#d2eee6',900:'#ffffff',950:'#f4f8f6' }
-    }
-}}};

@@ -184,3 +184,11 @@ public_html/
 
 ### Tests
 `php tests/money-test.php` checks wallet debit, top-up approval, rollback and SMS credit rules on a temporary SQLite file. Run it before deploying any change to `includes/billing.php`.
+
+### Styling build (Tailwind)
+Pages use a pre-built `assets/css/tailwind.css` instead of the Tailwind CDN script (faster, works offline, no third-party script). After you add or change Tailwind classes in any `.php` file, rebuild it:
+```bash
+npm install
+npm run build:css
+```
+Brand colours live in `assets/css/tokens.css` and `tailwind.config.js`; keep the two in step.

@@ -232,32 +232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        heading: ['Space Grotesk', 'sans-serif'],
-                        body: ['Inter', 'sans-serif']
-                    },
-                    colors: {
-                        brand: {
-                            50: '#e5f5f0',
-                            100: '#d2eee6',
-                            200: '#a8dfd0',
-                            300: '#79cdb7',
-                            400: '#43b39a',
-                            500: '#0b8b7a',
-                            600: '#087365',
-                            700: '#075e54'
-                        }
-                    }
-                }
-            }
-        };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/tokens.css">
     <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/polish.css">
@@ -266,6 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script defer src="assets/js/site.js"></script>
     <script defer src="assets/js/forms.js"></script>
+    <link rel="stylesheet" href="assets/css/tailwind.css">
 </head>
 <body class="site-public font-body antialiased">
     <?php include __DIR__ . '/includes/site-notice.php'; ?>

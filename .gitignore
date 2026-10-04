@@ -9,3 +9,4 @@ cpanel-config.local.php
 .env
 *.bak
 *.old
+node_modules/

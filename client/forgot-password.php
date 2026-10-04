@@ -45,14 +45,13 @@ $mathPrompt = auth_math_prompt('forgot-password');
     <meta name="robots" content="noindex, nofollow">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../assets/css/tokens.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/portal.css">
     <link rel="stylesheet" href="../assets/css/portal-polish.css">
     <link rel="stylesheet" href="../assets/css/ui-shared.css">
-    <script src="../assets/js/tailwind-config.js"></script>
     <script defer src="../assets/js/forms.js"></script>
+    <link rel="stylesheet" href="../assets/css/tailwind.css">
 </head>
 <body class="portal-shell portal-auth font-body bg-dark-950 text-slate-300 min-h-screen flex items-center justify-center">
     <div class="w-full max-w-md mx-4">
