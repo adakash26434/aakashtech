@@ -228,3 +228,6 @@ If every visitor shows the same IP, set `'ip_header' => 'CF-Connecting-IP'` (or 
 
 ### When a page shows "Something went wrong"
 Visitors see a short apology and a reference code such as `B074E955` (API calls get the same code in JSON). The full cause is in the server error log (cPanel → Errors, or `error_log` in the site folder) on a line starting `[ref B074E955]`. Ask the person for the code and search the log for it. Technical detail is never shown on screen.
+
+### SMS dashboards
+Client and admin dashboards open with an SMS panel: credits (or bulk stock against client credits), sent / delivered / failed for the last 7 days, a daily chart and quick actions. Numbers come from `includes/sms/stats.php`, markup from `includes/sms-overview-view.php`, style from `assets/css/sms-dash.css` (colours from `tokens.css`). The Delivered figure appears once the provider sends delivery reports (see "SMS delivery reports").

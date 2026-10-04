@@ -81,5 +81,17 @@ $errHtml = app_error_page_html('ABCD1234');
 check('error page shows the reference code', strpos($errHtml, 'ABCD1234') !== false);
 check('error page never shows technical detail', stripos($errHtml, 'Exception') === false && stripos($errHtml, '.php') === false);
 check('error page escapes the reference', strpos(app_error_page_html('<script>'), '<script>') === false);
+// Dashboard numbers
+$now = date('Y-m-d H:i:s'); $old = date('Y-m-d H:i:s', strtotime('-20 days'));
+$conn->query("INSERT INTO sms_messages (client_id, recipient, message_text, parts, status, sent_at, delivery) VALUES ($cid, '9841000010', 'a', 1, 'sent', '$now', 'delivered')");
+$conn->query("INSERT INTO sms_messages (client_id, recipient, message_text, parts, status, sent_at, delivery) VALUES ($cid, '9841000011', 'b', 1, 'failed', '$now', '')");
+$conn->query("INSERT INTO sms_messages (client_id, recipient, message_text, parts, status, sent_at, delivery) VALUES ($cid, '9841000012', 'c', 1, 'sent', '$old', '')");
+$ov = sms_overview($conn, $cid, 7);
+check('overview has one point per day', count($ov['series']) === 7 && $ov['series'][6]['day'] === date('Y-m-d'));
+$sentToday = (int) $conn->query("SELECT COUNT(*) AS c FROM sms_messages WHERE status = 'sent' AND sent_at >= '" . date('Y-m-d 00:00:00', strtotime('-6 days')) . "'")->fetch_assoc()['c'];
+check('overview counts the week and leaves the 20-day-old message out', $ov['totals']['failed'] === 1 && $ov['totals']['sent'] === $sentToday && $ov['totals']['delivered'] >= 1);
+check('delivery rate uses only reported messages', $ov['delivery_rate'] === 100 || $ov['delivery_rate'] === 50);
+check('another client sees none of it', sms_overview($conn, $cid + 999, 7)['totals']['sent'] === 0);
+check('top senders lists the client', count(sms_top_senders($conn, 5)) >= 1);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

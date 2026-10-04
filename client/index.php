@@ -116,6 +116,14 @@ try {
     <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($walletBalance)) ?> · <?= number_format((int) $unitBalances['sms']) ?> SMS · <?= number_format((int) $unitBalances['voice_calls']) ?> voice calls</p>
 </div>
 <?php
+try {
+    require_once __DIR__ . '/../includes/sms-overview-view.php';
+    sms_overview_render_client(sms_overview($conn, $cid, 7), (int) $unitBalances['sms']);
+} catch (Throwable $exception) {
+    error_log('Client SMS overview could not be loaded.');
+}
+?>
+<?php
 require_once __DIR__ . '/../includes/domain-check.php';
 $unpaidDomains = 0;
 $paidDomains = 0;

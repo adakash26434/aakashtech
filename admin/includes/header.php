@@ -17,6 +17,7 @@ ob_start();
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/portal.css">
     <link rel="stylesheet" href="../assets/css/portal-polish.css">
+    <link rel="stylesheet" href="../assets/css/sms-dash.css">
     <link rel="stylesheet" href="../assets/css/ui-shared.css">
     <script defer src="../assets/vendor/lucide-0.383.0.min.js"></script>
     <script defer src="../assets/vendor/alpine-3.14.9.min.js"></script>

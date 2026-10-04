@@ -1,0 +1,49 @@
+/* SMS dashboards (client + admin). Uses tokens.css only. */
+.sms-dash { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+.sms-dash-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.sms-dash-title { margin: 0; font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: var(--ink-900); }
+.sms-dash-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-500); }
+.sms-dash-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sms-dash-btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: var(--radius-md); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-900); font-weight: 600; font-size: 14px; text-decoration: none; transition: border-color .2s, background .2s, transform .2s; }
+.sms-dash-btn:hover { border-color: var(--brand-500); background: var(--brand-50); transform: translateY(-1px); }
+.sms-dash-btn.is-primary { background: var(--brand-500); border-color: var(--brand-500); color: #fff; }
+.sms-dash-btn.is-primary:hover { background: var(--brand-600); }
+.sms-dash-grid { display: grid; gap: 16px; grid-template-columns: minmax(200px, 1fr) minmax(220px, 1.3fr) minmax(240px, 1.6fr); align-items: stretch; }
+.sms-credit { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: var(--radius-md); background: var(--ok-bg); border: 1px solid #b6e2cd; }
+.sms-credit.is-low { background: var(--warn-bg); border-color: #f2d58b; }
+.sms-credit.is-empty { background: var(--bad-bg); border-color: #f3b9b3; }
+.sms-credit-value { font-family: var(--font-heading); font-size: 40px; line-height: 1.05; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.sms-credit-state { font-size: 13px; font-weight: 600; color: var(--ink-700); }
+.sms-credit-cta { margin-top: 6px; align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--radius-md); background: var(--ink-900); color: #fff; font-weight: 600; font-size: 14px; text-decoration: none; }
+.sms-meter { height: 8px; border-radius: 999px; background: rgba(16, 43, 53, .12); overflow: hidden; margin: 4px 0; }
+.sms-meter span { display: block; height: 100%; border-radius: 999px; background: var(--ok); }
+.sms-credit.is-empty .sms-meter span { background: var(--bad); }
+.sms-stats { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+.sms-stat { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: var(--radius-md); background: var(--surface-wash); }
+.sms-stat.is-warn { background: var(--warn-bg); }
+.sms-stat-label { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-500); }
+.sms-stat-value { font-family: var(--font-heading); font-size: 26px; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.sms-stat-note { font-size: 12px; line-height: 1.35; color: var(--ink-500); }
+.sms-chart-wrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sms-chart { width: 100%; height: 120px; display: block; }
+.sms-bar.is-sent { fill: var(--brand-500); } .sms-bar.is-failed { fill: var(--bad); } .sms-bar.is-queued { fill: var(--accent-gold); } .sms-bar.is-empty { fill: var(--line); }
+.sms-chart-days { display: flex; justify-content: space-around; font-size: 11px; color: var(--ink-400); }
+.sms-legend { display: flex; gap: 14px; margin: 0; font-size: 12px; color: var(--ink-500); }
+.sms-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--brand-500); }
+.sms-legend .is-failed::before { background: var(--bad); } .sms-legend .is-queued::before { background: var(--accent-gold); }
+.sms-top { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.sms-top h3 { margin: 0 0 8px; font-size: 14px; color: var(--ink-700); }
+.sms-top ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.sms-top li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: var(--radius-md); background: var(--surface-wash); font-size: 14px; }
+.sms-top a { color: var(--ink-900); font-weight: 600; text-decoration: none; } .sms-top a:hover { color: var(--brand-600); }
+.sms-top span { font-variant-numeric: tabular-nums; color: var(--ink-500); }
+@media (max-width: 1024px) { .sms-dash-grid { grid-template-columns: 1fr 1fr; } .sms-chart-wrap { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .sms-dash { padding: 14px; } .sms-dash-grid { grid-template-columns: 1fr; } .sms-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; } .sms-stat-value { font-size: 22px; } .sms-credit-value { font-size: 34px; } .sms-dash-actions { width: 100%; } .sms-dash-btn { flex: 1; justify-content: center; } }
+
+/* Composer: the preview looks like a message bubble on a phone */
+.portal-shell .sms-preview { max-width: 340px; margin-top: 14px; padding: 14px 16px 12px; border-radius: 22px 22px 22px 6px; background: #e8eef0; border: 1px solid #d3dde0; box-shadow: var(--shadow-sm); position: relative; }
+.portal-shell .sms-preview::after { content: "Now"; display: block; margin-top: 6px; font-size: 11px; color: var(--ink-400); text-align: right; }
+.portal-shell .sms-preview-label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-500); margin: 0 0 6px; }
+.portal-shell .sms-preview p:not(.sms-preview-label) { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink-900); white-space: pre-wrap; word-break: break-word; }
+.portal-shell .sms-credit-bar { font-size: 14px; font-weight: 600; padding: 8px 12px; border-radius: var(--radius-md); background: var(--ok-bg); color: var(--ok); display: inline-block; }
+.portal-shell .sms-credit-bar.is-short { background: var(--bad-bg); color: var(--bad); }

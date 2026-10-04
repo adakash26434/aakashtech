@@ -88,6 +88,16 @@ try {
     <p class="text-slate-500 text-sm">Welcome back, <?= e(get_admin_name()) ?>! Here's what's happening.</p>
 </div>
 
+<?php
+try {
+    require_once __DIR__ . '/../includes/sms-overview-view.php';
+    $smsStockNow = isset($smsSaved) && is_array($smsSaved) ? $smsSaved['balance'] : null;
+    sms_overview_render_admin(sms_overview($conn, 0, 7), $smsStockNow, (int) $sms_clients_holding, sms_top_senders($conn, 5));
+} catch (Throwable $exception) {
+    error_log('Admin SMS overview could not be loaded.');
+}
+?>
+
 <?php if ((int) $pending_topups > 0): ?>
     <a href="billing.php?tab=wallet" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
         <?= (int) $pending_topups ?> wallet top-up<?= (int) $pending_topups === 1 ? '' : 's' ?> waiting for confirmation. Renewals after that are automatic.
