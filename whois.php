@@ -30,7 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_whois'])) {
         $error = $mathError;
     } elseif ((time() - $last) < 3) {
         $error = 'Wait a moment, then check the name again.';
+    } elseif ($conn && auth_attempt_blocked($conn, 'whois', 30, 3600)) {
+        $error = 'Too many checks from this connection. Try again in an hour.';
     } else {
+        if ($conn) { auth_note_attempt($conn, 'whois'); }
         $_SESSION['whois_check_at'] = time();
         $result = domain_whois_lookup($typedName, $typedTld);
         if ($result['status'] === 'invalid') {

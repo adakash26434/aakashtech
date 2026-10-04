@@ -32,7 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_domain'])) {
         $typedLabel = trim((string) (isset($_POST['label']) ? $_POST['label'] : ''));
     } elseif ((time() - $last) < 3) {
         $error = 'Wait a moment, then check the name again.';
+    } elseif ($conn && auth_attempt_blocked($conn, 'domaincheck', 30, 3600)) {
+        $error = 'Too many checks from this connection. Try again in an hour.';
     } else {
+        if ($conn) { auth_note_attempt($conn, 'domaincheck'); }
         $_SESSION['domain_check_at'] = time();
         $typedLabel = trim((string) (isset($_POST['label']) ? $_POST['label'] : ''));
         $tld = domain_tld(isset($_POST['tld']) ? $_POST['tld'] : '');

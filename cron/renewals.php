@@ -12,6 +12,13 @@ if (PHP_SAPI !== 'cli') {
     }
 }
 
+// One run at a time: a slow run must not overlap the next cron tick (double charges / double SMS).
+$cronLock = fopen(sys_get_temp_dir() . '/aakash-' . basename(__FILE__, '.php') . '.lock', 'c');
+if ($cronLock === false || !flock($cronLock, LOCK_EX | LOCK_NB)) {
+    echo "Already running\n";
+    exit;
+}
+
 $stats = billing_process_renewals($conn);
 echo 'Renewed: ' . (int) $stats['renewed'] . PHP_EOL;
 echo 'Waiting for funds: ' . (int) $stats['waiting'] . PHP_EOL;

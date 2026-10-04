@@ -181,3 +181,6 @@ public_html/
 - The local PHP preview router also blocks internal configuration and schema files
 - Security headers set (X-Content-Type-Options, X-Frame-Options, etc.)
 - Set a strong admin password before enabling admin sign-in
+
+### Tests
+`php tests/money-test.php` checks wallet debit, top-up approval, rollback and SMS credit rules on a temporary SQLite file. Run it before deploying any change to `includes/billing.php`.

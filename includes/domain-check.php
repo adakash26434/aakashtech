@@ -639,7 +639,9 @@ function domain_pay_request($conn, $clientId, $requestId)
         $update->close();
         return 'That name is no longer free. It was not charged. Check another name.';
     }
+    billing_tx($conn, 'begin');
     if (!billing_wallet_debit($conn, $clientId, $price)) {
+        billing_tx($conn, 'rollback');
         return 'The wallet does not have enough for this year. Add funds, then pay again.';
     }
     $status = 'paid';
@@ -649,10 +651,16 @@ function domain_pay_request($conn, $clientId, $requestId)
     $saved = billing_affected($conn) === 1;
     $update->close();
     if (!$saved) {
-        billing_wallet_credit($conn, $clientId, $price);
+        billing_tx($conn, 'rollback');
         return 'The payment could not be saved. The wallet was not charged.';
     }
-    billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', 'Domain request ' . $row['domain_name'], 0);
+    try {
+        billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', 'Domain request ' . $row['domain_name'], 0);
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
+        return 'The payment could not be saved. The wallet was not charged.';
+    }
+    billing_tx($conn, 'commit');
     billing_notify($conn, 'Domain paid: ' . $row['domain_name'], array(
         'A domain request is paid and waiting to be registered.',
         'Domain: ' . $row['domain_name'],
