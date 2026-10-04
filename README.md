@@ -192,3 +192,7 @@ npm install
 npm run build:css
 ```
 Brand colours live in `assets/css/tokens.css` and `tailwind.config.js`; keep the two in step.
+
+### Code layout: billing
+`includes/billing.php` is now a small loader. The code lives in `includes/billing/`:
+`core.php` (helpers, settings), `schema.php` (tables), `catalog.php` (plans, prices, pricing pages), `wallet.php` (wallet, units, ledger, top-ups, transactions), `kyc.php` (identity), `mail.php` (e-mail), `site.php` (public settings, logos), `orders.php` (purchases, refunds, renewals). Other files keep using `require 'includes/billing.php'` as before.
