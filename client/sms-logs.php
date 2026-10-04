@@ -19,7 +19,7 @@ if (isset($_GET['export']) && (string) $_GET['export'] === '1') {
     header('X-Content-Type-Options: nosniff');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, array('When (Nepal)', 'Send', 'To', 'Message', 'Credits', 'From', 'Status', 'Result'), ',', '"', '\\');
+    fputcsv($out, array('When (Nepal)', 'Send', 'To', 'Message', 'Credits', 'From', 'Status', 'Delivery', 'Result'), ',', '"', '\\');
     foreach ($export['rows'] as $exportRow) {
         fputcsv($out, array(
             sms_csv_cell(sms_format_time($exportRow['created_at'])),
@@ -29,6 +29,7 @@ if (isset($_GET['export']) && (string) $_GET['export'] === '1') {
             (int) $exportRow['parts'],
             $exportRow['source'] === 'api' ? 'API' : 'Dashboard',
             sms_csv_cell($exportRow['status']),
+            sms_csv_cell(isset($exportRow['delivery']) && $exportRow['delivery'] !== '' ? $exportRow['delivery'] : ($exportRow['status'] === 'sent' ? 'awaiting' : '')),
             sms_csv_cell(isset($exportRow['error_text']) ? $exportRow['error_text'] : '')
         ), ',', '"', '\\');
     }

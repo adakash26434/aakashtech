@@ -12,6 +12,7 @@ $navItems = [
     'kyc.php'       => ['Identity', 'badge-check'],
     'sms-portal.php' => ['Send SMS', 'send'],
     'sms-logs.php' => ['SMS logs', 'scroll-text'],
+    'sms-report.php' => ['Delivery report', 'chart-no-axes-column'],
     'sms-api.php' => ['SMS API', 'key-round'],
     'campaigns.php' => ['Messages', 'message-square-text'],
     'support.php'   => ['Support', 'life-buoy'],

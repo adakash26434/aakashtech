@@ -10,6 +10,7 @@ $navItems = [
     'billing.php'    => ['Billing', 'wallet'],
     'campaigns.php'  => ['Messages', 'message-square-text'],
     'sms-line.php'   => ['SMS line', 'radio'],
+    'sms-report.php' => ['SMS report', 'chart-no-axes-column'],
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
     'settings.php'   => ['Settings', 'settings'],
     'manual.php'     => ['मार्गदर्शन', 'book-open'],

@@ -98,5 +98,27 @@ $spaced = sms_collect_contacts("+977 9841000002\n984 100 0004\nRam Thapa 98410 0
 check('server joins numbers typed with spaces', $spaced['ok'] && count($spaced['contacts']) === 5);
 check('server keeps the name with its number', $spaced['contacts'][2]['name'] === 'Ram Thapa' && $spaced['contacts'][2]['number'] === '9841000005');
 check('server still refuses a real bad number', sms_collect_contacts("12345 678")['ok'] === false);
+// Delivery report engine
+$conn->query("DELETE FROM sms_messages");
+$t = date('Y-m-d H:i:s'); $t2 = date('Y-m-d H:i:s', time() + 40);
+$rows = array(
+  array('9841000021', 'sent', 'delivered', $t, $t2, ''), array('9851000022', 'sent', 'delivered', $t, $t2, ''), array('9811000023', 'sent', 'failed', $t, null, ''),
+  array('9801000024', 'sent', '', $t, null, ''), array('9841000025', 'failed', '', $t, null, 'not-accepted'), array('9841000026', 'failed', '', $t, null, 'not-accepted'),
+);
+foreach ($rows as $r) {
+    $da = $r[4] === null ? 'NULL' : "'" . $r[4] . "'";
+    $conn->query("INSERT INTO sms_messages (client_id, recipient, message_text, parts, status, delivery, sent_at, delivery_at, error_text) VALUES ($cid, '{$r[0]}', 'x', 1, '{$r[1]}', '{$r[2]}', '{$r[3]}', $da, '{$r[5]}')");
+}
+$rep = sms_report($conn, $cid, date('Y-m-d'), date('Y-m-d'));
+check('report funnel counts every state', $rep['funnel']['total'] === 6 && $rep['funnel']['delivered'] === 2 && $rep['funnel']['undelivered'] === 1 && $rep['funnel']['awaiting'] === 1 && $rep['funnel']['rejected'] === 2);
+check('delivery rate counts only confirmed messages', $rep['rate'] === 67);
+check('median delivery time is read from the timestamps', $rep['median'] === 40);
+check('carriers are split by prefix', count($rep['carriers']) === 2 && $rep['carriers'][0]['name'] === 'NTC' && $rep['carriers'][0]['total'] === 4);
+check('failure reasons are explained in plain words', $rep['reasons'][0]['count'] === 2 && $rep['reasons'][0]['title'] === 'Number not accepted');
+check('another client sees an empty report', sms_report($conn, $cid + 999, date('Y-m-d'), date('Y-m-d'))['funnel']['total'] === 0);
+$conn->query("UPDATE sms_messages SET delivery = '' WHERE delivery <> ''");
+$none = sms_report($conn, $cid, date('Y-m-d'), date('Y-m-d'));
+check('with no confirmations the rate is empty and the page explains it', $none['rate'] === null && $none['insights'][0]['title'] === 'Waiting for network confirmation');
+check('prefix to carrier map', sms_carrier_for('9779841000001') === 'NTC' && sms_carrier_for('9811000000') === 'Ncell' && sms_carrier_for('9611000000') === 'Smart Cell');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

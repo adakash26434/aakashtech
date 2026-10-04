@@ -59,7 +59,7 @@ function sms_overview_render_client($ov, $credits, $lowAt = 100)
     list($delivery, $deliveryNote, $failure) = sms_overview_rates($ov);
     $sent = (int) $ov['totals']['sent'];
     echo '<section class="sms-dash" aria-label="SMS overview"><div class="sms-dash-head"><div><h2 class="sms-dash-title">SMS at a glance</h2><p class="sms-dash-sub">Last ' . (int) $ov['days'] . ' days</p></div>'
-        . '<div class="sms-dash-actions"><a class="sms-dash-btn is-primary" href="sms-portal.php">Send SMS</a><a class="sms-dash-btn" href="shop.php">Buy credits</a><a class="sms-dash-btn" href="sms-logs.php">Reports</a></div></div>';
+        . '<div class="sms-dash-actions"><a class="sms-dash-btn is-primary" href="sms-portal.php">Send SMS</a><a class="sms-dash-btn" href="shop.php">Buy credits</a><a class="sms-dash-btn" href="sms-report.php">Delivery report</a></div></div>';
     echo '<div class="sms-dash-grid"><div class="sms-credit is-' . $state . '"><span class="sms-stat-label">Credits left</span><strong class="sms-credit-value">' . number_format($credits) . '</strong><span class="sms-credit-state">' . htmlspecialchars($stateText, ENT_QUOTES, 'UTF-8') . '</span>';
     if ($state !== 'ok') {
         echo '<a class="sms-credit-cta" href="shop.php">Add credits</a>';
@@ -80,7 +80,7 @@ function sms_overview_render_admin($ov, $stock, $held, $top)
     $short = $hasStock && $stock < $held;
     $pct = $held > 0 && $hasStock ? min(100, (int) round($stock * 100 / $held)) : 100;
     echo '<section class="sms-dash" aria-label="SMS overview"><div class="sms-dash-head"><div><h2 class="sms-dash-title">SMS health</h2><p class="sms-dash-sub">All clients, last ' . (int) $ov['days'] . ' days</p></div>'
-        . '<div class="sms-dash-actions"><a class="sms-dash-btn is-primary" href="sms-line.php">SMS line</a><a class="sms-dash-btn" href="sms-line.php?tab=names">Sender names</a></div></div>';
+        . '<div class="sms-dash-actions"><a class="sms-dash-btn is-primary" href="sms-line.php">SMS line</a><a class="sms-dash-btn" href="sms-report.php">Delivery report</a><a class="sms-dash-btn" href="sms-line.php?tab=names">Sender names</a></div></div>';
     echo '<div class="sms-dash-grid"><div class="sms-credit is-' . ($short ? 'empty' : 'ok') . '"><span class="sms-stat-label">Bulk stock vs client credits</span>'
         . '<strong class="sms-credit-value">' . ($hasStock ? number_format($stock) : '—') . '</strong>'
         . '<div class="sms-meter" role="img" aria-label="Stock covers ' . $pct . ' percent of client credits"><span style="width:' . $pct . '%"></span></div>'

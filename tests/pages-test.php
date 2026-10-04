@@ -13,7 +13,7 @@ $conn->query("INSERT INTO admin_users (name,email,password) VALUES ('Office','of
 $aid = (int) $conn->insert_id;
 $_SESSION['client_id'] = $cid; $_SESSION['admin_id'] = $aid; $_SESSION['client_view_admin'] = $aid;
 set_error_handler(function ($no, $msg, $file, $line) { throw new ErrorException($msg, 0, $no, $file, $line); });
-$__pages = array('index', 'sms-portal', 'sms-logs', 'sms-api', 'campaigns', 'wallet', 'shop', 'services', 'domains', 'kyc', 'profile', 'support', 'manual');
+$__pages = array('index', 'sms-portal', 'sms-logs', 'sms-report', 'sms-api', 'campaigns', 'wallet', 'shop', 'services', 'domains', 'kyc', 'profile', 'support', 'manual');
 $__fail = 0;
 foreach ($__pages as $__name) {
     $_SERVER['SCRIPT_NAME'] = '/client/' . $__name . '.php';
