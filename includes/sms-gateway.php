@@ -1426,6 +1426,9 @@ function sms_take_credits($conn, $clientId, $credits)
     $stmt->execute();
     $taken = (int) $conn->affected_rows > 0;
     $stmt->close();
+    if ($taken && function_exists('billing_low_sms_alert')) {
+        billing_low_sms_alert($conn, $clientId);
+    }
     return $taken;
 }
 

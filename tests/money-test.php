@@ -25,5 +25,8 @@ check('nested commit keeps the credit', bal($conn, $cid) == 401.0);
 check('units cannot go negative', !billing_take_units($conn, $cid, 'sms', 5));
 billing_add_units($conn, $cid, 'sms', 10);
 check('take units within balance', billing_take_units($conn, $cid, 'sms', 4) && billing_unit_balances($conn, $cid)['sms'] === 6);
+billing_add_units($conn, $cid, 'sms', 50);
+check('low-credit alert fires below 100', @billing_low_sms_alert($conn, $cid) === true);
+check('low-credit alert only once a day', @billing_low_sms_alert($conn, $cid) === false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

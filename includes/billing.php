@@ -1010,6 +1010,14 @@ function billing_mail_catalog()
                 'You can pay for a service from the client portal.'
             )
         ),
+        'sms-low' => array(
+            'when' => 'A client\'s SMS credits drop below 100 (sent at most once a day)',
+            'subject' => 'Your SMS credits are running low',
+            'lines' => array(
+                'You have {left} SMS credits left.',
+                'Buy more from the client portal before your next send is refused.'
+            )
+        ),
         'office-wallet' => array(
             'when' => 'You record a cash or office payment on the wallet',
             'subject' => 'Wallet payment recorded',
@@ -3517,6 +3525,31 @@ function billing_tx($conn, $step)
         return true;
     } catch (Throwable $exception) {
         $depth = 0;
+        return false;
+    }
+}
+
+/**
+ * E-mail a client once a day when their SMS credits fall below the warning level.
+ * Never blocks or breaks a send: any problem here is swallowed.
+ */
+function billing_low_sms_alert($conn, $clientId, $threshold = 100)
+{
+    try {
+        $clientId = (int) $clientId;
+        $left = (int) billing_unit_balances($conn, $clientId)['sms'];
+        if ($clientId < 1 || $left >= (int) $threshold) {
+            return false;
+        }
+        $key = 'sms_low_alert_' . $clientId;
+        $today = date('Y-m-d');
+        if (billing_setting($conn, $key) === $today) {
+            return false;
+        }
+        billing_set_setting($conn, $key, $today);
+        billing_mail_client_event($conn, $clientId, 'sms-low', array('left' => number_format($left)));
+        return true;
+    } catch (Throwable $exception) {
         return false;
     }
 }
