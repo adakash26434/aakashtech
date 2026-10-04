@@ -3478,6 +3478,49 @@ function billing_balance($conn, $clientId)
     return $row ? (float) $row['balance'] : 0.0;
 }
 
+/**
+ * All-or-nothing money operations. Nested calls join the outer transaction,
+ * so a wallet debit, the service row and the SMS credits either all happen or none do.
+ */
+function billing_tx($conn, $step)
+{
+    static $depth = 0;
+    try {
+        if ($step === 'begin') {
+            if ($depth === 0) {
+                if (DB_DRIVER === 'sqlite') {
+                    $conn->query('BEGIN');
+                } else {
+                    $conn->begin_transaction();
+                }
+            }
+            $depth++;
+            return true;
+        }
+        if ($depth === 0) {
+            return true;
+        }
+        $depth--;
+        if ($step === 'commit' && $depth > 0) {
+            return true;
+        }
+        if ($step === 'rollback') {
+            $depth = 0;
+        }
+        if (DB_DRIVER === 'sqlite') {
+            $conn->query($step === 'commit' ? 'COMMIT' : 'ROLLBACK');
+        } elseif ($step === 'commit') {
+            $conn->commit();
+        } else {
+            $conn->rollback();
+        }
+        return true;
+    } catch (Throwable $exception) {
+        $depth = 0;
+        return false;
+    }
+}
+
 function billing_wallet_debit($conn, $clientId, $amount)
 {
     billing_ensure_wallet($conn, $clientId);
@@ -4347,7 +4390,9 @@ function billing_purchase($conn, $clientId, $plan, $post)
 
     $clientId = (int) $clientId;
     $price = billing_money($order['price']);
+    billing_tx($conn, 'begin');
     if (!billing_wallet_debit($conn, $clientId, $price)) {
+        billing_tx($conn, 'rollback');
         return array('ok' => false, 'error' => 'Your wallet does not have enough for this order. Add funds, then confirm again. Nothing else is required by phone.');
     }
 
@@ -4382,15 +4427,21 @@ function billing_purchase($conn, $clientId, $plan, $post)
     $stmt->close();
 
     if (!$ok || $serviceId <= 0) {
-        billing_wallet_credit($conn, $clientId, $price);
+        billing_tx($conn, 'rollback');
         return array('ok' => false, 'error' => 'The purchase could not be saved. Your wallet was not charged.');
     }
 
-    billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', $name, $serviceId);
-    billing_add_units($conn, $clientId, $unitKind, $unitQuantity);
-    if ($unitKind === 'sms' && $unitQuantity > 0 && function_exists('sms_remember_credit')) {
-        sms_remember_credit($conn, $clientId, $unitQuantity, 'Bought from the wallet');
+    try {
+        billing_record_entry($conn, $clientId, $price, 'debit', 'purchase', 'completed', 'wallet', $name, $serviceId);
+        billing_add_units($conn, $clientId, $unitKind, $unitQuantity);
+        if ($unitKind === 'sms' && $unitQuantity > 0 && function_exists('sms_remember_credit')) {
+            sms_remember_credit($conn, $clientId, $unitQuantity, 'Bought from the wallet');
+        }
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
+        return array('ok' => false, 'error' => 'The purchase could not be finished. Your wallet was not charged.');
     }
+    billing_tx($conn, 'commit');
     billing_notify($conn, 'New order: ' . $name, array(
         'A client bought or booked a service.',
         'Service: ' . $name,
@@ -4495,15 +4546,23 @@ function billing_approve_topup($conn, $entryId)
     if (!$entry) {
         return false;
     }
-    $stmt = $conn->prepare("UPDATE wallet_entries SET status = 'completed' WHERE id = ? AND status = 'pending'");
-    $stmt->bind_param('i', $entryId);
-    $stmt->execute();
-    $changed = billing_affected($conn) === 1;
-    $stmt->close();
-    if (!$changed) {
+    billing_tx($conn, 'begin');
+    try {
+        $stmt = $conn->prepare("UPDATE wallet_entries SET status = 'completed' WHERE id = ? AND status = 'pending'");
+        $stmt->bind_param('i', $entryId);
+        $stmt->execute();
+        $changed = billing_affected($conn) === 1;
+        $stmt->close();
+        if (!$changed) {
+            billing_tx($conn, 'rollback');
+            return false;
+        }
+        billing_wallet_credit($conn, (int) $entry['client_id'], $entry['amount']);
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
         return false;
     }
-    billing_wallet_credit($conn, (int) $entry['client_id'], $entry['amount']);
+    billing_tx($conn, 'commit');
     billing_mail_client_event($conn, (int) $entry['client_id'], 'topup-done', array(
         'amount' => number_format((float) $entry['amount'])
     ));
@@ -4533,8 +4592,15 @@ function billing_admin_wallet_credit($conn, $clientId, $amount, $note)
         return 'That client was not found.';
     }
     $method = 'office';
-    billing_record_entry($conn, $clientId, $amount, 'credit', 'topup', 'completed', $method, $note, 0);
-    billing_wallet_credit($conn, $clientId, $amount);
+    billing_tx($conn, 'begin');
+    try {
+        billing_record_entry($conn, $clientId, $amount, 'credit', 'topup', 'completed', $method, $note, 0);
+        billing_wallet_credit($conn, $clientId, $amount);
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
+        return 'The payment could not be saved. Nothing was added.';
+    }
+    billing_tx($conn, 'commit');
     billing_mail_client_event($conn, $clientId, 'office-wallet', array(
         'amount' => number_format($amount),
         'note' => $note
