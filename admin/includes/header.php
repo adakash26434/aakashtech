@@ -17,8 +17,8 @@ ob_start();
     <link rel="stylesheet" href="../assets/css/portal.css">
     <link rel="stylesheet" href="../assets/css/portal-polish.css">
     <link rel="stylesheet" href="../assets/css/ui-shared.css">
-    <script defer src="https://unpkg.com/lucide@0.383.0"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="../assets/vendor/lucide-0.383.0.min.js"></script>
+    <script defer src="../assets/vendor/alpine-3.14.9.min.js"></script>
     <script defer src="../assets/js/portal.js"></script>
     <script defer src="../assets/js/forms.js"></script>
     <link rel="stylesheet" href="../assets/css/tailwind.css">

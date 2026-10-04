@@ -236,8 +236,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/polish.css">
     <link rel="stylesheet" href="assets/css/ui-shared.css">
-    <script defer src="https://unpkg.com/lucide@0.383.0"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="assets/vendor/lucide-0.383.0.min.js"></script>
+    <script defer src="assets/vendor/alpine-3.14.9.min.js"></script>
     <script defer src="assets/js/site.js"></script>
     <script defer src="assets/js/forms.js"></script>
     <link rel="stylesheet" href="assets/css/tailwind.css">

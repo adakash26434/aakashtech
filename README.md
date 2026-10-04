@@ -213,3 +213,6 @@ The client SMS log then shows a green **Delivered** or red **Not delivered** bad
 `client/sms-portal.php` keeps only the page markup. Its form handling is in `client/includes/sms-portal-actions.php`, its styles in `assets/css/sms-portal.css` and its script in `assets/js/sms-portal.js`. `client/login.php` loads `assets/js/client-login.js`.
 
 `admin/settings.php`, `client.php`, `billing.php` and `sms-line.php` keep their markup; the form handling lives in `admin/includes/<page>-actions.php`.
+
+### Scripts are self-hosted
+Alpine.js (3.14.9) and Lucide icons (0.383.0) are served from `assets/vendor/`, pinned to exact versions, so pages no longer depend on unpkg or jsDelivr being reachable and a CDN change can never alter the site. To upgrade, replace the file and update the version in its name and in the `<script>` tags.
