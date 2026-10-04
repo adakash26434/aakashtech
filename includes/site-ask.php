@@ -2,9 +2,9 @@
 $askToken = function_exists('csrf_token') ? csrf_token() : '';
 ?>
 <div class="ask-dock">
-    <button class="ask-open" type="button" aria-expanded="false" aria-controls="ask-panel">
+    <button class="ask-open" type="button" aria-expanded="false" aria-controls="ask-panel" aria-label="Ask about the services" title="Ask about the services">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4a7 7 0 0 0-7 7v1.2A3.8 3.8 0 0 0 8.8 16H9v2.2L12.4 16H13a7 7 0 0 0 0-14z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg>
-        Ask about the services
+        <span class="ask-open-label">Ask about the services</span>
     </button>
     <section id="ask-panel" class="ask-panel" hidden>
         <div class="ask-panel-head">

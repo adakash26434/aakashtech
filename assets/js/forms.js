@@ -51,6 +51,19 @@
         var field = event.target;
         if (field && field.getAttribute && field.getAttribute("aria-invalid") === "true" && field.checkValidity()) { clearError(field); }
     });
+    function markRequired() {
+        document.querySelectorAll("label").forEach(function (label) {
+            var field = label.control || (label.nextElementSibling && label.nextElementSibling.matches("input,select,textarea") ? label.nextElementSibling : null);
+            if (!field || !field.required || field.type === "checkbox" || field.type === "radio") { return; }
+            if (label.textContent.indexOf("*") !== -1 || label.querySelector(".req-mark")) { return; }
+            var mark = document.createElement("span");
+            mark.className = "req-mark";
+            mark.setAttribute("aria-hidden", "true");
+            mark.textContent = "*";
+            label.appendChild(mark);
+        });
+    }
+    document.addEventListener("DOMContentLoaded", markRequired);
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll("input").forEach(function (input) {
             var name = (input.name || "").toLowerCase();

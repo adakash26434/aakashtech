@@ -11,6 +11,8 @@
     /* Status */
     --ok: #08734f; --ok-bg: #dcf3e8; --warn: #8a5a00; --warn-bg: #fff3d6;
     --bad: #b42318; --bad-bg: #fde8e6; --info: #0b5ea8; --info-bg: #e3f0fb;
+    /* Chat brands */
+    --brand-whatsapp: #128c7e; --brand-messenger: #0084ff;
     /* Type */
     --font-heading: "Space Grotesk", system-ui, sans-serif;
     --font-body: "Inter", system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", sans-serif;

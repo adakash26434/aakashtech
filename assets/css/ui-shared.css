@@ -7,7 +7,7 @@ h1, h2, h3, .font-heading { font-family: var(--font-heading); }
 
 /* Forms: same label, field, hint and error look on every page */
 body label.block, body .form-label { display: block; margin-bottom: 6px; font-size: var(--text-sm); font-weight: 600; color: var(--ink-700); line-height: 1.4; }
-body label:has(+ :required)::after, body label:has(> :required:not([type=checkbox]))::after { content: " *"; color: var(--bad); }
+body .req-mark { color: var(--bad); margin-left: 2px; }
 body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), body select, body textarea {
     width: 100%; min-height: var(--control-h); padding: 10px 14px; font-size: var(--text-base); font-family: inherit;
     color: var(--ink-900); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-md);
@@ -35,3 +35,40 @@ body form button[type=submit]:not([class*="bg-"]) { background: var(--brand-500)
 /* Alerts */
 .alert { padding: 12px 16px; border-radius: var(--radius-md); font-size: var(--text-sm); border: 1px solid var(--line); }
 .alert--ok { background: var(--ok-bg); color: var(--ok); } .alert--bad { background: var(--bad-bg); color: var(--bad); } .alert--warn { background: var(--warn-bg); color: var(--warn); }
+
+/* ===== Chat and social icons: one look in the header, footer, floating dock and mobile ===== */
+.guest-chat-link, .guest-chat-link:visited, .guest-chat-link:hover { color: #fff !important; opacity: 1; filter: none; }
+.guest-chat-link svg { width: 22px; height: 22px; color: #fff; fill: currentColor; stroke: none; flex: none; }
+.guest-chat-link--whatsapp { background: var(--brand-whatsapp) !important; }
+.guest-chat-link--messenger { background: var(--brand-messenger) !important; }
+.guest-chat-link { box-shadow: 0 6px 16px rgba(16, 43, 53, .22); transition: transform .2s var(--ui-ease, ease), box-shadow .2s; }
+.guest-chat-link:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 10px 22px rgba(16, 43, 53, .28); }
+.nav-chats .guest-chat-link { width: 40px; min-height: 40px; height: 40px; }
+.guest-chat--dock .guest-chat-link { width: 48px; height: 48px; min-height: 48px; }
+
+/* Footer social: white icons on a clear outlined tile (the old pale-on-pale tile was unreadable) */
+.footer-social a { width: 44px; height: 44px; color: #fff !important; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .35); border-radius: var(--radius-md); }
+.footer-social a:hover, .footer-social a:focus-visible { background: #fff; color: var(--ink-900) !important; border-color: #fff; }
+.footer-social svg { width: 22px; height: 22px; fill: currentColor; }
+
+/* Ask button: round icon, label slides out on hover or keyboard focus */
+.ask-open { width: 52px; min-width: 52px; height: 52px; min-height: 52px; padding: 0; gap: 0; justify-content: center; overflow: hidden; background: var(--brand-700); transition: width .3s var(--ui-ease, ease), background .2s, box-shadow .2s; }
+.ask-open svg { width: 22px; height: 22px; flex: none; }
+.ask-open-label { max-width: 0; opacity: 0; white-space: nowrap; font-weight: 600; transition: max-width .3s var(--ui-ease, ease), opacity .2s, margin .3s; }
+@media (hover: hover) {
+    .ask-open:hover, .ask-open:focus-visible { width: 236px; padding: 0 18px; gap: 10px; justify-content: flex-start; background: var(--brand-600); }
+    .ask-open:hover .ask-open-label, .ask-open:focus-visible .ask-open-label { max-width: 190px; opacity: 1; }
+}
+.ask-dock { right: 18px; bottom: 18px; }
+
+/* Phones: smaller tiles, centred footer social, nothing sits under the bottom action bar */
+@media (max-width: 720px) {
+    .guest-chat--dock { left: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+    .guest-chat--dock .guest-chat-link { width: 44px; height: 44px; min-height: 44px; }
+    .ask-dock { right: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: min(380px, calc(100vw - 24px)); }
+    .ask-open { width: 48px; min-width: 48px; height: 48px; min-height: 48px; }
+    .footer-social { justify-content: center; gap: 12px; }
+    .footer-social a { width: 46px; height: 46px; }
+    .site-footer h2 { font-size: 18px; }
+}
+.site-footer .footer-column h2 { font-size: var(--text-lg, 18px); line-height: 1.35; letter-spacing: -0.01em; }

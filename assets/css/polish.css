@@ -11,9 +11,9 @@ body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; 
 ::selection { background: var(--site-teal); color: #fff; }
 
 /* Typography: fluid sizes, balanced headings, readable line length */
-.site-public h1 { font-size: clamp(2.1rem, 1.4rem + 3.4vw, 4rem); line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; }
-.site-public h2 { font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.6rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
-.site-public h3 { text-wrap: balance; }
+.site-public main h1 { font-size: clamp(2.1rem, 1.4rem + 3.4vw, 4rem); line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; }
+.site-public main h2 { font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.6rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+.site-public main h3 { text-wrap: balance; }
 .site-public p, .site-public li { text-wrap: pretty; }
 .hero-lede { max-width: 60ch; font-size: clamp(1rem, 0.95rem + 0.3vw, 1.2rem); line-height: 1.65; }
 
