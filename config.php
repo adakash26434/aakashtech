@@ -131,6 +131,8 @@ define('ADMIN_EMAIL', cpanel_setting($cpanel, 'admin_email', 'ADMIN_EMAIL', ''))
 require_once __DIR__ . '/includes/session.php';
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
+require_once __DIR__ . '/includes/error-handler.php';
+app_install_error_handlers();
 
 // ====== AUTH HELPERS ======
 

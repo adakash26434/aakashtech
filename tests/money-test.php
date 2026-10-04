@@ -76,5 +76,10 @@ foreach (glob($bdir . '/*') as $f) { @unlink($f); } @rmdir($bdir);
 // Visitor IP behind a proxy
 $_SERVER['REMOTE_ADDR'] = '10.0.0.1'; $_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.9';
 check('proxy header ignored unless opted in', auth_client_ip() === '10.0.0.1');
+// Friendly error page
+$errHtml = app_error_page_html('ABCD1234');
+check('error page shows the reference code', strpos($errHtml, 'ABCD1234') !== false);
+check('error page never shows technical detail', stripos($errHtml, 'Exception') === false && stripos($errHtml, '.php') === false);
+check('error page escapes the reference', strpos(app_error_page_html('<script>'), '<script>') === false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
