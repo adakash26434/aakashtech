@@ -233,3 +233,5 @@ Visitors see a short apology and a reference code such as `B074E955` (API calls 
 
 ### SMS dashboards
 Client and admin dashboards open with an SMS panel: credits (or bulk stock against client credits), sent / delivered / failed for the last 7 days, a daily chart and quick actions. Numbers come from `includes/sms/stats.php`, markup from `includes/sms-overview-view.php`, style from `assets/css/sms-dash.css` (colours from `tokens.css`). The Delivered figure appears once the provider sends delivery reports (see "SMS delivery reports").
+
+Numbers may be typed or pasted with spaces (`+977 984 100 0001`, `98410 00001`); they are joined into one number when that makes a valid Nepal mobile. The rule lives in `smsTokens()` (browser) and `sms_tokens()` (server); `tests/fixtures-number-lines.json` holds shared examples.

@@ -13,8 +13,7 @@ let c = make({ text: 'Hello', numbers: '9841000001\n9841000001\n+977 9841000002\
 let e = c.measure();
 check('counts valid numbers once each', e.count === 3);
 check('counts repeated numbers', e.dupes === 1);
-// the server rejects any digit-bearing word that is not a Nepal mobile, so a split-off "+977" counts as one too
-check('counts pieces that are not Nepal mobiles (12345 and the split-off +977)', e.bad === 2);
+check('counts pieces that are not Nepal mobiles (12345); +977 with a space is now joined', e.bad === 1);
 check('one credit per number for a short English text', e.credits === 3);
 
 c = make({ text: 'a'.repeat(161), numbers: '9841000001' });
@@ -33,4 +32,10 @@ check('after clean-up nothing is invalid or repeated', make({ text: 'Hi', number
 
 c = make({ text: 'Hi', numbers: '9841000001', balance: 0 });
 check('not enough credits is flagged', c.measure().short === true);
+
+c = make({ text: 'Hi', numbers: '+977 9841000002\n984 100 0004\nRam Thapa 98410 00005\n9841000001 9841000009' });
+e = c.measure();
+check('numbers typed with spaces are joined (4 lines, 5 numbers, none invalid)', e.count === 5 && e.bad === 0);
+check('two numbers on one line stay two numbers', make({ text: 'Hi', numbers: '9841000001 9841000009' }).measure().count === 2);
+check('a name before a spaced number is kept as a name', make({ text: '{name} hi', numbers: 'Ram Thapa 984 100 0008' }).measure().preview === 'Ram Thapa hi');
 process.exit(failed ? 1 : 0);

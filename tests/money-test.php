@@ -93,5 +93,10 @@ check('overview counts the week and leaves the 20-day-old message out', $ov['tot
 check('delivery rate uses only reported messages', $ov['delivery_rate'] === 100 || $ov['delivery_rate'] === 50);
 check('another client sees none of it', sms_overview($conn, $cid + 999, 7)['totals']['sent'] === 0);
 check('top senders lists the client', count(sms_top_senders($conn, 5)) >= 1);
+// Typed numbers with spaces
+$spaced = sms_collect_contacts("+977 9841000002\n984 100 0004\nRam Thapa 98410 00005\n9841000001 9841000009");
+check('server joins numbers typed with spaces', $spaced['ok'] && count($spaced['contacts']) === 5);
+check('server keeps the name with its number', $spaced['contacts'][2]['name'] === 'Ram Thapa' && $spaced['contacts'][2]['number'] === '9841000005');
+check('server still refuses a real bad number', sms_collect_contacts("12345 678")['ok'] === false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

@@ -4,6 +4,64 @@
  * Split from the old includes/sms-gateway.php. Functions are unchanged.
  */
 
+/**
+ * Splits one typed line into names and numbers. Numbers typed with spaces ("+977 984 100 0001",
+ * "98410 00001") are joined back into one number when that makes a valid Nepal mobile.
+ * Keep in step with smsTokens() in assets/js/sms-portal.js.
+ */
+function sms_tokens($line)
+{
+    $valid = function ($digits) {
+        if (strlen($digits) === 13 && substr($digits, 0, 3) === '977') {
+            $digits = substr($digits, 3);
+        }
+        if (strlen($digits) === 11 && $digits[0] === '0') {
+            $digits = substr($digits, 1);
+        }
+        return preg_match('/^9[78]\d{8}$/', $digits) === 1;
+    };
+    $out = array();
+    foreach (preg_split('/[,;]+/', (string) $line) as $chunk) {
+        $acc = '';
+        $raws = array();
+        $flush = function () use (&$acc, &$raws, &$out, $valid) {
+            if (!$raws) {
+                return;
+            }
+            if (count($raws) > 1 && !$valid($acc)) {
+                foreach ($raws as $raw) {
+                    $out[] = $raw;
+                }
+            } else {
+                $out[] = count($raws) > 1 ? $acc : $raws[0];
+            }
+            $acc = '';
+            $raws = array();
+        };
+        foreach (preg_split('/\s+/', trim($chunk)) as $token) {
+            if ($token === '') {
+                continue;
+            }
+            if (!preg_match('/\d/', $token) || preg_match('/[^\d+\-().]/', $token)) {
+                $flush();
+                $out[] = $token;
+                continue;
+            }
+            $digits = preg_replace('/\D/', '', $token);
+            if ($acc !== '' && $valid($acc)) {
+                $flush();
+            }
+            if ($acc !== '' && strlen($acc . $digits) > 13) {
+                $flush();
+            }
+            $acc .= $digits;
+            $raws[] = $token;
+        }
+        $flush();
+    }
+    return $out;
+}
+
 function sms_collect_contacts($raw, $max = 0)
 {
     $max = (int) $max > 0 ? (int) $max : sms_send_limit();
@@ -17,10 +75,7 @@ function sms_collect_contacts($raw, $max = 0)
         if ($line === '') {
             continue;
         }
-        $parts = preg_split('/[\s,;]+/', $line);
-        if (!is_array($parts)) {
-            continue;
-        }
+        $parts = sms_tokens($line);
         $numbers = array();
         $words = array();
         foreach ($parts as $part) {

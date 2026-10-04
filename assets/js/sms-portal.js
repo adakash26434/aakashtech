@@ -4,12 +4,47 @@ function smsNepalDigits(part) {
     if (digits.length === 11 && digits.charAt(0) === '0') digits = digits.slice(1);
     return /^9[78]\d{8}$/.test(digits) ? digits : '';
 }
+/* Splits one typed line into names and numbers. Numbers typed with spaces ("+977 984 100 0001",
+   "98410 00001") are joined back into one number when that makes a valid Nepal mobile.
+   Keep in step with sms_tokens() in includes/sms/contacts.php. */
+function smsTokens(line) {
+    var out = [];
+    String(line || '').split(/[,;]+/).forEach(function (chunk) {
+        var acc = '';
+        var raws = [];
+        var flush = function () {
+            if (!raws.length) return;
+            if (raws.length > 1 && !smsNepalDigits(acc)) {
+                raws.forEach(function (raw) { out.push(raw); });
+            } else {
+                out.push(raws.length > 1 ? acc : raws[0]);
+            }
+            acc = '';
+            raws = [];
+        };
+        chunk.trim().split(/\s+/).forEach(function (token) {
+            if (!token) return;
+            if (!/\d/.test(token) || /[^\d+\-().]/.test(token)) {
+                flush();
+                out.push(token);
+                return;
+            }
+            var digits = token.replace(/\D/g, '');
+            if (acc && smsNepalDigits(acc)) flush();
+            if (acc && (acc + digits).length > 13) flush();
+            acc += digits;
+            raws.push(token);
+        });
+        flush();
+    });
+    return out;
+}
 function smsFillName(text, person) {
     return String(text).split('{name}').join(person || '').replace(/\s+,/g, ',').replace(/^[\s,]+/, '').replace(/ {2,}/g, ' ').trim();
 }
 function smsHasNames(numbers) {
     return String(numbers || '').split(/\r?\n/).some(function (line) {
-        return String(line).split(/[\s,;]+/).some(function (part) {
+        return smsTokens(line).some(function (part) {
             return part !== '' && !/\d/.test(part);
         });
     });
@@ -75,7 +110,7 @@ function smsComposer(seed) {
             var seen = {};
             String(this.numbers || '').split(/\r?\n/).forEach(function (line) {
                 var out = [];
-                String(line || '').trim().split(/[\s,;]+/).forEach(function (part) {
+                smsTokens(line).forEach(function (part) {
                     if (!part) return;
                     if (!/\d/.test(part)) {
                         out.push(part);
@@ -151,13 +186,13 @@ function smsComposer(seed) {
                         if (self.keepTyped && existing) {
                             var have = {};
                             existing.split(/\r?\n/).forEach(function (line) {
-                                String(line).split(/[\s,;]+/).forEach(function (part) {
+                                smsTokens(line).forEach(function (part) {
                                     var digits = smsNepalDigits(part);
                                     if (digits) have[digits] = true;
                                 });
                             });
                             var fresh = String(body.numbers).split('\n').filter(function (line) {
-                                var parts = String(line).split(/[\s,;]+/);
+                                var parts = smsTokens(line);
                                 return !have[smsNepalDigits(parts[parts.length - 1])];
                             });
                             added = fresh.length;
@@ -223,7 +258,7 @@ function smsComposer(seed) {
                 return bodyUnicode ? (bodyChars.length <= 70 ? 1 : Math.ceil(bodyChars.length / 67)) : (bodyChars.length <= 160 ? 1 : Math.ceil(bodyChars.length / 153));
             };
             String(this.numbers || '').split(/\r?\n/).forEach(function (line) {
-                var bits = String(line || '').trim().split(/[\s,;]+/);
+                var bits = smsTokens(line);
                 var nums = [];
                 var words = [];
                 bits.forEach(function (part) {
