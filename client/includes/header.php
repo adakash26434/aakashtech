@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/../../config.php';
+if (function_exists('sms_lazy_resume') && isset($conn) && $conn) {
+    sms_lazy_resume($conn);
+}
 require_client();
 try {
     billing_process_renewals($conn, (int) get_client_id());

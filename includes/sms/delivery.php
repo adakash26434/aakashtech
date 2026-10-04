@@ -36,20 +36,8 @@ function sms_insert_messages($conn, $clientId, $campaignId, $tokenId, $source, $
 
 function sms_db_batch($conn, $step)
 {
-    try {
-        if (DB_DRIVER === 'sqlite') {
-            $conn->query($step === 'begin' ? 'BEGIN' : ($step === 'commit' ? 'COMMIT' : 'ROLLBACK'));
-        } elseif ($step === 'begin') {
-            $conn->begin_transaction();
-        } elseif ($step === 'commit') {
-            $conn->commit();
-        } else {
-            $conn->rollback();
-        }
-        return true;
-    } catch (Throwable $exception) {
-        return false;
-    }
+    // Same nesting-aware transaction as the money code, so a batch inside a purchase never commits early.
+    return billing_tx($conn, $step);
 }
 
 function sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender, $messages)
@@ -88,6 +76,22 @@ function sms_insert_rendered_rows($conn, $clientId, $campaignId, $tokenId, $sour
     }
     $stmt->close();
     return $ids;
+}
+
+/** Credits that were charged for these messages: the parts saved on each row, not a guess from one text. */
+function sms_charged_parts($conn, $ids)
+{
+    $total = 0;
+    foreach (array_chunk(array_map('intval', $ids), 200) as $chunk) {
+        $marks = implode(',', array_fill(0, count($chunk), '?'));
+        $stmt = $conn->prepare('SELECT COALESCE(SUM(parts), 0) AS n FROM sms_messages WHERE id IN (' . $marks . ')');
+        $stmt->bind_param(str_repeat('i', count($chunk)), ...$chunk);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        $total += $row ? (int) $row['n'] : 0;
+    }
+    return $total;
 }
 
 function sms_mark_messages($conn, $ids, $status, $error)
@@ -277,8 +281,10 @@ function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
             $refundIds[] = (int) $queuedRow['id'];
         }
         if ($refundIds) {
-            billing_add_units($conn, $clientId, 'sms', sms_message_parts($text) * count($refundIds));
+            billing_tx($conn, 'begin');
+            billing_add_units($conn, $clientId, 'sms', sms_charged_parts($conn, $refundIds));
             sms_mark_messages($conn, $refundIds, 'failed', 'prohibited');
+            billing_tx($conn, 'commit');
         }
         $failed = 'failed';
         $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ?');
@@ -310,8 +316,24 @@ function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
     $existing->close();
     $queue = array();
     if ($rows) {
+        // A message left "sending" was being handed to the SMS line when an earlier run stopped.
+        // We cannot know whether the line took it, so it is not sent again (no double SMS) and the
+        // credits are returned (no charge for a message we cannot confirm).
+        $unsure = array();
+        foreach ($rows as $index => $row) {
+            if ((string) $row['status'] === 'sending') {
+                $unsure[] = (int) $row['id'];
+                $rows[$index]['status'] = 'failed';
+            }
+        }
+        if ($unsure) {
+            billing_tx($conn, 'begin');
+            billing_add_units($conn, $clientId, 'sms', sms_charged_parts($conn, $unsure));
+            sms_mark_messages($conn, $unsure, 'failed', 'unconfirmed');
+            billing_tx($conn, 'commit');
+        }
         foreach ($rows as $row) {
-            if ((string) $row['status'] === 'queued' || (string) $row['status'] === 'sending') {
+            if ((string) $row['status'] === 'queued') {
                 $queue[] = array(
                     'id' => (int) $row['id'],
                     'number' => (string) $row['recipient'],
@@ -401,31 +423,47 @@ function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
             $offset += 100;
             $sentIds = array();
             $failIds = array();
-            $result = sms_vendor_send($conn, $chunkNumbers, $groupText, $sender);
-            if ($result['code'] !== '') {
-                sms_mark_messages($conn, $chunkIds, 'failed', $result['code']);
-                billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($chunkNumbers));
-                $failedNumbers += count($chunkNumbers);
-                continue;
+            sms_mark_messages($conn, $chunkIds, 'sending', '');
+            try {
+                $result = sms_vendor_send($conn, $chunkNumbers, $groupText, $sender);
+            } catch (Throwable $exception) {
+                error_log('SMS line error: ' . $exception->getMessage());
+                $result = array('code' => 'line-error', 'rejected' => array());
             }
-            $rejected = array();
-            foreach ($result['rejected'] as $rejectedNumber) {
-                $rejected[(string) $rejectedNumber] = true;
-            }
-            foreach ($chunkNumbers as $index => $number) {
-                if (isset($rejected[(string) $number])) {
-                    $failIds[] = $chunkIds[$index];
+            billing_tx($conn, 'begin');
+            try {
+                if ($result['code'] !== '') {
+                    sms_mark_messages($conn, $chunkIds, 'failed', $result['code']);
+                    billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($chunkNumbers));
+                    $failedNumbers += count($chunkNumbers);
                 } else {
-                    $sentIds[] = $chunkIds[$index];
+                    $rejected = array();
+                    foreach ($result['rejected'] as $rejectedNumber) {
+                        $rejected[(string) $rejectedNumber] = true;
+                    }
+                    foreach ($chunkNumbers as $index => $number) {
+                        if (isset($rejected[(string) $number])) {
+                            $failIds[] = $chunkIds[$index];
+                        } else {
+                            $sentIds[] = $chunkIds[$index];
+                        }
+                    }
+                    sms_mark_messages($conn, $sentIds, 'sent', '');
+                    if ($failIds) {
+                        sms_mark_messages($conn, $failIds, 'failed', 'not-accepted');
+                        billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($failIds));
+                        $failedNumbers += count($failIds);
+                    }
+                    $creditsSent += (int) $group['parts'] * count($sentIds);
                 }
+            } catch (Throwable $exception) {
+                // Could not record the result: leave the rows "sending" so the next run returns the
+                // credits instead of guessing. Nothing is charged twice and nothing is sent twice.
+                billing_tx($conn, 'rollback');
+                error_log('SMS result could not be saved: ' . $exception->getMessage());
+                throw $exception;
             }
-            sms_mark_messages($conn, $sentIds, 'sent', '');
-            $creditsSent += (int) $group['parts'] * count($sentIds);
-            if ($failIds) {
-                sms_mark_messages($conn, $failIds, 'failed', 'not-accepted');
-                billing_add_units($conn, $clientId, 'sms', (int) $group['parts'] * count($failIds));
-                $failedNumbers += count($failIds);
-            }
+            billing_tx($conn, 'commit');
         }
     }
     if ($outOfTime) {
@@ -533,15 +571,25 @@ function sms_send($conn, $clientId, $job)
     }
     $list = sms_store_contacts($parsed['contacts']);
     if ($future) {
-        if (!sms_take_credits($conn, $clientId, $credits)) {
-            return sms_result(false, 'There are not enough SMS credits for this message.');
+        // Credits and the scheduled messages are saved together: both happen or neither does.
+        billing_tx($conn, 'begin');
+        try {
+            if (!sms_take_credits($conn, $clientId, $credits)) {
+                billing_tx($conn, 'rollback');
+                return sms_result(false, 'There are not enough SMS credits for this message.');
+            }
+            $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'scheduled', $when, $audience, $purpose, $list);
+            if ($campaignId < 1) {
+                billing_tx($conn, 'rollback');
+                return sms_result(false, 'That SMS could not be scheduled. Nothing was charged.');
+            }
+            sms_insert_rendered($conn, $clientId, $campaignId, 0, $source, $sender['sender'], $rendered['messages']);
+        } catch (Throwable $exception) {
+            billing_tx($conn, 'rollback');
+            error_log('SMS schedule failed: ' . $exception->getMessage());
+            return sms_result(false, 'That SMS could not be scheduled. Nothing was charged.');
         }
-        $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'scheduled', $when, $audience, $purpose, $list);
-        if ($campaignId < 1) {
-            billing_add_units($conn, $clientId, 'sms', $credits);
-            return sms_result(false, 'That SMS could not be scheduled.');
-        }
-        sms_insert_rendered($conn, $clientId, $campaignId, 0, $source, $sender['sender'], $rendered['messages']);
+        billing_tx($conn, 'commit');
         $balances = billing_unit_balances($conn, $clientId);
         return sms_result(true, '', array(
             'message' => 'Scheduled for ' . $schedule['label'] . ' Nepal time. ' . number_format($credits) . ' credits are held until it sends. Cancel returns them.',
@@ -556,17 +604,27 @@ function sms_send($conn, $clientId, $job)
         return sms_result(false, 'There are not enough SMS credits for this message.');
     }
     $tokenId = (int) (isset($job['token_id']) ? $job['token_id'] : 0);
-    $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'sending', '', $audience, $purpose, $list);
-    $messageIds = sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender['sender'], $rendered['messages']);
-    if (!sms_take_credits($conn, $clientId, $credits)) {
-        sms_mark_messages($conn, $messageIds, 'failed', 'credits');
-        $failed = 'failed';
-        $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ? WHERE id = ?');
-        $stmt->bind_param('si', $failed, $campaignId);
-        $stmt->execute();
-        $stmt->close();
-        return sms_result(false, 'There are not enough SMS credits for this message.');
+    // The send record, its messages and the credits are saved together. If any step fails, none of
+    // them stay: no credits are taken for a send that was never recorded, and no message can be
+    // sent for credits that were never taken.
+    billing_tx($conn, 'begin');
+    try {
+        if (!sms_take_credits($conn, $clientId, $credits)) {
+            billing_tx($conn, 'rollback');
+            return sms_result(false, 'There are not enough SMS credits for this message.');
+        }
+        $campaignId = sms_insert_campaign($conn, $clientId, $name, $text, $sender['sender'], count($numbers), 'sending', '', $audience, $purpose, $list);
+        if ($campaignId < 1) {
+            billing_tx($conn, 'rollback');
+            return sms_result(false, 'That SMS could not be started. Nothing was charged.');
+        }
+        sms_insert_rendered($conn, $clientId, $campaignId, $tokenId, $source, $sender['sender'], $rendered['messages']);
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
+        error_log('SMS start failed: ' . $exception->getMessage());
+        return sms_result(false, 'That SMS could not be started. Nothing was charged.');
     }
+    billing_tx($conn, 'commit');
     if (count($numbers) > sms_instant_limit()) {
         sms_campaign_touch($conn, $campaignId, '2000-01-01 00:00:00');
         $balances = billing_unit_balances($conn, $clientId);
@@ -701,5 +759,23 @@ function sms_run_queue($conn, $limit, $budgetSeconds = 40)
         }
     } catch (Throwable $exception) {
         error_log('A stuck SMS could not be resumed.');
+    }
+}
+
+/**
+ * Safety net for hosts without cron: when a client opens a page, finish any send that stopped part
+ * way. At most once a minute, a few seconds at a time, and never an error for the visitor.
+ */
+function sms_lazy_resume($conn)
+{
+    try {
+        $last = (int) billing_setting($conn, 'sms_lazy_run_at');
+        if (time() - $last < 60) {
+            return;
+        }
+        billing_set_setting($conn, 'sms_lazy_run_at', (string) time());
+        sms_resume_sending($conn, 12);
+    } catch (Throwable $exception) {
+        error_log('Lazy SMS resume failed: ' . $exception->getMessage());
     }
 }

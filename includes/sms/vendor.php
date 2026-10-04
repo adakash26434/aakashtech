@@ -226,6 +226,10 @@ function sms_aakash_rejected($json, $numbers)
 
 function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
 {
+    // Test seam: tests install a fake SMS line here. Never set in production.
+    if (!empty($GLOBALS['SMS_TEST_VENDOR']) && is_callable($GLOBALS['SMS_TEST_VENDOR'])) {
+        return call_user_func($GLOBALS['SMS_TEST_VENDOR'], $numbers, $text, $sender);
+    }
     $line = sms_line_secret($conn);
     if ($line['provider'] === '' || $line['token'] === '') {
         return array('code' => 'line-off', 'rejected' => array());

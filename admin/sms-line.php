@@ -10,6 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_line'])) {
     verify_csrf();
     $saved = sms_save_line($conn, $_POST);
     if ($saved === '') {
+        billing_set_setting($conn, 'sms_refund_undelivered', !empty($_POST['refund_undelivered']) ? '1' : '0');
+    }
+    if ($saved === '') {
         $msg = 'SMS line saved. Clients send from this site and do not see these details.';
         $fresh = sms_vendor_stock($conn, true);
         if ($fresh['balance'] !== null && $fresh['error'] === '') {
@@ -333,6 +336,10 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">5. Send URL, optional</label>
                 <input type="text" name="sms_line_endpoint" value="<?= e($endpoint) ?>" class="form-input" placeholder="Leave empty for the Sparrow address" :disabled="provider!=='sparrow'">
             </div>
+            <label class="flex items-start gap-3 cursor-pointer" style="margin-top:4px">
+                <input type="checkbox" name="refund_undelivered" value="1" <?= sms_refund_undelivered_on($conn) ? 'checked' : '' ?> class="mt-1">
+                <span class="block text-slate-300 text-sm leading-relaxed"><b>Return credits when the phone network says a message was not delivered.</b> Clients are never charged for a message that did not arrive. Needs delivery reports from your provider (see the README). Messages the SMS line refuses are always returned.</span>
+            </label>
             <button type="submit" name="save_line" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save line</button>
         </form>
     </div>

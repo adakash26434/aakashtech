@@ -183,6 +183,8 @@ public_html/
 - Set a strong admin password before enabling admin sign-in
 
 ### Tests
+`php tests/sms-balance-test.php` breaks the SMS line on purpose (line down, some numbers refused, a crash, a send cut off half way, a network failure report, a scheduled send) and checks the client is never charged for a message that did not go out and that the books always balance. Run it before touching `includes/sms/delivery.php`.
+
 `php tests/admin-pages-test.php` does the same for every admin page (and checks sub-folder file paths). Add `--hash` to print a fingerprint per page; run it on two versions of the code and `diff` the output to prove a refactor changed nothing visible.
 
 `php tests/pages-test.php` opens every client page as a logged-in client (office view) and fails on any PHP error, so a broken include or path shows up before deploy.
@@ -238,3 +240,10 @@ Numbers may be typed or pasted with spaces (`+977 984 100 0001`, `98410 00001`);
 
 ### Delivery report
 Client: **Delivery report** in the sidebar. Admin: **SMS report**. Both show the same things in the same order: what it means in plain words, delivery rate, typical delivery time, where every message ended up (Delivered / Awaiting confirmation / Not delivered / Refused / Waiting), a day-by-day chart, a split by network (NTC, Ncell, Smart Cell, from the number prefix), why messages did not go with what to do about it, and each send. Admin also sees a by-client table. Numbers come from `includes/sms/analytics.php`, the screen from `includes/sms-report-view.php`. Until the provider reports back, messages show as *Awaiting confirmation*; the rate is left empty rather than guessed.
+
+### Credits are never kept for a message that did not go
+- A send is saved with its credits in one step: if saving fails, no credits are taken and nothing is sent.
+- If the SMS line refuses, is down or crashes, the credits for those numbers are returned at once and the reason is shown (Delivery report, SMS logs).
+- If a send is cut off while handing messages to the line, those messages are **not sent again** and their credits are returned (reason: "Could not confirm it was sent").
+- Sends that stop part way are finished or returned automatically within a minute whenever a client opens any portal page, so a missing cron job cannot leave credits held. (Still add the cron jobs; they are faster.)
+- When the phone network reports a message as not delivered, its credit is returned once. Switch this on or off on the admin SMS line page. It needs delivery reports from the provider.

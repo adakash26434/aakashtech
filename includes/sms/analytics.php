@@ -31,6 +31,8 @@ function sms_failure_explained($code)
         'line-rejected' => array('SMS line refused the send', 'The SMS line refused this send. Credits were returned. Contact support if it repeats.'),
         'credits' => array('Not enough credits', 'Credits ran out while sending. Add credits and send the rest.'),
         'prohibited' => array('Message not allowed', 'The message was blocked because it breaks the use rules. Credits were returned.'),
+        'line-error' => array('SMS line error', 'The SMS line could not be reached. Credits were returned. Send again shortly.'),
+        'unconfirmed' => array('Could not confirm it was sent', 'A send was interrupted, so we could not confirm this message left. Credits were returned and it was not sent again. If the phone did not get it, send it again.'),
         'cancelled' => array('Cancelled before sending', 'This send was cancelled and the credits were returned.')
     );
     $code = (string) $code;
@@ -185,7 +187,11 @@ function sms_report($conn, $clientId, $from, $to, $sendId = 0)
     $stale = sms_report_query($conn, 'COUNT(*) AS n', "AND m.status = 'sent' AND (m.delivery IS NULL OR m.delivery = '') AND m.sent_at < '" . $old . "'", $filters);
     $staleCount = $stale ? (int) $stale[0]['n'] : 0;
 
+    $stuckSince = date('Y-m-d H:i:s', strtotime('-15 minutes'));
+    $stuck = sms_report_query($conn, 'COUNT(*) AS n', "AND m.status IN ('queued', 'sending') AND m.created_at < '" . $stuckSince . "' AND m.campaign_id IN (SELECT id FROM sms_campaigns WHERE status = 'sending')", $filters);
+
     $report = array(
+        'stuck' => $stuck ? (int) $stuck[0]['n'] : 0,
         'from' => $from, 'to' => $to, 'funnel' => $funnel, 'series' => array_values($series), 'carriers' => array_values($carriers), 'reasons' => $reasons, 'sends' => $sends,
         'rate' => sms_percent($funnel['delivered'], $reported),
         'confirmed_share' => sms_percent($reported, $funnel['accepted']),
@@ -215,6 +221,9 @@ function sms_report_insights($r)
 {
     $f = $r['funnel'];
     $out = array();
+    if (!empty($r['stuck'])) {
+        array_unshift($out, array('tone' => 'warn', 'title' => number_format($r['stuck']) . ' messages are taking too long to send', 'text' => 'They are finished automatically within a few minutes. If a message cannot be sent, its credits are returned, never kept.'));
+    }
     if ($f['total'] === 0) {
         return array(array('tone' => 'info', 'title' => 'No messages in this period', 'text' => 'Pick a longer period, or send your first SMS.'));
     }

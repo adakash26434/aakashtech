@@ -6,6 +6,12 @@
  *   https://YOUR-SITE/api/sms-dlr.php?key=YOUR_DLR_KEY
  */
 
+/** On unless the admin switched it off on the SMS line page. */
+function sms_refund_undelivered_on($conn)
+{
+    return billing_setting($conn, 'sms_refund_undelivered') !== '0';
+}
+
 function sms_dlr_normalise_status($raw)
 {
     $raw = strtolower(trim((string) $raw));
@@ -71,11 +77,35 @@ function sms_dlr_apply($conn, $number, $status, $ref = '')
         return false;
     }
     $now = date('Y-m-d H:i:s');
-    $stmt = $conn->prepare('UPDATE sms_messages SET delivery = ?, delivery_at = ?, provider_ref = CASE WHEN provider_ref = \'\' OR provider_ref IS NULL THEN ? ELSE provider_ref END WHERE id = ? AND status = \'sent\'');
-    $stmt->bind_param('sssi', $state, $now, $ref, $id);
-    $stmt->execute();
-    $done = billing_affected($conn) === 1;
-    $stmt->close();
+    billing_tx($conn, 'begin');
+    try {
+        // The (delivery is empty) test makes this change happen once, so credits can never be returned twice.
+        $stmt = $conn->prepare('UPDATE sms_messages SET delivery = ?, delivery_at = ?, provider_ref = CASE WHEN provider_ref = \'\' OR provider_ref IS NULL THEN ? ELSE provider_ref END WHERE id = ? AND status = \'sent\' AND (delivery IS NULL OR delivery = \'\')');
+        $stmt->bind_param('sssi', $state, $now, $ref, $id);
+        $stmt->execute();
+        $done = billing_affected($conn) === 1;
+        $stmt->close();
+        if ($done && $state === 'failed' && sms_refund_undelivered_on($conn)) {
+            $stmt = $conn->prepare('SELECT client_id, parts FROM sms_messages WHERE id = ?');
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $row = db_fetch_assoc($stmt);
+            $stmt->close();
+            if ($row && (int) $row['parts'] > 0) {
+                billing_add_units($conn, (int) $row['client_id'], 'sms', (int) $row['parts']);
+                sms_remember_credit($conn, (int) $row['client_id'], (int) $row['parts'], 'Returned: the phone network could not deliver a message');
+                $stmt = $conn->prepare("UPDATE sms_messages SET error_text = 'refunded' WHERE id = ?");
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    } catch (Throwable $exception) {
+        billing_tx($conn, 'rollback');
+        error_log('Delivery report could not be saved: ' . $exception->getMessage());
+        return false;
+    }
+    billing_tx($conn, 'commit');
     return $done;
 }
 
