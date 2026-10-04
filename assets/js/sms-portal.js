@@ -70,6 +70,30 @@ function smsComposer(seed) {
             this.reviewing = false;
             input.value = '';
         },
+        removeInvalid: function () {
+            var kept = [];
+            var seen = {};
+            String(this.numbers || '').split(/\r?\n/).forEach(function (line) {
+                var out = [];
+                String(line || '').trim().split(/[\s,;]+/).forEach(function (part) {
+                    if (!part) return;
+                    if (!/\d/.test(part)) {
+                        out.push(part);
+                        return;
+                    }
+                    var digits = smsNepalDigits(part);
+                    if (digits && !seen[digits]) {
+                        seen[digits] = 1;
+                        out.push(digits);
+                    }
+                });
+                if (out.some(function (item) { return /\d/.test(item); })) kept.push(out.join(' '));
+            });
+            this.numbers = kept.join('\n');
+            this.reviewing = false;
+            this.importOk = true;
+            this.importNote = 'Removed numbers that were not valid or were repeated.';
+        },
         openReview: function () {
             var form = document.getElementById('sms-send');
             if (form && !form.reportValidity()) return;
@@ -188,6 +212,7 @@ function smsComposer(seed) {
             var seen = {};
             var count = 0;
             var bad = 0;
+            var dupes = 0;
             var credits = 0;
             var previewName = '';
             var usesName = text.indexOf('{name}') !== -1;
@@ -215,6 +240,8 @@ function smsComposer(seed) {
                     if (!seen[digits]) {
                         seen[digits] = 1;
                         nums.push(digits);
+                    } else {
+                        dupes += 1;
                     }
                 });
                 var person = words.join(' ');
@@ -250,7 +277,17 @@ function smsComposer(seed) {
             if (previewChars.length > 180) {
                 preview = previewChars.slice(0, 180).join('') + '…';
             }
-            return { parts: parts, count: count, credits: credits, short: (credits > this.balance && credits > 0) || brackets, label: label, preview: preview, brackets: brackets };
+            var capacity = unicode ? (chars.length <= 70 ? 70 : 67) : (chars.length <= 160 ? 160 : 153);
+            var used = chars.length ? chars.length - (parts - 1) * capacity : 0;
+            var meter = {
+                language: language,
+                chars: chars.length,
+                part: parts,
+                capacity: capacity,
+                left: chars.length ? parts * capacity - chars.length : capacity,
+                percent: chars.length ? Math.min(100, Math.round(used * 100 / capacity)) : 0
+            };
+            return { parts: parts, count: count, credits: credits, short: (credits > this.balance && credits > 0) || brackets, label: label, preview: preview, brackets: brackets, bad: bad, dupes: dupes, meter: meter };
         }
     };
 }

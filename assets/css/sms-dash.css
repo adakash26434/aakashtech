@@ -47,3 +47,17 @@
 .portal-shell .sms-preview p:not(.sms-preview-label) { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink-900); white-space: pre-wrap; word-break: break-word; }
 .portal-shell .sms-credit-bar { font-size: 14px; font-weight: 600; padding: 8px 12px; border-radius: var(--radius-md); background: var(--ok-bg); color: var(--ok); display: inline-block; }
 .portal-shell .sms-credit-bar.is-short { background: var(--bad-bg); color: var(--bad); }
+
+/* Composer: recipient summary and message length meter */
+.portal-shell .sms-recipients { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.portal-shell .sms-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.portal-shell .sms-pill.is-ok { background: var(--ok-bg); color: var(--ok); }
+.portal-shell .sms-pill.is-note { background: var(--info-bg); color: var(--info); }
+.portal-shell .sms-pill.is-bad { background: var(--bad-bg); color: var(--bad); }
+.portal-shell .sms-clean { min-height: 32px; padding: 0 14px; border: 1.5px solid var(--brand-500); border-radius: 999px; background: var(--surface); color: var(--brand-600); font-size: 13px; font-weight: 700; cursor: pointer; }
+.portal-shell .sms-clean:hover { background: var(--brand-50); }
+.portal-shell .sms-meter-box { margin-top: 10px; }
+.portal-shell .sms-length { height: 8px; border-radius: 999px; background: var(--surface-wash); border: 1px solid var(--line); overflow: hidden; }
+.portal-shell .sms-length span { display: block; height: 100%; border-radius: 999px; background: var(--brand-500); transition: width .15s linear; }
+.portal-shell .sms-length span.is-near { background: var(--accent-gold); }
+.portal-shell .sms-length-note { margin: 6px 0 0; font-size: 12px; color: var(--ink-500); line-height: 1.5; }

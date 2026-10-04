@@ -112,6 +112,12 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                     </div>
                     <input type="text" inputmode="numeric" autocomplete="off" class="form-input mb-2" placeholder="Type one mobile, then press Enter" @keydown.enter.prevent="addNumber($event.target)">
                     <textarea id="sms-numbers" name="numbers" x-model="numbers" required rows="9" autocomplete="off" class="form-input sms-numbers" placeholder="9800000001&#10;Ram, 9800000002" @input="reviewing = false; reviewNote = ''"><?= e($values['numbers']) ?></textarea>
+                    <div class="sms-recipients" x-show="estimate().count || estimate().bad || estimate().dupes" x-cloak aria-live="polite">
+                        <span class="sms-pill is-ok" x-show="estimate().count"><b x-text="estimate().count"></b> valid</span>
+                        <span class="sms-pill is-note" x-show="estimate().dupes"><b x-text="estimate().dupes"></b> repeated, counted once</span>
+                        <span class="sms-pill is-bad" x-show="estimate().bad"><b x-text="estimate().bad"></b> not a Nepal mobile</span>
+                        <button type="button" class="sms-clean" x-show="estimate().bad || estimate().dupes" @click="removeInvalid()">Clean up the list</button>
+                    </div>
                     <p class="text-xs mt-2" :class="importOk ? 'text-emerald-600' : 'text-slate-500'" x-show="importNote && !uploadOpen" x-text="importNote"></p>
                     <div class="sms-upload-shade" x-show="uploadOpen" x-cloak @click.self="uploadOpen = false" @keydown.escape.window="uploadOpen = false">
                         <div class="sms-upload-box" role="dialog" aria-modal="true" aria-labelledby="sms-upload-title">
@@ -171,6 +177,10 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                         <input type="checkbox" :checked="nameFirst()" @change="setNameFirst($event.target.checked)">
                         Start each SMS with the person's name
                     </label>
+                    <div class="sms-meter-box" x-show="text" x-cloak>
+                        <div class="sms-length" role="img" :aria-label="estimate().meter.chars + ' characters, SMS part ' + estimate().meter.part"><span :style="'width:' + estimate().meter.percent + '%'" :class="estimate().meter.percent > 90 ? 'is-near' : ''"></span></div>
+                        <p class="sms-length-note"><span x-text="estimate().meter.language"></span> · part <b x-text="estimate().meter.part"></b> · <b x-text="estimate().meter.left"></b> characters left before the next part (<span x-text="estimate().meter.capacity"></span> per part)</p>
+                    </div>
                     <p class="sms-credit-bar" :class="estimate().short ? 'is-short' : ''" x-text="estimate().label"></p>
                     <p class="text-slate-500 text-xs mt-2" x-show="estimate().brackets">Replace the words in [brackets] before this can send. <button type="button" class="text-brand-400 bg-transparent border-0 cursor-pointer p-0" @click="text += (text && !text.endsWith(' ') ? ' ' : '') + '{name}'">Insert {name}</button></p>
                     <div class="sms-preview" x-show="text" x-cloak>

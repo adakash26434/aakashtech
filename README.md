@@ -187,6 +187,8 @@ public_html/
 
 `php tests/pages-test.php` opens every client page as a logged-in client (office view) and fails on any PHP error, so a broken include or path shows up before deploy.
 
+`node tests/sms-composer-test.js` checks the Send SMS composer's counting (valid, repeated and invalid numbers, Nepali vs English parts, the length meter and the list clean-up) without a browser.
+
 `php tests/money-test.php` checks wallet debit, top-up approval, rollback and SMS credit rules on a temporary SQLite file. Run it before deploying any change to `includes/billing.php`.
 
 ### Styling build (Tailwind)
