@@ -219,3 +219,9 @@ Alpine.js (3.14.9) and Lucide icons (0.383.0) are served from `assets/vendor/`, 
 
 ### Fonts
 Inter and Space Grotesk (Latin) are self-hosted in `assets/fonts/` and declared in `assets/css/fonts.css`; there are no Google Fonts requests. Nepali text uses the device's Devanagari font through the fallback stack in `assets/css/tokens.css`.
+
+### Daily database backup
+Add one cPanel cron job, once a day: `php /home/USER/public_html/cron/backup.php`. It writes `backup-YYYY-MM-DD-HHMMSS.sql.gz`, keeps the newest 14 and deletes older ones. Files go to a folder next to the site (outside the web root); set `backup_dir` in `cpanel-config.local.php` to choose another. Restore: `gunzip -c backup-...sql.gz | mysql -u USER -p DBNAME`. The backup holds the database only; copy `uploads/` (KYC documents, logos) separately. Download a backup now and then and keep it somewhere other than this server.
+
+### Behind Cloudflare or another proxy
+If every visitor shows the same IP, set `'ip_header' => 'CF-Connecting-IP'` (or `X-Real-IP`) in `cpanel-config.local.php` so rate limits count each visitor separately. Leave it empty if the site can also be reached without the proxy, because the header could then be forged.

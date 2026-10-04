@@ -24,6 +24,13 @@ return array(
 
     'cron_key' => '',
 
+    // Where daily database backups go. Empty = a folder next to the site (outside the web root) is used.
+    'backup_dir' => '',
+
+    // Only if the site is behind Cloudflare/another proxy: the header carrying the visitor's real IP.
+    // One of: CF-Connecting-IP, X-Real-IP, X-Forwarded-For. Leave empty otherwise.
+    'ip_header' => '',
+
     // Secret for SMS delivery reports. Provider callback: https://YOUR-SITE/api/sms-dlr.php?key=THIS_VALUE
     // Generate one with: php -r "echo bin2hex(random_bytes(16));"
     'dlr_key' => '',

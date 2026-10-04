@@ -121,6 +121,8 @@ define('ESEWA_ID', cpanel_setting($cpanel, 'esewa_id', 'ESEWA_ID', ''));
 define('KHALTI_ID', cpanel_setting($cpanel, 'khalti_id', 'KHALTI_ID', ''));
 define('BANK_DETAILS', cpanel_setting($cpanel, 'bank_details', 'BANK_DETAILS', ''));
 define('CRON_KEY', cpanel_setting($cpanel, 'cron_key', 'CRON_KEY', ''));
+define('TRUSTED_IP_HEADER', cpanel_setting($cpanel, 'ip_header', 'TRUSTED_IP_HEADER', ''));
+define('BACKUP_DIR', cpanel_setting($cpanel, 'backup_dir', 'BACKUP_DIR', ''));
 define('SMS_DLR_KEY', cpanel_setting($cpanel, 'dlr_key', 'SMS_DLR_KEY', ''));
 define('SITE_URL', rtrim(cpanel_setting($cpanel, 'site_url', 'SITE_URL', ''), '/'));
 define('PANEL_CIPHER_KEY', strtolower(cpanel_setting($cpanel, 'cipher_key', 'PANEL_CIPHER_KEY', '')));
@@ -395,6 +397,20 @@ function auth_password_still_current($conn, $kind)
 
 function auth_client_ip() {
     $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+    // Behind Cloudflare or another proxy every visitor shares the proxy's address, which makes
+    // rate limits punish everyone at once. Opt in with ip_header in cpanel-config.local.php
+    // ('CF-Connecting-IP', 'X-Real-IP' or 'X-Forwarded-For'). Leave it empty if the site is
+    // reachable without that proxy, because the header can then be forged.
+    $header = defined('TRUSTED_IP_HEADER') ? TRUSTED_IP_HEADER : '';
+    if (in_array($header, array('CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For'), true)) {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
+        if (!empty($_SERVER[$key])) {
+            $first = trim(explode(',', (string) $_SERVER[$key])[0]);
+            if (filter_var($first, FILTER_VALIDATE_IP)) {
+                $ip = $first;
+            }
+        }
+    }
     return substr($ip, 0, 45);
 }
 

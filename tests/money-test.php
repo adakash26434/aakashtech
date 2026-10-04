@@ -56,5 +56,25 @@ billing_set_setting($conn, 'sms_vendor_balance', '9999');
 check('a stale number from another key is ignored', sms_vendor_stock_saved($conn)['balance'] === null);
 billing_set_setting($conn, 'sms_vendor_balance_for', sms_vendor_fingerprint($conn));
 check('saving the same key keeps the cache', sms_save_line($conn, array('sms_line_provider' => 'aakash', 'sms_line_token' => 'NEW-KEY-87654321')) === '' && sms_vendor_stock_saved($conn)['balance'] === 9999);
+// Backup and restore round trip
+require_once $root . '/includes/backup.php';
+$conn->query("INSERT INTO client_users (name,email,password) VALUES ('Quote''s \\ test','q@example.com','x')");
+$bdir = sys_get_temp_dir() . '/aakash-backup-test-' . getmypid(); @mkdir($bdir);
+$bfile = $bdir . '/backup-test.sql.gz';
+$rowsSaved = backup_write($conn, $bfile);
+check('backup writes a gzip file with rows', $rowsSaved > 0 && is_file($bfile) && filesize($bfile) > 200);
+$restore = new PDO('sqlite::memory:');
+$restore->exec(gzdecode(file_get_contents($bfile)));
+$before = (int) $conn->query('SELECT COUNT(*) AS c FROM client_users')->fetch_assoc()['c'];
+$after = (int) $restore->query('SELECT COUNT(*) FROM client_users')->fetchColumn();
+$name = $restore->query("SELECT name FROM client_users WHERE email = 'q@example.com'")->fetchColumn();
+check('restore brings back the same clients', $before === $after && $after >= 2);
+check('quotes and backslashes survive a restore', $name === "Quote's \\ test");
+$ids = (int) $restore->query('SELECT COUNT(*) FROM client_wallets')->fetchColumn();
+check('wallet rows are in the backup', $ids === (int) $conn->query('SELECT COUNT(*) AS c FROM client_wallets')->fetch_assoc()['c']);
+foreach (glob($bdir . '/*') as $f) { @unlink($f); } @rmdir($bdir);
+// Visitor IP behind a proxy
+$_SERVER['REMOTE_ADDR'] = '10.0.0.1'; $_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.9';
+check('proxy header ignored unless opted in', auth_client_ip() === '10.0.0.1');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

@@ -59,6 +59,8 @@ RewriteRule ^uploads/.*\.(php|phtml|phar|php5)$ - [F,L]
 
 RewriteRule ^includes/ - [F,L]
 RewriteRule ^docs/ - [F,L]
+RewriteRule ^(tests|backups|node_modules)/ - [F,L]
+RewriteRule ^(package(-lock)?\.json|tailwind\.config\.js)$ - [F,L]
 RewriteRule ^uploads/kyc/ - [F,L]
 RewriteRule ^uploads/domains/ - [F,L]
 
