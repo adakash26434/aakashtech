@@ -44,11 +44,20 @@ $values = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : array();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['review_order']) || isset($_POST['confirm_purchase']))) {
     verify_csrf();
+    $orderGuard = 'order-submit-' . $plan['code'];
+    $orderExpected = isset($_SESSION['form_guard'][$orderGuard]['token']) ? (string) $_SESSION['form_guard'][$orderGuard]['token'] : '';
+    $orderPosted = isset($_POST['order_token']) && is_string($_POST['order_token']) ? $_POST['order_token'] : '';
+    $orderFresh = $orderExpected !== '' && hash_equals($orderExpected, $orderPosted);
     $preview = billing_prepare_order($conn, $plan, $_POST);
     if (empty($preview['ok'])) {
         $error = $preview['error'];
         $preview = null;
+    } elseif (isset($_POST['confirm_purchase']) && !$orderFresh) {
+        // The same page was sent twice (double tap, Back button, reload). Never charge a second time.
+        $error = 'This order was already sent. Open My Services to see it before you try again.';
+        $preview = null;
     } elseif (isset($_POST['confirm_purchase'])) {
+        unset($_SESSION['form_guard'][$orderGuard]);
         $result = billing_purchase($conn, (int) get_client_id(), $plan, $_POST);
         if (!empty($result['ok'])) {
             if ($needs === 'sms') {
@@ -94,29 +103,52 @@ if ($preview && !empty($preview['ok'])) {
     $due = $billTotal;
 }
 $short = $due > 0 && ($balance + 0.001 < $due);
+require_once __DIR__ . '/../includes/shop-view.php';
+$nextStepsByKind = array(
+    'sms' => array('The SMS credits are added to your account the moment you pay.', 'You send from the SMS page. Sending more than 100 needs approved identity.', 'Credits for messages that cannot be sent are returned.'),
+    'voice' => array('The voice credits are added when you pay.', 'Save your script under Messages. Our team places the calls.', 'Credits are used only when calls are made.'),
+    'domain' => array('We register the name for you and mark it active here.', 'You can follow it in My Services.'),
+    'hosting' => array('We set up the server and send you the access details.', 'You can follow it in My Services.'),
+    'email' => array('We create the mailboxes and send you the login details.', 'You can follow it in My Services.'),
+    'website' => array('Your booking is saved with every answer on this page.', 'The team contacts you to start. You will not need to explain it again.'),
+    'training' => array('Your request is saved with the date, place and topics.', 'We confirm the trainer and the time with you.')
+);
+$nextSteps = isset($nextStepsByKind[$needs]) ? $nextStepsByKind[$needs] : array('We set it up and you can follow it in My Services.');
 $slabs = ($needs === 'sms' || $needs === 'voice') ? billing_slabs_for($conn, $plan['service_slug']) : array();
 
-function checkout_value($values, $key)
-{
-    return isset($values[$key]) && is_string($values[$key]) ? $values[$key] : '';
+if (!function_exists('checkout_value')) {
+    function checkout_value($values, $key)
+    {
+        return isset($values[$key]) && is_string($values[$key]) ? $values[$key] : '';
+    }
 }
 ?>
-<div class="mb-8">
-    <a href="../service.php?slug=<?= e(rawurlencode($plan['service_slug'])) ?>" class="text-brand-400 text-sm">Service details</a>
-    <h1 class="font-heading font-bold text-white text-2xl mt-3 mb-1"><?= e($service['action']) ?></h1>
-    <p class="text-slate-500 text-sm"><?= e($service['title']) ?> · <?= e($plan['name']) ?></p>
+<?php
+$twoStep = $needs !== 'sms' && $needs !== 'voice';
+$stageNow = $twoStep ? 1 : ($preview && !empty($preview['ok']) ? 2 : 1);
+$stepNames = $twoStep ? array('Your details', 'Pay from wallet') : array('Your details', 'Check the price', 'Pay from wallet');
+?>
+<div class="co-head">
+    <a href="shop.php" class="co-back">&larr; All services</a>
+    <h1 class="co-title"><?= e($service['action']) ?></h1>
+    <p class="co-sub"><?= e($service['title']) ?> · <?= e($plan['name']) ?> · <a href="../service.php?slug=<?= e(rawurlencode($plan['service_slug'])) ?>">What is included</a></p>
+    <ol class="co-steps" aria-label="Steps">
+        <?php foreach ($stepNames as $n => $name): ?>
+            <li class="<?= $n + 1 < $stageNow ? 'is-done' : ($n + 1 === $stageNow ? 'is-now' : '') ?>"<?= $n + 1 === $stageNow ? ' aria-current="step"' : '' ?>><b><?= $n + 1 ?></b><?= e($name) ?></li>
+        <?php endforeach; ?>
+    </ol>
 </div>
 
-<div class="grid lg:grid-cols-5 gap-6">
-    <section class="dash-panel lg:col-span-3">
-        <div class="p-6">
-            <p class="text-slate-500 text-sm mb-5"><?= e($plan['summary']) ?></p>
+<div class="co-layout">
+    <section class="co-main">
+        <div class="co-card">
+            <p class="co-lead"><?= e($plan['summary']) ?></p>
             <?php if ($error !== ''): ?>
-                <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+                <div class="co-alert is-bad" role="alert"><p><?= e($error) ?></p></div>
             <?php endif; ?>
             <?php if ($preview && !empty($preview['ok'])): ?>
-                <div class="mb-4 p-4 bg-brand-500/10 border border-brand-500/30 rounded-xl text-sm">
-                    <p class="text-white font-medium mb-2">Bill</p>
+                <div class="co-bill">
+                    <p class="co-bill-title">Your bill</p>
                     <p class="text-slate-300">List price <?= e(billing_money_label($preview['net'])) ?></p>
                     <p class="text-slate-300">VAT 13% <?= e(billing_money_label($preview['vat'])) ?></p>
                     <p class="text-white font-medium">Total <?= e(billing_money_label($preview['price'])) ?></p>
@@ -127,26 +159,31 @@ function checkout_value($values, $key)
             <?php endif; ?>
             <?php if ($short): ?>
                 <?php $checkoutMethods = billing_payment_methods($conn); ?>
-                <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-300 text-sm space-y-2">
-                    <p>Your wallet has <?= e(billing_money_label($balance)) ?>. Add at least <?= e(billing_money_label(max(0, $due - $balance))) ?> and submit this same form again. <a class="underline" href="wallet.php?amount=<?= (int) ceil(max(0, $due - $balance)) ?>">Add funds</a></p>
+                <div class="co-alert" role="alert">
+                    <p><b>Your wallet is NPR <?= e(number_format(max(0, $due - $balance), 2)) ?> short.</b> It has <?= e(billing_money_label($balance)) ?> and this order is <?= e(billing_money_label($due)) ?>.</p>
+                    <p>Add at least that amount, then come back to this page and pay. What you typed below stays here.</p>
+                    <p><a class="co-alert-btn" href="wallet.php">Add funds to the wallet</a></p>
                     <?php if ($checkoutMethods): ?>
+                        <ul class="co-methods">
                         <?php foreach ($checkoutMethods as $checkoutMethod): ?>
-                            <p class="whitespace-pre-wrap"><?= e($checkoutMethod['label']) ?>: <?= e($checkoutMethod['detail']) ?></p>
+                            <li><b><?= e($checkoutMethod['label']) ?></b> <span><?= e($checkoutMethod['detail']) ?></span></li>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <p>Payment details are not published yet.</p>
+                        </ul>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="checkout.php?plan=<?= e(rawurlencode($plan['code'])) ?>" class="space-y-4">
+            <form method="POST" action="checkout.php?plan=<?= e(rawurlencode($plan['code'])) ?>" class="co-form">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="plan" value="<?= e($plan['code']) ?>">
+                <input type="hidden" name="order_token" value="<?= e(billing_form_guard_token('order-submit-' . $plan['code'])) ?>">
 
                 <?php if ($needs === 'sms' || $needs === 'voice'): ?>
                     <div>
                         <label class="block text-slate-400 text-xs font-medium mb-1.5" for="quantity"><?= $needs === 'sms' ? 'How many SMS' : 'How many calls' ?></label>
                         <input id="quantity" name="quantity" inputmode="numeric" required value="<?= e(checkout_value($values, 'quantity')) ?>" class="form-input" placeholder="<?= $needs === 'sms' ? '5000' : '1000' ?>">
+                    
+                        <p class="co-estimate" id="co-estimate" aria-live="polite"></p>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div>
@@ -307,46 +344,61 @@ function checkout_value($values, $key)
                     </div>
                 <?php endif; ?>
 
+                <div class="co-actions">
                 <?php if ($needs !== 'sms' && $needs !== 'voice' && !$short): ?>
-                    <button type="submit" name="confirm_purchase" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
+                    <button type="submit" name="confirm_purchase" value="1" class="co-pay">
                         Pay <?= e(billing_money_label($due)) ?> from wallet
                     </button>
                 <?php elseif ($preview && !empty($preview['ok']) && !$short): ?>
-                    <button type="submit" name="confirm_purchase" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
+                    <button type="submit" name="confirm_purchase" value="1" class="co-pay">
                         Pay <?= e(billing_money_label($preview['price'])) ?> from wallet
                     </button>
                 <?php elseif ($needs !== 'sms' && $needs !== 'voice' && $short): ?>
                     <p class="text-slate-400 text-sm">The bill is already on this page. Add the wallet funds, then come back and pay.</p>
                 <?php else: ?>
-                    <button type="submit" name="review_order" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">
+                    <button type="submit" name="review_order" value="1" class="co-pay">
                         Review price
                     </button>
                 <?php endif; ?>
+                </div>
             </form>
         </div>
     </section>
-    <aside class="dash-panel lg:col-span-2">
-        <div class="p-6 space-y-3 text-sm">
+    <aside class="co-side" aria-label="Order summary">
+        <div class="co-card co-summary">
+            <h2>Order summary</h2>
+            <p class="co-plan"><b><?= e($plan['name']) ?></b><span><?= e(shop_cycle_chip($plan['billing_cycle'], (int) $plan['auto_renew_default'] === 1)) ?></span></p>
             <?php if ($slabs): ?>
-                <p class="text-white font-medium">Volume rates</p>
+                <table class="shop-ladder" id="co-ladder"><caption class="sr-only">Rate by quantity</caption><thead><tr><th scope="col">Quantity</th><th scope="col">Each</th></tr></thead><tbody>
                 <?php foreach ($slabs as $slab): ?>
-                    <div class="flex justify-between gap-3"><span class="text-slate-500"><?= number_format($slab['min_qty']) ?>–<?= number_format($slab['max_qty']) ?></span><strong class="text-white"><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true) ?></strong></div>
+                    <tr><th scope="row"><?= number_format($slab['min_qty']) ?> to <?= number_format($slab['max_qty']) ?></th><td><?= billing_rate_markup($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0, true, '') ?></td></tr>
                 <?php endforeach; ?>
-            <?php else: ?>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">List price</span><strong class="text-white"><?= billing_rate_markup($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0, false, billing_cycle_suffix($plan['billing_cycle'])) ?></strong></div>
+                </tbody></table>
             <?php endif; ?>
-            <?php if ($billTotal > 0 && $slabs): ?>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">List price</span><strong class="text-white"><?= e(billing_money_label($billNet)) ?></strong></div>
-            <?php endif; ?>
-            <?php if ($billTotal > 0): ?>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">VAT 13%</span><strong class="text-white"><?= e(billing_money_label($billVat)) ?></strong></div>
-                <div class="flex justify-between gap-3"><span class="text-slate-500">Bill total</span><strong class="text-white"><?= e(billing_money_label($billTotal)) ?></strong></div>
-            <?php else: ?>
-                <p class="text-slate-500">The bill is the list price for your quantity, plus 13% VAT.</p>
-            <?php endif; ?>
-            <div class="flex justify-between gap-3"><span class="text-slate-500">Wallet</span><strong class="text-white"><?= e(billing_money_label($balance)) ?></strong></div>
-            <p class="text-slate-500 text-xs leading-relaxed pt-2">Fill this form completely. The saved answers are what the team uses. Recurring plans renew the same bill, including VAT, from the wallet.</p>
+            <dl class="co-lines">
+                <?php if ($billTotal > 0): ?>
+                    <div><dt>List price</dt><dd><?= e(billing_money_label($billNet)) ?></dd></div>
+                    <div><dt>VAT 13%</dt><dd><?= e(billing_money_label($billVat)) ?></dd></div>
+                    <div class="is-total"><dt>You pay</dt><dd><?= e(billing_money_label($billTotal)) ?></dd></div>
+                <?php else: ?>
+                    <div class="is-total"><dt>You pay</dt><dd id="co-total">Set the quantity</dd></div>
+                    <p class="co-fine">List price for your quantity plus 13% VAT. The exact bill is shown on the next step.</p>
+                <?php endif; ?>
+                <div><dt>Wallet now</dt><dd><?= e(billing_money_label($balance)) ?></dd></div>
+                <?php if ($billTotal > 0): ?>
+                    <div class="<?= $short ? 'is-short' : 'is-ok' ?>"><dt><?= $short ? 'Still needed' : 'Wallet after paying' ?></dt><dd><?= e($short ? billing_money_label($due - $balance) : billing_money_label($balance - $due)) ?></dd></div>
+                <?php endif; ?>
+            </dl>
+            <h3>What happens next</h3>
+            <ul class="co-next">
+                <?php foreach ($nextSteps as $line): ?><li><?= e($line) ?></li><?php endforeach; ?>
+            </ul>
+            <p class="co-fine"><?= (int) $plan['auto_renew_default'] === 1 && $plan['billing_cycle'] !== 'one_time' ? 'This renews on its own from your wallet at the same bill, VAT included. You can turn that off in My Services.' : 'No automatic renewal.' ?> Paying is only from your wallet; nothing is charged until you press the Pay button.</p>
         </div>
     </aside>
 </div>
+<?php if ($slabs): ?>
+<script type="application/json" id="co-slabs"><?= json_encode(array_map(function ($slab) { return array('min' => (int) $slab['min_qty'], 'max' => (int) $slab['max_qty'], 'unit' => billing_selling_price($slab['unit_price'], isset($slab['offer_price']) ? $slab['offer_price'] : 0)); }, $slabs), JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+<script defer src="../assets/js/checkout.js"></script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

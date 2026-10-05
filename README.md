@@ -183,6 +183,8 @@ public_html/
 - Set a strong admin password before enabling admin sign-in
 
 ### Tests
+`php tests/checkout-test.php` opens the real checkout page as a client: wallet too small, one payment charged once, the same page sent twice (second one refused), a payment without its order token, and the SMS price hook.
+
 `php tests/kyc-test.php` checks the identity form rules (dates in BS and AD, document numbers, 77 districts, addresses, same-as-permanent), saving drafts, camera and file uploads, passport (one side) against citizenship (two sides), personal and organization submissions, approval and the lock.
 
 `php tests/sms-balance-test.php` breaks the SMS line on purpose (line down, some numbers refused, a crash, a send cut off half way, a network failure report, a scheduled send) and checks the client is never charged for a message that did not go out and that the books always balance. Run it before touching `includes/sms/delivery.php`.
@@ -262,3 +264,6 @@ One list in `includes/billing/kyc-fields.php` describes every section and field;
 - **After approval** the client sees all details and documents (and can open them full-size, zoom and turn); the details are locked, changes go through Support.
 - **Admin → Identity checks:** tabs (Waiting / Verified / Sent back / All) with counts, search by name, phone, document or PAN number, every detail and document in one place with a viewer, automatic notes (missing documents, the same document or PAN number on another account, name or mobile that do not match the account, old-form submissions), and common reasons to send back with one click.
 - Identities approved on the older, shorter form keep working and are shown with the details they have.
+
+### Checkout
+Steps (Your details, Check the price, Pay from wallet), an order summary that stays in view (list price, VAT, wallet now, wallet after paying, what happens next), a clear "your wallet is short by NPR X" box with an Add funds button, and a live price line while the SMS or voice quantity is typed (`assets/js/checkout.js`; the server still works out the real bill). Each checkout page carries a one-use order token: the same page sent twice, from a double tap, the Back button or a reload, is charged once and the second send is refused with a pointer to My Services.
