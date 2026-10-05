@@ -137,5 +137,18 @@ $offerPlan = $byCode['domain-com']; $offerPlan['offer_price'] = 1800;
 check('shop: an offer shows the real saving', shop_plan_facts($offerPlan, 0)['save_percent'] === 25 && shop_plan_facts($offerPlan, 0)['selling'] == 1800.0);
 check('shop: slab services have no flat price', shop_plan_facts($byCode['sms-slab'], 0)['priced'] === false);
 check('shop: identity note appears for SMS until approved', shop_identity_note($conn, $cid, array('bulk-sms')) !== '' && shop_identity_note($conn, $cid, array('domain-registration')) === '');
+// My Services helpers
+$rowsSvc = array(
+  array('service_name' => 'Domain A', 'status' => 'active', 'auto_renew' => 1, 'next_renewal' => date('Y-m-d', strtotime('+10 days')), 'price' => 2034),
+  array('service_name' => 'Email B', 'status' => 'past_due', 'auto_renew' => 1, 'next_renewal' => date('Y-m-d', strtotime('-2 days')), 'price' => 8475),
+  array('service_name' => 'Site C', 'status' => 'active', 'auto_renew' => 1, 'next_renewal' => date('Y-m-d', strtotime('+90 days')), 'price' => 50000),
+  array('service_name' => 'Hosting D', 'status' => 'active', 'auto_renew' => 0, 'next_renewal' => date('Y-m-d', strtotime('+5 days')), 'price' => 1000),
+  array('service_name' => 'Old E', 'status' => 'cancelled', 'auto_renew' => 1, 'next_renewal' => date('Y-m-d', strtotime('+3 days')), 'price' => 700),
+);
+$ren = service_renewal_summary($rowsSvc, 5000);
+check('renewals: only auto-renewing active or overdue services within 30 days count', count($ren['items']) === 2 && $ren['total'] === 10509.0);
+check('renewals: the wallet shortfall is worked out', $ren['short_by'] === 5509.0 && service_renewal_summary($rowsSvc, 20000)['short_by'] === 0.0);
+check('renewals: the overdue one is first and negative days', $ren['items'][0]['name'] === 'Email B' && $ren['items'][0]['days'] === -2);
+check('status words are plain', service_status_info('past_due', true)['label'] === 'Needs funds' && service_status_info('booked', false)['tone'] === 'info' && service_group('suspended') === 'attention' && service_group('cancelled') === 'ended');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

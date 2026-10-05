@@ -267,3 +267,6 @@ One list in `includes/billing/kyc-fields.php` describes every section and field;
 
 ### Checkout
 Steps (Your details, Check the price, Pay from wallet), an order summary that stays in view (list price, VAT, wallet now, wallet after paying, what happens next), a clear "your wallet is short by NPR X" box with an Add funds button, and a live price line while the SMS or voice quantity is typed (`assets/js/checkout.js`; the server still works out the real bill). Each checkout page carries a one-use order token: the same page sent twice, from a double tap, the Back button or a reload, is charged once and the second send is refused with a pointer to My Services.
+
+### My Services
+Top strip: wallet, SMS credits, voice calls and how many services are active or being set up. If auto-renewals fall due in the next 30 days it says whether the wallet covers them, or exactly how much to add. Tabs (All, Active, Being set up, Needs attention, Ended). Each service shows its status in plain words, when it started, when it renews (days left, overdue in red), the bill with VAT, the order details folded away, then the same access buttons as before (cPanel, email, website) and an auto-renew switch. The status words and the renewal sum come from `includes/shop-view.php` and are tested in `tests/money-test.php`.

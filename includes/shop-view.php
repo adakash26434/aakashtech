@@ -72,3 +72,60 @@ function shop_identity_note($conn, $clientId, $slugs)
     }
     return 'Your identity is not approved yet. Until it is, you can send up to ' . number_format(sms_unverified_cap()) . ' SMS. Buying credits is fine; approve your identity to use them all.';
 }
+
+/** Plain-words status for a service: label, colour tone and a sentence that says what is happening. */
+function service_status_info($status, $renewable)
+{
+    $map = array(
+        'active' => array('Active', 'ok', 'Running.'),
+        'booked' => array('Booked', 'info', 'The team is working on this from your details.'),
+        'past_due' => array('Needs funds', 'warn', 'The renewal is waiting for wallet funds. It tries again by itself.'),
+        'suspended' => array('Paused', 'bad', $renewable ? 'Paused until the wallet can cover the renewal. No request to staff is needed.' : 'Paused.'),
+        'cancelled' => array('Ended', 'none', 'This service has ended.'),
+        'expired' => array('Ended', 'none', 'This service has ended.')
+    );
+    $info = isset($map[$status]) ? $map[$status] : array(ucfirst(str_replace('_', ' ', (string) $status)), 'none', '');
+    return array('label' => $info[0], 'tone' => $info[1], 'text' => $info[2]);
+}
+
+/** Which tab a service belongs to. */
+function service_group($status)
+{
+    if ($status === 'active') {
+        return 'active';
+    }
+    if ($status === 'booked') {
+        return 'waiting';
+    }
+    if ($status === 'past_due' || $status === 'suspended') {
+        return 'attention';
+    }
+    return 'ended';
+}
+
+/** Whole days from today to a date (negative when past). */
+function service_days_until($date)
+{
+    return (int) floor((strtotime((string) $date) - strtotime(date('Y-m-d'))) / 86400);
+}
+
+/** Auto-renewals due soon: what they add up to, and whether the wallet covers them. */
+function service_renewal_summary($rows, $walletBalance, $withinDays = 30)
+{
+    $due = array();
+    $total = 0.0;
+    foreach ($rows as $row) {
+        if ((int) $row['auto_renew'] !== 1 || !in_array((string) $row['status'], array('active', 'past_due'), true) || empty($row['next_renewal']) || (float) $row['price'] <= 0) {
+            continue;
+        }
+        $days = service_days_until($row['next_renewal']);
+        if ($days <= $withinDays) {
+            $due[] = array('name' => (string) $row['service_name'], 'date' => (string) $row['next_renewal'], 'days' => $days, 'amount' => (float) $row['price']);
+            $total += (float) $row['price'];
+        }
+    }
+    usort($due, function ($a, $b) {
+        return strcmp($a['date'], $b['date']);
+    });
+    return array('items' => $due, 'total' => round($total, 2), 'short_by' => max(0.0, round($total - (float) $walletBalance, 2)), 'days' => $withinDays);
+}

@@ -22,15 +22,38 @@ $kycApproved = billing_kyc_approved($conn, $cid);
 $services->close();
 $units = billing_unit_balances($conn, $cid);
 $balance = billing_balance($conn, $cid);
+require_once __DIR__ . '/../includes/shop-view.php';
+$definitions = billing_service_definitions();
+$planService = array();
+foreach (billing_load_plans($conn) as $planRow) {
+    $planService[$planRow['code']] = $planRow['service_slug'];
+}
+$groupCounts = array('all' => count($serviceRows), 'active' => 0, 'waiting' => 0, 'attention' => 0, 'ended' => 0);
+foreach ($serviceRows as $row) {
+    $groupCounts[service_group((string) $row['status'])]++;
+}
+$show = isset($_GET['show']) && isset($groupCounts[$_GET['show']]) ? (string) $_GET['show'] : 'all';
+$renewals = service_renewal_summary($serviceRows, $balance, 30);
+$visibleRows = array();
+foreach ($serviceRows as $row) {
+    if ($show === 'all' || service_group((string) $row['status']) === $show) {
+        $visibleRows[] = $row;
+    }
+}
 ?>
-<div class="mb-8 flex items-end justify-between flex-wrap gap-4">
+<div class="shop-head">
     <div>
-        <h1 class="font-heading font-bold text-white text-2xl mb-1">My Services</h1>
-        <p class="text-slate-500 text-sm">Wallet <?= e(billing_money_label($balance)) ?> · <?= number_format($units['sms']) ?> SMS · <?= number_format((int) $units['voice_calls']) ?> voice calls. <a class="text-brand-400" href="manual.php#services">नेपाली चरण</a></p>
+        <h1 class="shop-title">My Services</h1>
+        <p class="shop-sub">Everything you bought, what it is doing now, and when it renews.</p>
     </div>
-    <a href="shop.php" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Buy a service</a>
+    <a href="shop.php" class="shop-btn" style="margin-top:0">Buy a service</a>
 </div>
-
+<div class="svc-stats">
+    <a href="wallet.php" class="svc-stat"><span>Wallet</span><strong><?= e(billing_money_label($balance)) ?></strong><em>Add funds</em></a>
+    <a href="sms-portal.php" class="svc-stat"><span>SMS credits</span><strong><?= number_format($units['sms']) ?></strong><em>Send SMS</em></a>
+    <a href="campaigns.php" class="svc-stat"><span>Voice calls</span><strong><?= number_format((int) $units['voice_calls']) ?></strong><em>Voice jobs</em></a>
+    <div class="svc-stat"><span>Services</span><strong><?= (int) $groupCounts['active'] ?> active</strong><em><?= (int) $groupCounts['waiting'] ?> being set up</em></div>
+</div>
 <?php if ($notice !== ''): ?>
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div>
 <?php endif; ?>
@@ -38,12 +61,33 @@ $balance = billing_balance($conn, $cid);
     <div class="mb-4 p-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-brand-400 text-sm"><?= e($toggleMessage) ?></div>
 <?php endif; ?>
 
+<?php if ($renewals['items']): ?>
+    <section class="svc-renew<?= $renewals['short_by'] > 0 ? ' is-short' : '' ?>" aria-label="Coming renewals">
+        <div>
+            <h2><?= $renewals['short_by'] > 0 ? 'Add NPR ' . e(number_format($renewals['short_by'], 2)) . ' before your next renewal' : 'Renewals in the next ' . (int) $renewals['days'] . ' days are covered' ?></h2>
+            <p><?= count($renewals['items']) ?> auto-renewal<?= count($renewals['items']) === 1 ? '' : 's' ?> add up to <?= e(billing_money_label($renewals['total'])) ?> (VAT included). Your wallet has <?= e(billing_money_label($balance)) ?>.</p>
+        </div>
+        <ul>
+            <?php foreach (array_slice($renewals['items'], 0, 4) as $item): ?>
+                <li><span><?= e($item['name']) ?></span><b><?= $item['days'] < 0 ? 'was due ' . e(date('j M', strtotime($item['date']))) : e(date('j M', strtotime($item['date']))) . ' · in ' . (int) $item['days'] . ' d' ?></b><i><?= e(billing_money_label($item['amount'])) ?></i></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php if ($renewals['short_by'] > 0): ?><a class="co-alert-btn" href="wallet.php">Add funds</a><?php endif; ?>
+    </section>
+<?php endif; ?>
+
 <?php if ($serviceRows): ?>
+    <nav class="shop-tabs" aria-label="Show">
+        <?php foreach (array('all' => 'All', 'active' => 'Active', 'waiting' => 'Being set up', 'attention' => 'Needs attention', 'ended' => 'Ended') as $key => $label): ?>
+            <?php if ($key !== 'all' && $groupCounts[$key] === 0) { continue; } ?>
+            <a href="services.php?show=<?= e($key) ?>" class="<?= $show === $key ? 'is-on' : '' ?>"<?= $show === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?><span><?= (int) $groupCounts[$key] ?></span></a>
+        <?php endforeach; ?>
+    </nav>
     <?php $panelAnchor = false; ?>
     <?php $mailAnchor = false; ?>
     <?php $siteAnchor = false; ?>
-    <div class="grid sm:grid-cols-2 gap-4">
-        <?php foreach ($serviceRows as $s): ?>
+    <div class="svc-grid">
+        <?php foreach ($visibleRows as $s): ?>
             <?php
             $renewable = isset($s['billing_cycle']) && ($s['billing_cycle'] === 'monthly' || $s['billing_cycle'] === 'yearly');
             $status = (string) $s['status'];
@@ -69,32 +113,36 @@ $balance = billing_balance($conn, $cid);
                 $anchor = ' id="website"';
             }
             ?>
-            <article class="dash-panel"<?= $anchor ?>>
-                <div class="p-5">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <h2 class="font-heading font-semibold text-white text-base"><?= e($s['service_name']) ?></h2>
-                        <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $statusClass ?>"><?= e(ucfirst(str_replace('_', ' ', $status))) ?></span>
-                    </div>
-                    <?php if ($brief): ?>
-                        <dl class="text-xs space-y-1 mb-3">
+            <?php
+            $info = service_status_info($status, $renewable);
+            $slug = isset($planService[$s['plan_code']]) ? $planService[$s['plan_code']] : '';
+            $icon = $slug !== '' && isset($definitions[$slug]) ? $definitions[$slug]['icon'] : 'package';
+            $daysLeft = !empty($s['next_renewal']) ? service_days_until($s['next_renewal']) : null;
+            ?>
+            <article class="svc-card is-<?= e($info['tone']) ?>"<?= $anchor ?>>
+                <header class="svc-card-head">
+                    <span class="shop-icon"><i data-lucide="<?= e($icon) ?>"></i></span>
+                    <div><h2><?= e($s['service_name']) ?></h2><p><?= e($info['text']) ?></p></div>
+                    <span class="svc-pill is-<?= e($info['tone']) ?>"><?= e($info['label']) ?></span>
+                </header>
+                <dl class="svc-facts">
+                    <?php if (!empty($s['start_date'])): ?><div><dt>Started</dt><dd><?= e(date('j M Y', strtotime($s['start_date']))) ?></dd></div><?php endif; ?>
+                    <?php if ($renewable && !empty($s['next_renewal'])): ?>
+                        <div class="<?= $daysLeft !== null && $daysLeft <= 14 ? 'is-soon' : '' ?>"><dt><?= (int) $s['auto_renew'] === 1 ? 'Renews' : 'Ends' ?></dt><dd><?= e(date('j M Y', strtotime($s['next_renewal']))) ?><small><?= $daysLeft < 0 ? 'overdue' : ($daysLeft === 0 ? 'today' : 'in ' . (int) $daysLeft . ' days') ?></small></dd></div>
+                    <?php endif; ?>
+                    <?php if ((float) $s['price'] > 0): ?><div><dt>Bill</dt><dd><?= e(billing_money_label($s['price'])) ?><small><?= e(trim(billing_cycle_suffix($s['billing_cycle'] ?? ''), ' /')) ?> · VAT included</small></dd></div><?php endif; ?>
+                    <?php if (!empty($s['detail_label'])): ?><div class="is-wide"><dt>Details</dt><dd><?= e($s['detail_label']) ?></dd></div><?php endif; ?>
+                </dl>
+                <?php if ($brief): ?>
+                    <details class="svc-brief"><summary>Your order details</summary>
+                        <dl>
                             <?php foreach ($brief as $label => $value): ?>
-                                <div class="max-h-24 overflow-auto whitespace-pre-wrap"><dt class="text-slate-500 inline"><?= e($label) ?>: </dt><dd class="text-slate-300 inline"><?= e($value) ?></dd></div>
+                                <div><dt><?= e($label) ?></dt><dd><?= e($value) ?></dd></div>
                             <?php endforeach; ?>
                         </dl>
-                    <?php else: ?>
-                        <p class="text-slate-500 text-xs mb-3"><?= e($s['description'] ?: 'No description') ?></p>
-                    <?php endif; ?>
-                    <?php if (!empty($s['detail_label'])): ?>
-                        <p class="text-slate-300 text-sm mb-3"><?= e($s['detail_label']) ?></p>
-                    <?php endif; ?>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <?php if (!empty($s['start_date'])): ?><span>Started <?= e(date('M d, Y', strtotime($s['start_date']))) ?></span><?php endif; ?>
-                        <?php if (!empty($s['next_renewal'])): ?>
-                            <?php $renewDays = (int) floor((strtotime($s['next_renewal']) - strtotime(date('Y-m-d'))) / 86400); ?>
-                            <span>Next renewal <?= e(date('M d, Y', strtotime($s['next_renewal']))) ?><?= $renewDays <= 14 ? ' · keep the wallet ready' : '' ?></span>
-                        <?php endif; ?>
-                        <?php if ((float) $s['price'] > 0): ?><span>Bill <?= e(billing_money_label($s['price'])) ?><?= e(billing_cycle_suffix($s['billing_cycle'] ?? '')) ?>, VAT included</span><?php endif; ?>
-                    </div>
+                    </details>
+                <?php endif; ?>
+                <div class="svc-actions">
                     <?php if (hosting_panel_ready($s)): ?>
                         <form method="POST" action="cpanel-open.php" target="_blank" class="mt-4">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
@@ -148,13 +196,14 @@ $balance = billing_balance($conn, $cid);
                     <?php elseif ($status === 'suspended' && $renewable): ?>
                         <p class="text-red-300 text-xs mt-3">Paused until the wallet can cover the renewal. No staff request is needed.</p>
                     <?php endif; ?>
+                </div>
                     <?php if ($renewable): ?>
-                        <form method="POST" class="mt-4">
+                        <form method="POST" class="svc-renew-form">
                             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                             <input type="hidden" name="service_id" value="<?= (int) $s['id'] ?>">
                             <input type="hidden" name="enabled" value="<?= (int) $s['auto_renew'] === 1 ? '0' : '1' ?>">
-                            <button type="submit" name="set_auto_renew" value="1" class="text-brand-400 text-sm"<?= (int) $s['auto_renew'] === 1 ? ' onclick="return confirm(\'Turn auto-renew off? This service stops when it expires unless you renew it yourself.\')"' : '' ?>>
-                                <?= (int) $s['auto_renew'] === 1 ? 'Turn auto-renew off' : 'Turn auto-renew on' ?>
+                            <button type="submit" name="set_auto_renew" value="1" class="svc-switch<?= (int) $s['auto_renew'] === 1 ? ' is-on' : '' ?>" role="switch" aria-checked="<?= (int) $s['auto_renew'] === 1 ? 'true' : 'false' ?>"<?= (int) $s['auto_renew'] === 1 ? ' onclick="return confirm(\'Turn auto-renew off? This service stops when it expires unless you renew it yourself.\')"' : '' ?>>
+                                <span class="svc-knob" aria-hidden="true"></span><span>Auto-renew is <?= (int) $s['auto_renew'] === 1 ? 'on' : 'off' ?>. <?= (int) $s['auto_renew'] === 1 ? 'Tap to turn it off.' : 'Tap to turn it on.' ?></span>
                             </button>
                         </form>
                     <?php endif; ?>
@@ -163,11 +212,6 @@ $balance = billing_balance($conn, $cid);
         <?php endforeach; ?>
     </div>
 <?php else: ?>
-    <div class="dash-panel">
-        <div class="p-12 text-center">
-            <p class="text-slate-500 text-sm mb-4">You don't have any services yet.</p>
-            <a href="shop.php" class="inline-block px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Browse services</a>
-        </div>
-    </div>
+    <div class="shop-empty"><h2>You have no services yet</h2><p>Buy SMS credits to send messages today, or a domain, hosting, email or website. Everything you buy appears here.</p><a href="shop.php" class="shop-btn">Browse services</a></div>
 <?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
