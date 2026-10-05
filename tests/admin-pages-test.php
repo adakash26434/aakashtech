@@ -3,7 +3,10 @@
 // Renders every admin page as a signed-in admin on a throw-away SQLite file. Fails on any PHP error.
 // With --hash it prints a fingerprint of each page so two versions of the code can be compared.
 $root = dirname(__DIR__);
-putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . sys_get_temp_dir() . '/aakash-admin-test-' . getmypid() . '.sqlite');
+$__db = sys_get_temp_dir() . '/aakash-admin-test-' . getmypid() . '-' . bin2hex(random_bytes(3)) . '.sqlite';
+@unlink($__db);
+putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . $__db);
+register_shutdown_function(function () use ($__db) { @unlink($__db); });
 $_SERVER['HTTP_HOST'] = 'localhost'; $_SERVER['REQUEST_METHOD'] = 'GET';
 chdir($root);
 ob_start(); require $root . '/config.php'; ob_end_clean();
