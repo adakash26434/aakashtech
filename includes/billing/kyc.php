@@ -72,11 +72,15 @@ function billing_kyc_columns($conn)
         return;
     }
     $definition = DB_DRIVER === 'sqlite' ? "TEXT DEFAULT ''" : "VARCHAR(255) DEFAULT ''";
-    foreach (array('doc_identity_back', 'doc_clearance') as $name) {
+    foreach (array('doc_identity_back', 'doc_clearance', 'doc_photo') as $name) {
         if (isset($present[$name])) {
             continue;
         }
         billing_exec($conn, 'ALTER TABLE client_kyc ADD COLUMN ' . $name . ' ' . $definition);
+    }
+    if (!isset($present['details'])) {
+        // Every detailed answer (gender, family, addresses, dates ...) as JSON; see kyc-fields.php.
+        billing_exec($conn, 'ALTER TABLE client_kyc ADD COLUMN details TEXT' . (DB_DRIVER === 'sqlite' ? " DEFAULT ''" : ''));
     }
 }
 
@@ -103,6 +107,8 @@ function billing_kyc_blank()
         'doc_authority' => '',
         'doc_identity_back' => '',
         'doc_clearance' => '',
+        'doc_photo' => '',
+        'details' => '',
         'admin_note' => '',
         'submitted_at' => '',
         'reviewed_at' => ''
@@ -141,12 +147,13 @@ function billing_kyc_approved($conn, $clientId)
 
 function billing_kyc_id_kind($value)
 {
-    return $value === 'national_id' ? 'national_id' : 'citizenship';
+    return array_key_exists((string) $value, kyc_id_kinds()) ? (string) $value : 'citizenship';
 }
 
 function billing_kyc_id_label($value)
 {
-    return billing_kyc_id_kind($value) === 'national_id' ? 'National Identity Card' : 'Citizenship certificate';
+    $kinds = kyc_id_kinds();
+    return $kinds[billing_kyc_id_kind($value)];
 }
 
 function billing_kyc_reference($value, $max)
@@ -178,7 +185,7 @@ function billing_kyc_unlink($clientId, $relative)
 function billing_kyc_store_file($clientId, $slot, $file)
 {
     $clientId = (int) $clientId;
-    $slots = array('identity' => true, 'identity_back' => true, 'registration' => true, 'tax' => true, 'authority' => true, 'clearance' => true);
+    $slots = array('identity' => true, 'identity_back' => true, 'registration' => true, 'tax' => true, 'authority' => true, 'clearance' => true, 'photo' => true);
     if (!isset($slots[$slot])) {
         return array('ok' => false, 'error' => 'That document is not accepted.');
     }
@@ -224,112 +231,103 @@ function billing_kyc_store_file($clientId, $slot, $file)
         file_put_contents($guard, "Require all denied\nDeny from all\n");
     }
     $relative = 'uploads/kyc/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__, 2) . '/' . $relative)) {
+    $target = dirname(__DIR__, 2) . '/' . $relative;
+    $moved = !empty($GLOBALS['KYC_TEST_UPLOADS']) ? copy($file['tmp_name'], $target) : move_uploaded_file($file['tmp_name'], $target);
+    if (!$moved) {
         return array('ok' => false, 'error' => 'The document could not be saved.');
     }
     return array('ok' => true, 'path' => $relative);
 }
 
-function billing_kyc_write($conn, $clientId, $status, $kind, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs, $note, $submitted)
+/** All answers for one client as one flat list: the saved details, then the plain columns. */
+function billing_kyc_values($row)
+{
+    $values = array();
+    $decoded = isset($row['details']) && $row['details'] !== '' ? json_decode((string) $row['details'], true) : null;
+    if (is_array($decoded)) {
+        $values = $decoded;
+    }
+    foreach (array('full_name', 'id_kind', 'id_number', 'org_name', 'registration_number', 'tax_number', 'contact_name', 'contact_id_kind', 'contact_id_number', 'purpose') as $key) {
+        if (!isset($values[$key]) && isset($row[$key]) && $row[$key] !== '') {
+            $values[$key] = (string) $row[$key];
+        }
+    }
+    return $values;
+}
+
+/** Writes the named columns for one client (insert or update). Column names come from this file only. */
+function billing_kyc_save($conn, $clientId, $columns)
 {
     $clientId = (int) $clientId;
-    $probe = $conn->prepare('SELECT client_id FROM client_kyc WHERE client_id = ?');
-    if (!$probe) {
+    $allowed = array('account_kind', 'status', 'purpose', 'full_name', 'id_kind', 'id_number', 'address', 'org_name', 'registration_number', 'tax_number', 'contact_name', 'contact_id_kind', 'contact_id_number',
+        'doc_identity', 'doc_registration', 'doc_tax', 'doc_authority', 'doc_identity_back', 'doc_clearance', 'doc_photo', 'details', 'admin_note', 'submitted_at', 'reviewed_at');
+    $columns = array_intersect_key($columns, array_flip($allowed));
+    if (!$columns) {
         return false;
     }
+    $probe = $conn->prepare('SELECT client_id FROM client_kyc WHERE client_id = ?');
     $probe->bind_param('i', $clientId);
     $probe->execute();
     $exists = (bool) db_fetch_assoc($probe);
     $probe->close();
+    $names = array_keys($columns);
+    $values = array_values($columns);
     if ($exists) {
-        $stmt = $conn->prepare('UPDATE client_kyc SET account_kind = ?, status = ?, purpose = ?, full_name = ?, id_kind = ?, id_number = ?, address = ?, org_name = ?, registration_number = ?, tax_number = ?, contact_name = ?, contact_id_kind = ?, contact_id_number = ?, doc_identity = ?, doc_registration = ?, doc_tax = ?, doc_authority = ?, doc_identity_back = ?, doc_clearance = ?, admin_note = ?, submitted_at = NULLIF(?, \'\') WHERE client_id = ?');
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param('sssssssssssssssssssssi', $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $docs['identity_back'], $docs['clearance'], $note, $submitted, $clientId);
+        $stmt = $conn->prepare('UPDATE client_kyc SET ' . implode(' = ?, ', $names) . ' = ? WHERE client_id = ?');
+        $types = str_repeat('s', count($values)) . 'i';
+        $values[] = $clientId;
     } else {
-        $stmt = $conn->prepare('INSERT INTO client_kyc (client_id, account_kind, status, purpose, full_name, id_kind, id_number, address, org_name, registration_number, tax_number, contact_name, contact_id_kind, contact_id_number, doc_identity, doc_registration, doc_tax, doc_authority, doc_identity_back, doc_clearance, admin_note, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, \'\'))');
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param('isssssssssssssssssssss', $clientId, $kind, $status, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs['identity'], $docs['registration'], $docs['tax'], $docs['authority'], $docs['identity_back'], $docs['clearance'], $note, $submitted);
+        $stmt = $conn->prepare('INSERT INTO client_kyc (client_id, ' . implode(', ', $names) . ') VALUES (?' . str_repeat(', ?', count($names)) . ')');
+        $types = 'i' . str_repeat('s', count($values));
+        array_unshift($values, $clientId);
     }
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param($types, ...$values);
     $ok = $stmt->execute();
     $stmt->close();
-    return $ok;
+    return (bool) $ok;
 }
 
-function billing_kyc_submit($conn, $clientId, $post, $files)
+/**
+ * Checks and saves a submission. Returns array('ok' => bool, 'errors' => field => message, 'message' => text, 'values' => cleaned answers).
+ * Answers are saved even when something is missing, so nothing typed is lost; the status only becomes
+ * "pending" when every answer and document is complete.
+ */
+function billing_kyc_submit_detailed($conn, $clientId, $post, $files)
 {
     $clientId = (int) $clientId;
     $current = billing_kyc_load($conn, $clientId);
     if ($current['status'] === 'approved') {
-        return 'This identity is approved. It can no longer be changed from the client portal.';
+        return array('ok' => false, 'errors' => array(), 'values' => array(), 'message' => 'This identity is approved. It can no longer be changed from the client portal. Contact support for a change.');
     }
     $kind = isset($post['account_kind']) && $post['account_kind'] === 'organization' ? 'organization' : 'individual';
-    $purpose = billing_plain_block(isset($post['purpose']) ? $post['purpose'] : '', 500);
-    $address = billing_plain_block(isset($post['address']) ? $post['address'] : '', 300);
-    if (strlen($purpose) < 12) {
-        return 'Write what the SMS and voice calls are for.';
+    $check = kyc_validate($kind, $post);
+    $values = $check['values'];
+    $errors = $check['errors'];
+    $idKind = $kind === 'organization' ? $check['contact_kind'] : $check['id_kind'];
+
+    $map = array('identity' => 'doc_identity', 'identity_back' => 'doc_identity_back', 'registration' => 'doc_registration', 'tax' => 'doc_tax', 'authority' => 'doc_authority', 'clearance' => 'doc_clearance', 'photo' => 'doc_photo');
+    $docs = array();
+    foreach ($map as $slot => $column) {
+        $docs[$slot] = (string) $current[$column];
     }
-    if (strlen($address) < 8) {
-        return 'Enter the address.';
+    $wanted = array();
+    foreach (kyc_doc_spec($kind, $idKind) as $spec) {
+        $wanted[$spec['slot']] = $spec;
     }
-    $fullName = '';
-    $idKind = 'citizenship';
-    $idNumber = '';
-    $orgName = '';
-    $registration = '';
-    $tax = '';
-    $contactName = '';
-    $contactKind = 'citizenship';
-    $contactNumber = '';
-    $docs = array(
-        'identity' => (string) $current['doc_identity'],
-        'identity_back' => (string) $current['doc_identity_back'],
-        'registration' => (string) $current['doc_registration'],
-        'tax' => (string) $current['doc_tax'],
-        'authority' => (string) $current['doc_authority'],
-        'clearance' => (string) $current['doc_clearance']
-    );
-    if ($kind === 'individual') {
-        $fullName = billing_plain_line(isset($post['full_name']) ? $post['full_name'] : '', 160);
-        $idKind = 'national_id';
-        $idNumber = billing_kyc_reference(isset($post['id_number']) ? $post['id_number'] : '', 40);
-        if (strlen($fullName) < 3) {
-            return 'Enter the name as it appears on the citizenship certificate.';
+    $docErrors = array();
+    foreach ($wanted as $slot => $spec) {
+        // A photo taken with the camera and a file chosen from the phone use different inputs; either one counts.
+        $upload = isset($files['doc_' . $slot]) ? $files['doc_' . $slot] : array();
+        if ((!is_array($upload) || !isset($upload['error']) || (int) $upload['error'] === UPLOAD_ERR_NO_FILE) && isset($files['cam_' . $slot])) {
+            $upload = $files['cam_' . $slot];
         }
-        if (strlen($idNumber) < 5) {
-            return 'Enter the National Identity Card number.';
-        }
-    } else {
-        $orgName = billing_plain_line(isset($post['org_name']) ? $post['org_name'] : '', 200);
-        $registration = billing_kyc_reference(isset($post['registration_number']) ? $post['registration_number'] : '', 40);
-        $tax = billing_kyc_reference(isset($post['tax_number']) ? $post['tax_number'] : '', 40);
-        if (strlen($orgName) < 2) {
-            return 'Enter the company name.';
-        }
-        if (strlen($registration) < 3) {
-            return 'Enter the company registration number.';
-        }
-        if (strlen($tax) < 3) {
-            return 'Enter the PAN number.';
-        }
-    }
-    $needed = $kind === 'individual' ? array('identity', 'identity_back') : array('registration', 'tax', 'clearance');
-    $labels = array(
-        'identity' => 'citizenship certificate, front',
-        'identity_back' => 'citizenship certificate, back',
-        'registration' => 'company registration certificate',
-        'tax' => 'PAN certificate',
-        'clearance' => 'latest tax clearance'
-    );
-    $stop = '';
-    foreach ($needed as $slot) {
-        $stored = billing_kyc_store_file($clientId, $slot, isset($files['doc_' . $slot]) ? $files['doc_' . $slot] : array());
+        $stored = billing_kyc_store_file($clientId, $slot, $upload);
         if (!$stored['ok']) {
-            $stop = $stored['error'];
-            break;
+            $docErrors['doc_' . $slot] = $stored['error'];
+            continue;
         }
         if ($stored['path']) {
             if ($docs[$slot] !== '' && $docs[$slot] !== $stored['path']) {
@@ -337,29 +335,50 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
             }
             $docs[$slot] = $stored['path'];
         }
-        if ($docs[$slot] === '' || billing_kyc_safe_path($clientId, $docs[$slot]) === '') {
-            $stop = 'Upload the ' . $labels[$slot] . '.';
-            break;
+        if (!empty($spec['required']) && ($docs[$slot] === '' || billing_kyc_safe_path($clientId, $docs[$slot]) === '')) {
+            $docErrors['doc_' . $slot] = 'Add the ' . strtolower($spec['label']) . '.';
         }
     }
-    if ($stop !== '') {
-        billing_kyc_write($conn, $clientId, $current['status'], $kind, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs, (string) $current['admin_note'], (string) $current['submitted_at']);
-        return $stop;
-    }
-    $drop = $kind === 'individual' ? array('registration', 'tax', 'authority', 'clearance') : array('identity', 'identity_back');
-    foreach ($drop as $slot) {
-        if ($docs[$slot] !== '') {
+    // Documents that the chosen account type does not use are removed.
+    foreach ($map as $slot => $column) {
+        if (!isset($wanted[$slot]) && $docs[$slot] !== '') {
             billing_kyc_unlink($clientId, $docs[$slot]);
             $docs[$slot] = '';
         }
     }
-    $status = 'pending';
-    $note = '';
-    $submitted = date('Y-m-d H:i:s');
-    if (!billing_kyc_write($conn, $clientId, $status, $kind, $purpose, $fullName, $idKind, $idNumber, $address, $orgName, $registration, $tax, $contactName, $contactKind, $contactNumber, $docs, $note, $submitted)) {
-        return 'The identity could not be saved. The details you typed are still in the form.';
+    $allErrors = array_merge($errors, $docErrors);
+    $complete = !$allErrors;
+
+    $columns = array(
+        'account_kind' => $kind,
+        'status' => $complete ? 'pending' : ($current['status'] === 'rejected' ? 'rejected' : ($current['status'] === 'pending' ? 'pending' : '')),
+        'purpose' => isset($values['purpose']) ? $values['purpose'] : '',
+        'full_name' => $kind === 'individual' && isset($values['full_name']) ? $values['full_name'] : '',
+        'id_kind' => $kind === 'individual' ? $check['id_kind'] : 'citizenship',
+        'id_number' => $kind === 'individual' && isset($values['id_number']) ? $values['id_number'] : '',
+        'address' => kyc_address_line($values, 'perm'),
+        'org_name' => $kind === 'organization' && isset($values['org_name']) ? $values['org_name'] : '',
+        'registration_number' => $kind === 'organization' && isset($values['registration_number']) ? $values['registration_number'] : '',
+        'tax_number' => $kind === 'organization' && isset($values['tax_number']) ? $values['tax_number'] : '',
+        'contact_name' => $kind === 'organization' && isset($values['contact_name']) ? $values['contact_name'] : '',
+        'contact_id_kind' => $kind === 'organization' ? $check['contact_kind'] : 'citizenship',
+        'contact_id_number' => $kind === 'organization' && isset($values['contact_id_number']) ? $values['contact_id_number'] : '',
+        'doc_identity' => $docs['identity'], 'doc_identity_back' => $docs['identity_back'], 'doc_registration' => $docs['registration'], 'doc_tax' => $docs['tax'],
+        'doc_authority' => $docs['authority'], 'doc_clearance' => $docs['clearance'], 'doc_photo' => $docs['photo'],
+        'details' => json_encode($values, JSON_UNESCAPED_UNICODE)
+    );
+    if ($complete) {
+        $columns['submitted_at'] = date('Y-m-d H:i:s');
+        $columns['admin_note'] = '';
     }
-    $who = $kind === 'individual' ? $fullName : $orgName;
+    if (!billing_kyc_save($conn, $clientId, $columns)) {
+        return array('ok' => false, 'errors' => $allErrors, 'values' => $values, 'message' => 'The identity could not be saved. Please try again.');
+    }
+    if (!$complete) {
+        $first = reset($allErrors);
+        return array('ok' => false, 'errors' => $allErrors, 'values' => $values, 'message' => 'Some details need attention (' . count($allErrors) . '). What you entered is saved: ' . $first);
+    }
+    $who = $kind === 'individual' ? $values['full_name'] : $values['org_name'];
     billing_mail_client_event($conn, $clientId, 'kyc-received');
     billing_notify($conn, 'Identity waiting for approval', array(
         'A client submitted identity details.',
@@ -368,7 +387,14 @@ function billing_kyc_submit($conn, $clientId, $post, $files)
         'Client: ' . billing_notify_client_label($conn, $clientId),
         'Open Admin → Identity.'
     ));
-    return '';
+    return array('ok' => true, 'errors' => array(), 'values' => $values, 'message' => '');
+}
+
+/** Older callers: the first message, or an empty string when all went well. */
+function billing_kyc_submit($conn, $clientId, $post, $files)
+{
+    $result = billing_kyc_submit_detailed($conn, $clientId, $post, $files);
+    return $result['ok'] ? '' : $result['message'];
 }
 
 function billing_kyc_decide($conn, $clientId, $decision, $note)
@@ -409,39 +435,99 @@ function billing_kyc_decide($conn, $clientId, $decision, $note)
     return '';
 }
 
-function billing_kyc_queue($conn, $find = '')
+function billing_kyc_queue($conn, $find = '', $status = '')
 {
     $base = 'SELECT k.*, c.name AS account_name, c.email, c.phone FROM client_kyc k JOIN client_users c ON c.id = k.client_id ';
     $find = admin_find_text($find);
+    $where = array("k.status <> ''");
+    $types = '';
+    $values = array();
+    if (in_array($status, array('pending', 'approved', 'rejected'), true)) {
+        $where[] = 'k.status = ?';
+        $types .= 's';
+        $values[] = $status;
+    }
     if ($find !== '') {
         $like = '%' . $find . '%';
-        $stmt = $conn->prepare($base . 'WHERE c.name LIKE ? OR c.email LIKE ? OR k.full_name LIKE ? OR k.org_name LIKE ? ORDER BY k.submitted_at DESC LIMIT 50');
-        $stmt->bind_param('ssss', $like, $like, $like, $like);
-        $stmt->execute();
-        $rows = db_fetch_all($stmt);
-        $stmt->close();
-        return $rows;
-    }
-    $rows = array();
-    $seen = array();
-    foreach (array(
-        $base . "WHERE k.status = 'pending' ORDER BY k.submitted_at DESC",
-        $base . 'ORDER BY k.submitted_at DESC LIMIT 80'
-    ) as $sql) {
-        $result = $conn->query($sql);
-        if (!$result) {
-            continue;
-        }
-        while ($row = $result->fetch_assoc()) {
-            $id = (int) $row['client_id'];
-            if (isset($seen[$id])) {
-                continue;
-            }
-            $seen[$id] = true;
-            $rows[] = $row;
+        $where[] = '(c.name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR k.full_name LIKE ? OR k.org_name LIKE ? OR k.id_number LIKE ? OR k.registration_number LIKE ? OR k.tax_number LIKE ? OR k.details LIKE ?)';
+        $types .= 'sssssssss';
+        for ($n = 0; $n < 9; $n++) {
+            $values[] = $like;
         }
     }
+    $stmt = $conn->prepare($base . 'WHERE ' . implode(' AND ', $where) . " ORDER BY CASE WHEN k.status = 'pending' THEN 0 ELSE 1 END, k.submitted_at DESC LIMIT 80");
+    if ($values) {
+        $stmt->bind_param($types, ...$values);
+    }
+    $stmt->execute();
+    $rows = db_fetch_all($stmt) ?: array();
+    $stmt->close();
     return $rows;
+}
+
+/** How many identities are in each state (for the tabs). */
+function billing_kyc_counts($conn)
+{
+    $counts = array('pending' => 0, 'approved' => 0, 'rejected' => 0);
+    $result = $conn->query("SELECT status, COUNT(*) AS n FROM client_kyc WHERE status <> '' GROUP BY status");
+    while ($result && ($row = $result->fetch_assoc())) {
+        if (isset($counts[$row['status']])) {
+            $counts[$row['status']] = (int) $row['n'];
+        }
+    }
+    $counts['all'] = array_sum($counts);
+    return $counts;
+}
+
+/**
+ * What the reviewer should look at: missing documents, repeated numbers, a name that does not
+ * match the account, old-style submissions. tone: bad, warn, ok.
+ */
+function billing_kyc_flags($conn, $row)
+{
+    $flags = array();
+    $clientId = (int) $row['client_id'];
+    $kind = $row['account_kind'] === 'organization' ? 'organization' : 'individual';
+    $idKind = $kind === 'organization' ? $row['contact_id_kind'] : $row['id_kind'];
+    $columns = array('identity' => 'doc_identity', 'identity_back' => 'doc_identity_back', 'registration' => 'doc_registration', 'tax' => 'doc_tax', 'authority' => 'doc_authority', 'clearance' => 'doc_clearance', 'photo' => 'doc_photo');
+    $missing = array();
+    foreach (kyc_doc_spec($kind, $idKind) as $spec) {
+        if (!empty($spec['required']) && billing_kyc_safe_path($clientId, (string) $row[$columns[$spec['slot']]]) === '') {
+            $missing[] = $spec['label'];
+        }
+    }
+    if ($missing) {
+        $flags[] = array('tone' => 'bad', 'text' => 'Missing: ' . implode(', ', $missing) . '.');
+    }
+    if ($row['details'] === '' || $row['details'] === null) {
+        $flags[] = array('tone' => 'warn', 'text' => 'Submitted with the older, shorter form. Gender, family, issue date and addresses are not on file. Ask the client to update before approving.');
+    }
+    foreach (array('id_number' => 'document number', 'contact_id_number' => 'authorized person\'s document number', 'registration_number' => 'registration number', 'tax_number' => 'PAN number') as $column => $label) {
+        $same = billing_kyc_duplicates($conn, $clientId, $column, (string) $row[$column]);
+        if ($same) {
+            $names = array();
+            foreach ($same as $other) {
+                $names[] = '<a href="client.php?id=' . (int) $other['client_id'] . '">' . htmlspecialchars((string) $other['name'], ENT_QUOTES, 'UTF-8') . '</a>';
+            }
+            $flags[] = array('tone' => 'warn', 'html' => true, 'text' => 'The same ' . $label . ' is also on: ' . implode(', ', $names) . '.');
+        }
+    }
+    $account = strtolower(preg_replace('/[^a-z ]/i', ' ', (string) $row['account_name']));
+    $given = strtolower(preg_replace('/[^a-z ]/i', ' ', $kind === 'organization' ? (string) $row['org_name'] . ' ' . (string) $row['contact_name'] : (string) $row['full_name']));
+    $shared = array_intersect(array_filter(explode(' ', $account), function ($w) { return strlen($w) > 2; }), explode(' ', $given));
+    if (trim($account) !== '' && trim($given) !== '' && !$shared) {
+        $flags[] = array('tone' => 'warn', 'text' => 'The name on the account ("' . $row['account_name'] . '") shares no word with the name given here. This can be fine; check the document.');
+    }
+    $values = billing_kyc_values($row);
+    $mobile = isset($values['mobile']) ? (string) $values['mobile'] : '';
+    $phone = kyc_mobile_normalise((string) $row['phone']);
+    if ($mobile !== '' && $phone !== '' && $mobile !== $phone) {
+        $flags[] = array('tone' => 'warn', 'text' => 'The mobile number here (' . $mobile . ') differs from the account phone (' . $phone . ').');
+    }
+    if (!$flags) {
+        $flags[] = array('tone' => 'ok', 'text' => 'All required documents are present and nothing looks repeated or mismatched.');
+    }
+    return $flags;
 }
 
 function billing_kyc_send($conn, $clientId, $slot)
@@ -452,7 +538,8 @@ function billing_kyc_send($conn, $clientId, $slot)
         'registration' => 'doc_registration',
         'tax' => 'doc_tax',
         'authority' => 'doc_authority',
-        'clearance' => 'doc_clearance'
+        'clearance' => 'doc_clearance',
+        'photo' => 'doc_photo'
     );
     if (!isset($map[$slot])) {
         http_response_code(404);
@@ -473,7 +560,8 @@ function billing_kyc_send($conn, $clientId, $slot)
     header('Content-Type: ' . $types[$ext]);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
-    header('Content-Disposition: ' . ($ext === 'pdf' ? 'attachment' : 'inline') . '; filename="identity-document.' . $ext . '"');
+    $showHere = $ext !== 'pdf' || (isset($_GET['inline']) && $_GET['inline'] === '1');
+    header('Content-Disposition: ' . ($showHere ? 'inline' : 'attachment') . '; filename="identity-document.' . $ext . '"');
     header('Content-Length: ' . (string) filesize($full));
     readfile($full);
     exit;
@@ -492,4 +580,21 @@ function billing_client_has_messaging($conn, $clientId)
     $row = db_fetch_assoc($stmt);
     $stmt->close();
     return (bool) $row;
+}
+
+/** Other accounts that gave the same document, registration or PAN number (a check for the reviewer). */
+function billing_kyc_duplicates($conn, $clientId, $column, $value)
+{
+    $columns = array('id_number', 'registration_number', 'tax_number', 'contact_id_number');
+    if (!in_array($column, $columns, true) || trim((string) $value) === '') {
+        return array();
+    }
+    $clientId = (int) $clientId;
+    $value = (string) $value;
+    $stmt = $conn->prepare('SELECT k.client_id, c.name FROM client_kyc k JOIN client_users c ON c.id = k.client_id WHERE k.' . $column . ' = ? AND k.client_id <> ? LIMIT 5');
+    $stmt->bind_param('si', $value, $clientId);
+    $stmt->execute();
+    $rows = db_fetch_all($stmt) ?: array();
+    $stmt->close();
+    return $rows;
 }

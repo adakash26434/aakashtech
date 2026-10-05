@@ -183,6 +183,8 @@ public_html/
 - Set a strong admin password before enabling admin sign-in
 
 ### Tests
+`php tests/kyc-test.php` checks the identity form rules (dates in BS and AD, document numbers, 77 districts, addresses, same-as-permanent), saving drafts, camera and file uploads, passport (one side) against citizenship (two sides), personal and organization submissions, approval and the lock.
+
 `php tests/sms-balance-test.php` breaks the SMS line on purpose (line down, some numbers refused, a crash, a send cut off half way, a network failure report, a scheduled send) and checks the client is never charged for a message that did not go out and that the books always balance. Run it before touching `includes/sms/delivery.php`.
 
 `php tests/admin-pages-test.php` does the same for every admin page (and checks sub-folder file paths). Add `--hash` to print a fingerprint per page; run it on two versions of the code and `diff` the output to prove a refactor changed nothing visible.
@@ -250,3 +252,13 @@ Client: **Delivery report** in the sidebar. Admin: **SMS report**. Both show the
 
 ### Service pages (Buy, Checkout, My Services)
 Shared look for every service lives in `assets/css/service-ui.css` (colours from `tokens.css`). Plan numbers and wording (VAT bill, wallet cover, saving, cost per mailbox, identity note) come from `includes/shop-view.php`, with tests in `tests/money-test.php`. **Buy a service** shows: how buying works, a tab per service with plan counts, one card per plan with the real price and 13% VAT bill, a badge only when it is true (offer saving, lowest cost per mailbox), whether the wallet covers the plan or how much to add, and the SMS/voice rate ladder.
+
+### Identity (KYC)
+One list in `includes/billing/kyc-fields.php` describes every section and field; it builds the client form, checks the answers on the server and prints the read-only views for both client and admin. To add or change a question, edit that list.
+- **Personal:** name, gender, date of birth, occupation, mobile; document type, number, issue date, issued-from district; permanent and current address (province, district, municipality or rural municipality, ward, tole; "same as permanent"); grandfather, father and mother; purpose; photo and the document (front and back, passport one side).
+- **Organization:** name, type, registration number, registered with, registration date, PAN/VAT, what it does, office phone and email; registered and current address; authorized person (position, gender, mobile, email and document details); purpose; registration, PAN, tax clearance, authority letter (optional), the person's document and photo.
+- Dates can be typed in BS (Nepali) or AD. A National ID number must have 10 digits.
+- **On a phone:** "Take photo" opens the camera, "Choose file" picks a photo or PDF. Big photos are shrunk in the browser before upload (limit 5 MB each). Text answers are kept in the browser tab while the form is open, never photos.
+- **After approval** the client sees all details and documents (and can open them full-size, zoom and turn); the details are locked, changes go through Support.
+- **Admin → Identity checks:** tabs (Waiting / Verified / Sent back / All) with counts, search by name, phone, document or PAN number, every detail and document in one place with a viewer, automatic notes (missing documents, the same document or PAN number on another account, name or mobile that do not match the account, old-form submissions), and common reasons to send back with one click.
+- Identities approved on the older, shorter form keep working and are shown with the details they have.
