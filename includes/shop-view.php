@@ -129,3 +129,53 @@ function service_renewal_summary($rows, $walletBalance, $withinDays = 30)
     });
     return array('items' => $due, 'total' => round($total, 2), 'short_by' => max(0.0, round($total - (float) $walletBalance, 2)), 'days' => $withinDays);
 }
+
+/** Words for a wallet row: what it was, in a sentence a person would say. */
+function wallet_entry_words($entry)
+{
+    $kind = (string) $entry['kind'];
+    $note = trim((string) $entry['reference_note']);
+    $titles = array('topup' => 'Money added', 'purchase' => 'Bought a service', 'renewal' => 'Renewal paid', 'refund' => 'Money returned');
+    $title = isset($titles[$kind]) ? $titles[$kind] : ucfirst($kind);
+    $status = (string) $entry['status'];
+    $states = array('completed' => array('Done', 'ok'), 'pending' => array('Waiting for confirmation', 'warn'), 'rejected' => array('Not accepted', 'bad'), 'reversed' => array('Reversed', 'none'));
+    $state = isset($states[$status]) ? $states[$status] : array(ucfirst($status), 'none');
+    return array('title' => $title, 'note' => $note, 'state' => $state[0], 'tone' => $state[1], 'in' => (string) $entry['direction'] === 'credit');
+}
+
+/** Totals for the rows on screen: money in and out, counting only finished rows, and what is still waiting. */
+function wallet_totals($entries)
+{
+    $in = 0.0;
+    $out = 0.0;
+    $waiting = 0.0;
+    foreach ($entries as $entry) {
+        $amount = (float) $entry['amount'];
+        if ($entry['status'] === 'pending' && $entry['direction'] === 'credit') {
+            $waiting += $amount;
+        } elseif ($entry['status'] === 'completed') {
+            if ($entry['direction'] === 'credit') {
+                $in += $amount;
+            } else {
+                $out += $amount;
+            }
+        }
+    }
+    return array('in' => round($in, 2), 'out' => round($out, 2), 'waiting' => round($waiting, 2));
+}
+
+/** Quick top-up amounts: round numbers, plus the exact sum that covers the coming renewals if the wallet is short. */
+function wallet_quick_amounts($shortBy)
+{
+    $amounts = array(1000, 2000, 5000, 10000, 25000);
+    $chips = array();
+    if ($shortBy > 0) {
+        $chips[] = array('amount' => (int) ceil($shortBy), 'label' => 'NPR ' . number_format((int) ceil($shortBy)), 'note' => 'covers your coming renewals');
+    }
+    foreach ($amounts as $amount) {
+        if ($shortBy <= 0 || $amount !== (int) ceil($shortBy)) {
+            $chips[] = array('amount' => $amount, 'label' => 'NPR ' . number_format($amount), 'note' => '');
+        }
+    }
+    return $chips;
+}

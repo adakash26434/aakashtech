@@ -125,3 +125,44 @@ a.svc-stat:hover { border-color: var(--brand-500); }
 .svc-knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .2s; }
 .svc-switch.is-on { border-color: var(--ok); } .svc-switch.is-on .svc-knob { background: var(--ok); } .svc-switch.is-on .svc-knob::after { transform: translateX(18px); }
 @media (max-width: 620px) { .svc-grid { grid-template-columns: 1fr; } .svc-stats { grid-template-columns: 1fr 1fr; } }
+
+/* ===== Wallet ===== */
+.wal-hero { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); margin-bottom: 18px; padding: 20px; border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--brand-50), var(--surface)); border: 1px solid var(--brand-200); box-shadow: var(--shadow-sm); }
+.wal-balance { display: grid; gap: 4px; align-content: start; }
+.wal-balance span { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-500); }
+.wal-balance strong { font-family: var(--font-heading); font-size: 38px; line-height: 1.1; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.wal-balance em { font-style: normal; font-size: 14px; font-weight: 600; } .wal-balance em.is-wait { color: var(--warn); }
+.wal-balance .co-pay { justify-self: start; margin-top: 10px; }
+.wal-credits { margin: 0; display: grid; gap: 10px; grid-template-columns: 1fr 1fr; align-content: start; }
+.wal-credits div { padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--line); }
+.wal-credits dt { font-size: 12px; color: var(--ink-500); } .wal-credits dd { margin: 0; font-family: var(--font-heading); font-size: 22px; color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.wal-renew { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; padding: 10px 14px; border-radius: var(--radius-md); font-size: 14px; }
+.wal-renew.is-ok { background: var(--ok-bg); color: var(--ok); } .wal-renew.is-short { background: var(--warn-bg); color: var(--warn); } .wal-renew span { color: var(--ink-700); }
+.wal-form { display: grid; gap: 18px; }
+.wal-step { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.wal-step legend { display: flex; gap: 10px; align-items: center; padding: 0; margin-bottom: 6px; font-weight: 700; color: var(--ink-900); font-size: 15px; }
+.wal-step legend b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--brand-500); color: #fff; font-size: 12px; }
+.wal-methods { display: grid; gap: 8px; }
+.wal-method { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--radius-md); background: var(--surface); cursor: pointer; min-height: 48px; }
+.wal-method:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); box-shadow: var(--ring); }
+.wal-method input { margin-top: 3px; } .wal-method span { display: grid; gap: 4px; min-width: 0; } .wal-method b { color: var(--ink-900); font-size: 15px; } .wal-method small { color: var(--ink-500); font-size: 13px; line-height: 1.55; word-break: break-word; }
+.wal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wal-chips button { display: inline-flex; flex-direction: column; align-items: flex-start; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-900); font-weight: 700; font-size: 14px; cursor: pointer; }
+.wal-chips button small { font-weight: 500; font-size: 11px; color: var(--ink-500); }
+.wal-chips button:hover { border-color: var(--brand-500); background: var(--brand-50); }
+.wal-sum { margin: 0 0 10px; font-size: 14px; color: var(--ink-500); } .wal-sum b { color: var(--ink-900); } .wal-sum b.is-in { color: var(--ok); }
+.wal-table { border-collapse: collapse; }
+.wal-table th { padding: 12px 16px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-500); border-bottom: 1px solid var(--line); }
+.wal-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--ink-900); vertical-align: top; font-variant-numeric: tabular-nums; }
+.wal-table td small { display: block; font-size: 12px; color: var(--ink-500); margin-top: 2px; }
+.wal-table td.is-in { color: var(--ok); font-weight: 700; } .wal-table tr.is-pending td { background: var(--warn-bg); }
+.wal-empty { text-align: center; padding: 36px 16px !important; color: var(--ink-500) !important; }
+@media (max-width: 820px) { .wal-hero { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+    .wal-balance strong { font-size: 32px; }
+    .wal-table thead { display: none; } .wal-table, .wal-table tbody, .wal-table tr, .wal-table td { display: block; width: 100%; }
+    .wal-table tr { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+    .wal-table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; text-align: right; }
+    .wal-table td::before { content: attr(data-label); color: var(--ink-500); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; text-align: left; flex: none; }
+    .wal-table td small { text-align: right; }
+}

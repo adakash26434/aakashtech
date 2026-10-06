@@ -150,5 +150,18 @@ check('renewals: only auto-renewing active or overdue services within 30 days co
 check('renewals: the wallet shortfall is worked out', $ren['short_by'] === 5509.0 && service_renewal_summary($rowsSvc, 20000)['short_by'] === 0.0);
 check('renewals: the overdue one is first and negative days', $ren['items'][0]['name'] === 'Email B' && $ren['items'][0]['days'] === -2);
 check('status words are plain', service_status_info('past_due', true)['label'] === 'Needs funds' && service_status_info('booked', false)['tone'] === 'info' && service_group('suspended') === 'attention' && service_group('cancelled') === 'ended');
+// Wallet page helpers
+$walletRows = array(
+  array('kind' => 'topup', 'direction' => 'credit', 'status' => 'completed', 'amount' => 3000, 'reference_note' => 'ESW1'),
+  array('kind' => 'purchase', 'direction' => 'debit', 'status' => 'completed', 'amount' => 2034, 'reference_note' => 'Domain'),
+  array('kind' => 'topup', 'direction' => 'credit', 'status' => 'pending', 'amount' => 5000, 'reference_note' => 'BANK'),
+  array('kind' => 'topup', 'direction' => 'credit', 'status' => 'rejected', 'amount' => 700, 'reference_note' => 'BAD'),
+);
+$wt = wallet_totals($walletRows);
+check('wallet totals: only finished rows are money in or out, pending is waiting', $wt['in'] === 3000.0 && $wt['out'] === 2034.0 && $wt['waiting'] === 5000.0);
+check('wallet words: a waiting top-up and a refused one are told apart', wallet_entry_words($walletRows[2])['state'] === 'Waiting for confirmation' && wallet_entry_words($walletRows[3])['tone'] === 'bad' && wallet_entry_words($walletRows[1])['in'] === false);
+$chips = wallet_quick_amounts(5475.5);
+check('wallet chips: the exact renewal sum comes first, rounded up', $chips[0]['amount'] === 5476 && $chips[0]['note'] !== '' && count($chips) === 6);
+check('wallet chips: round amounts only when nothing is due', count(wallet_quick_amounts(0)) === 5 && wallet_quick_amounts(0)[0]['amount'] === 1000);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
