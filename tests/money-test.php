@@ -163,5 +163,14 @@ check('wallet words: a waiting top-up and a refused one are told apart', wallet_
 $chips = wallet_quick_amounts(5475.5);
 check('wallet chips: the exact renewal sum comes first, rounded up', $chips[0]['amount'] === 5476 && $chips[0]['note'] !== '' && count($chips) === 6);
 check('wallet chips: round amounts only when nothing is due', count(wallet_quick_amounts(0)) === 5 && wallet_quick_amounts(0)[0]['amount'] === 1000);
+// Admin: needs your attention
+require_once $root . '/includes/admin-queue.php';
+$nowT = strtotime('2026-10-10 12:00:00');
+check('queue: nothing waiting gives an empty list', admin_attention_items(array()) === array());
+$q = admin_attention_items(array('inquiries' => 4, 'tickets' => 1, 'kyc' => 2, 'topups' => 3, 'sms_short' => 500, 'sms_holding' => 9000, 'renewals' => 1), array('topups' => '2026-10-07 09:00:00', 'kyc' => '2026-10-10 08:00:00'), $nowT);
+check('queue: money and blocked clients come before inquiries', array_map(function ($i) { return $i['key']; }, $q) === array('sms_short', 'topups', 'kyc', 'tickets', 'inquiries', 'renewals'));
+check('queue: how long the oldest has waited is said in days', $q[1]['age'] === 'oldest 3 days' && $q[2]['age'] === 'since today' && $q[4]['age'] === '');
+check('queue: singular and plural wording', $q[3]['title'] === '1 support ticket waiting' && $q[2]['title'] === '2 identities to check' && admin_attention_items(array('kyc' => 1))[0]['title'] === '1 identity to check');
+check('queue: the SMS stock row says how short and for how many', $q[0]['tone'] === 'bad' && strpos($q[0]['help'], '9,000') !== false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

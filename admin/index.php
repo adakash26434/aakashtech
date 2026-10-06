@@ -21,6 +21,8 @@ $sms_clients_holding = 0;
 $renewing_soon = 0;
 $recent_inquiries = false;
 $recent_clients = false;
+$waitingSince = array();
+require_once __DIR__ . '/../includes/admin-queue.php';
 try {
     $dashCount = function ($sql) use ($conn) {
         $result = $conn->query($sql);
@@ -75,6 +77,13 @@ try {
     $mailRow = db_fetch_assoc($mailStmt);
     $mailStmt->close();
     $mail_logins = $mailRow ? (int) $mailRow['c'] : 0;
+    $waitingSince = array(
+        'topups' => admin_waiting_since($conn, "SELECT MIN(created_at) FROM wallet_entries WHERE kind = 'topup' AND status = 'pending'"),
+        'kyc' => admin_waiting_since($conn, "SELECT MIN(submitted_at) FROM client_kyc WHERE status = 'pending'"),
+        'tickets' => admin_waiting_since($conn, "SELECT MIN(created_at) FROM support_tickets WHERE status IN ('open','in_progress')"),
+        'inquiries' => admin_waiting_since($conn, "SELECT MIN(created_at) FROM inquiries WHERE status = 'new'"),
+        'senders' => admin_waiting_since($conn, "SELECT MIN(created_at) FROM sms_sender_names WHERE status = 'pending'")
+    );
     $recent_inquiries = $conn->query("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 5");
     $recent_clients = $conn->query("SELECT id, name, email, company, status, created_at FROM client_users ORDER BY created_at DESC LIMIT 5");
 } catch (Throwable $exception) {
@@ -98,66 +107,13 @@ try {
 }
 ?>
 
-<?php if ((int) $pending_topups > 0): ?>
-    <a href="billing.php?tab=wallet" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
-        <?= (int) $pending_topups ?> wallet top-up<?= (int) $pending_topups === 1 ? '' : 's' ?> waiting for confirmation. Renewals after that are automatic.
-    </a>
-<?php endif; ?>
-<?php if ((int) $booked_orders > 0): ?>
-    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $booked_orders ?> website or training booking<?= (int) $booked_orders === 1 ? '' : 's' ?> waiting. The brief is under Billing → Delivery.
-    </a>
-<?php endif; ?>
-<?php if ((int) $hosting_logins > 0): ?>
-    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $hosting_logins ?> hosting plan<?= (int) $hosting_logins === 1 ? ' needs' : 's need' ?> a cPanel login. Add it under Billing → Delivery.
-    </a>
-<?php endif; ?>
-<?php if ((int) $mail_logins > 0): ?>
-    <a href="billing.php?tab=delivery" class="mb-6 block p-4 rounded-2xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-sm">
-        <?= (int) $mail_logins ?> mailbox plan<?= (int) $mail_logins === 1 ? ' needs' : 's need' ?> the login shown to the client. Add it under Billing → Delivery.
-    </a>
-<?php endif; ?>
-<?php if ((int) $new_inquiries > 0): ?>
-    <a href="inquiries.php" class="mb-6 block p-4 rounded-2xl border border-green-500/30 bg-green-500/10 text-green-300 text-sm">
-        <?= (int) $new_inquiries ?> new inquir<?= (int) $new_inquiries === 1 ? 'y' : 'ies' ?> waiting.
-    </a>
-<?php endif; ?>
-<?php if ((int) $open_tickets > 0): ?>
-    <a href="tickets.php" class="mb-6 block p-4 rounded-2xl border border-orange-500/30 bg-orange-500/10 text-orange-200 text-sm">
-        <?= (int) $open_tickets ?> support ticket<?= (int) $open_tickets === 1 ? '' : 's' ?> waiting.
-    </a>
-<?php endif; ?>
-<?php if ((int) $paid_domains > 0): ?>
-    <a href="domains.php" class="mb-6 block p-4 rounded-2xl border border-brand-500/30 bg-brand-500/10 text-brand-400 text-sm">
-        <?= (int) $paid_domains ?> paid domain<?= (int) $paid_domains === 1 ? '' : 's' ?> waiting. Register the name, then mark it active.
-    </a>
-<?php endif; ?>
-<?php if ((int) $sms_stock_short > 0): ?>
-    <a href="sms-line.php?tab=line" class="mb-6 block p-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
-        Clients still hold <?= number_format((int) $sms_clients_holding) ?> SMS, and the bulk line has less. Buy more from the vendor before those sends fail.
-    </a>
-<?php endif; ?>
-<?php if ((int) $renewing_soon > 0): ?>
-    <a href="billing.php?tab=records" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
-        <?= (int) $renewing_soon ?> hosting, domain, or mailbox year<?= (int) $renewing_soon === 1 ? '' : 's' ?> renew within 14 days. The wallet must cover them.
-    </a>
-<?php endif; ?>
-<?php if ((int) $waiting_voice > 0): ?>
-    <a href="campaigns.php" class="mb-6 block p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-200 text-sm">
-        <?= (int) $waiting_voice ?> voice job<?= (int) $waiting_voice === 1 ? '' : 's' ?> waiting. Place the call, then mark it placed.
-    </a>
-<?php endif; ?>
-<?php if ((int) $pending_senders > 0): ?>
-    <a href="sms-line.php?tab=names" class="mb-6 block p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-200 text-sm">
-        <?= (int) $pending_senders ?> sender name<?= (int) $pending_senders === 1 ? '' : 's' ?> waiting for approval.
-    </a>
-<?php endif; ?>
-<?php if ((int) $pending_kyc > 0): ?>
-    <a href="kyc.php" class="mb-6 block p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-sm">
-        <?= (int) $pending_kyc ?> identit<?= (int) $pending_kyc === 1 ? 'y' : 'ies' ?> waiting. SMS, a voice job, and an API token stay closed until you approve.
-    </a>
-<?php endif; ?>
+<?php
+admin_attention_render(admin_attention_items(array(
+    'sms_short' => $sms_stock_short, 'sms_holding' => $sms_clients_holding, 'topups' => $pending_topups, 'kyc' => $pending_kyc, 'domains' => $paid_domains,
+    'booked' => $booked_orders, 'hosting' => $hosting_logins, 'mail' => $mail_logins, 'voice' => $waiting_voice, 'senders' => $pending_senders,
+    'tickets' => $open_tickets, 'inquiries' => $new_inquiries, 'renewals' => $renewing_soon
+), $waitingSince));
+?>
 
 <!-- Stat Cards -->
 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
