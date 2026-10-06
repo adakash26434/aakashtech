@@ -38,6 +38,7 @@ if ($docRoot !== false && strpos(__DIR__, $docRoot) === 0) {
     <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/space-grotesk-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="assets/css/fonts.css">
+    <?= isset($conn) ? site_favicon_html($conn, '') : '' ?>
     <link rel="stylesheet" href="assets/css/tokens.css">
     <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/polish.css">

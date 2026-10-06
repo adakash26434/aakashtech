@@ -226,6 +226,25 @@ if (isset($_POST['save_homepage'])) {
                     </label>
                 <?php endif; ?>
             </div>
+            <?php $faviconPreview = site_favicon_file($settings['favicon_path'] ?? ''); ?>
+            <div>
+                <label class="block text-slate-400 text-xs font-medium mb-1.5" for="favicon">Tab icon (shown in the browser tab and bookmarks)</label>
+                <div class="flex items-center gap-4 mb-3">
+                    <?php if ($faviconPreview !== ''): ?>
+                        <img src="../<?= e($faviconPreview) ?>?v=<?= (int) @filemtime(dirname(__DIR__) . '/' . $faviconPreview) ?>" alt="Current tab icon" width="32" height="32" class="h-8 w-8 rounded bg-white object-contain" style="border:1px solid #dce8e4">
+                        <span class="text-slate-400 text-sm">This is how it looks in a tab. Visitors may need to refresh or reopen the browser to see a new one.</span>
+                    <?php else: ?>
+                        <span class="text-slate-400 text-sm">None uploaded. The logo is used for now.</span>
+                    <?php endif; ?>
+                </div>
+                <input id="favicon" type="file" name="favicon" accept="image/png,image/jpeg,image/webp,image/x-icon,.ico" class="form-input">
+                <p class="text-slate-500 text-xs mt-1.5">A square PNG works best: 512 by 512 pixels, simple, with a clear shape. Also PNG, JPG, WEBP or ICO, up to 500 KB.</p>
+                <?php if ($faviconPreview !== ''): ?>
+                    <label class="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                        <input type="checkbox" name="remove_favicon" value="1"> Remove it and use the logo instead
+                    </label>
+                <?php endif; ?>
+            </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Site name</label>
                 <input type="text" name="site_name" maxlength="80" class="form-input" value="<?= e($settings['site_name'] ?? '') ?>">

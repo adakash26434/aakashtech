@@ -39,11 +39,8 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                     <?= site_escape($siteLocation) ?>
                 </span>
                 <?php endif; ?>
-                <?php if ($chatChannels || $siteSocials): ?>
-                <div class="footer-social" aria-label="Social contact">
-                    <?php foreach ($chatChannels as $channel): ?>
-                        <a href="<?= site_escape($channel['href']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= site_escape($channel['label']) ?>"><?= $channel['icon'] ?></a>
-                    <?php endforeach; ?>
+                <?php if ($siteSocials): ?>
+                <div class="footer-social" aria-label="Social media">
                     <?php foreach ($siteSocials as $social): ?>
                         <a href="<?= site_escape($social['href']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= site_escape($social['label']) ?>"><?= $social['icon'] ?></a>
                     <?php endforeach; ?>

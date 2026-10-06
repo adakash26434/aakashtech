@@ -71,6 +71,7 @@ function site_public_defaults()
         'cookie_policy' => '',
         'terms_of_service' => '',
         'logo_path' => '',
+        'favicon_path' => '',
         'esewa_id' => defined('ESEWA_ID') ? ESEWA_ID : '',
         'khalti_id' => defined('KHALTI_ID') ? KHALTI_ID : '',
         'bank_details' => defined('BANK_DETAILS') ? BANK_DETAILS : ''
@@ -149,6 +150,9 @@ function site_public_settings($conn)
     if (!$managed) {
         if (!empty($stored['logo_path'])) {
             $settings['logo_path'] = $stored['logo_path'];
+        }
+        if (!empty($stored['favicon_path'])) {
+            $settings['favicon_path'] = $stored['favicon_path'];
         }
         foreach (array('privacy_policy', 'cookie_policy', 'terms_of_service') as $legalKey) {
             if (isset($stored[$legalKey]) && trim($stored[$legalKey]) !== '') {
@@ -504,4 +508,106 @@ function site_store_notice_image($file)
         return array('ok' => false, 'error' => 'The notice image could not be saved.');
     }
     return array('ok' => true, 'path' => $relative);
+}
+
+function site_favicon_file($path)
+{
+    return site_public_file($path, '/^uploads\/site-favicon\.(png|jpe?g|webp|ico)$/');
+}
+
+/**
+ * The small picture in the browser tab. Admin uploads it under Settings. PNG, JPG, WEBP or ICO,
+ * roughly square. SVG is not accepted because a file opened directly could carry a script.
+ */
+function site_store_favicon($file)
+{
+    if (!is_array($file) || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return array('ok' => true, 'path' => null);
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        return array('ok' => false, 'error' => 'The tab icon could not be uploaded.');
+    }
+    if ((int) $file['size'] > 524288) {
+        return array('ok' => false, 'error' => 'Use a tab icon smaller than 500 KB.');
+    }
+    $mime = '';
+    if (class_exists('finfo')) {
+        $info = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $info->file($file['tmp_name']);
+    }
+    $ext = '';
+    if (in_array($mime, array('image/x-icon', 'image/vnd.microsoft.icon'), true)) {
+        $head = (string) @file_get_contents($file['tmp_name'], false, null, 0, 4);
+        if ($head !== "\x00\x00\x01\x00") {
+            return array('ok' => false, 'error' => 'That is not a real ICO file.');
+        }
+        $ext = 'ico';
+    } else {
+        $types = array('image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp');
+        $image = @getimagesize($file['tmp_name']);
+        $byType = array(IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg');
+        if (defined('IMAGETYPE_WEBP')) {
+            $byType[IMAGETYPE_WEBP] = 'webp';
+        }
+        if (!isset($types[$mime]) || !$image || !isset($byType[$image[2]]) || $types[$mime] !== $byType[$image[2]]) {
+            return array('ok' => false, 'error' => 'The tab icon must be a PNG, JPG, WEBP or ICO image.');
+        }
+        $w = (int) $image[0];
+        $h = (int) $image[1];
+        if ($w < 32 || $h < 32) {
+            return array('ok' => false, 'error' => 'The tab icon is too small. Use at least 64 by 64 pixels (512 by 512 is best).');
+        }
+        if ($w > 2000 || $h > 2000 || max($w, $h) / min($w, $h) > 1.5) {
+            return array('ok' => false, 'error' => 'Use a square image no larger than 2000 pixels. A wide logo becomes unreadable in a tab.');
+        }
+        $ext = $types[$mime];
+    }
+    $dir = dirname(__DIR__, 2) . '/uploads';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return array('ok' => false, 'error' => 'The uploads folder could not be created.');
+    }
+    $relative = 'uploads/site-favicon.' . $ext;
+    foreach (glob($dir . '/site-favicon.*') as $old) {
+        if (is_file($old)) {
+            unlink($old);
+        }
+    }
+    $target = dirname(__DIR__, 2) . '/' . $relative;
+    $moved = !empty($GLOBALS['KYC_TEST_UPLOADS']) ? copy($file['tmp_name'], $target) : move_uploaded_file($file['tmp_name'], $target);
+    if (!$moved) {
+        return array('ok' => false, 'error' => 'The tab icon could not be saved.');
+    }
+    return array('ok' => true, 'path' => $relative);
+}
+
+/** <link> tags for the tab icon. With no icon uploaded the logo is used, so a tab is never blank. */
+function site_favicon_html($conn, $prefix = '')
+{
+    static $cache = array();
+    if (isset($cache[$prefix])) {
+        return $cache[$prefix];
+    }
+    $cache[$prefix] = '';
+    if (!$conn) {
+        return '';
+    }
+    $settings = site_public_settings($conn);
+    $path = site_favicon_file(isset($settings['favicon_path']) ? $settings['favicon_path'] : '');
+    if ($path === '') {
+        $path = site_logo_file(isset($settings['logo_path']) ? $settings['logo_path'] : '');
+    }
+    if ($path === '') {
+        return '';
+    }
+    $full = dirname(__DIR__, 2) . '/' . $path;
+    $version = is_file($full) ? (int) filemtime($full) : 0;
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $types = array('png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', 'gif' => 'image/gif', 'ico' => 'image/x-icon');
+    $href = htmlspecialchars($prefix . $path . '?v=' . $version, ENT_QUOTES, 'UTF-8');
+    $html = '<link rel="icon" type="' . $types[$ext] . '" href="' . $href . '">';
+    if (in_array($ext, array('png', 'jpg', 'jpeg', 'webp'), true)) {
+        $html .= '<link rel="apple-touch-icon" href="' . $href . '">';
+    }
+    $cache[$prefix] = $html;
+    return $html;
 }

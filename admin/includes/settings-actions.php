@@ -76,8 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
             } elseif ($logo['path'] !== null) {
                 $values['logo_path'] = $logo['path'];
             }
+            $favicon = site_store_favicon(isset($_FILES['favicon']) ? $_FILES['favicon'] : array());
+            if (!$favicon['ok']) {
+                $err = $favicon['error'];
+            } elseif (!empty($_POST['remove_favicon']) && $favicon['path'] === null) {
+                foreach (glob(dirname(__DIR__, 2) . '/uploads/site-favicon.*') as $oldIcon) {
+                    if (is_file($oldIcon)) {
+                        unlink($oldIcon);
+                    }
+                }
+                $values['favicon_path'] = '';
+            } elseif ($favicon['path'] !== null) {
+                $values['favicon_path'] = $favicon['path'];
+            }
             $noticeImage = site_store_notice_image(isset($_FILES['notice_image']) ? $_FILES['notice_image'] : array());
-            if (!$noticeImage['ok']) {
+            if ($err !== '') {
+                // the tab icon was refused: nothing is saved, the message is shown
+            } elseif (!$noticeImage['ok']) {
                 $err = $noticeImage['error'];
             } else {
                 if (!empty($_POST['remove_notice_image']) && $noticeImage['path'] === null) {

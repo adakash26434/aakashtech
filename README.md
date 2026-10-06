@@ -183,6 +183,8 @@ public_html/
 - Set a strong admin password before enabling admin sign-in
 
 ### Tests
+`php tests/favicon-test.php` checks the admin tab icon: a square PNG is accepted; tiny, wide, over-500-KB, SVG, text-renamed-to-PNG and PHP-renamed-to-PNG files are refused; the page head gets the icon with a cache version.
+
 `php tests/checkout-test.php` opens the real checkout page as a client: wallet too small, one payment charged once, the same page sent twice (second one refused), a payment without its order token, and the SMS price hook.
 
 `php tests/kyc-test.php` checks the identity form rules (dates in BS and AD, document numbers, 77 districts, addresses, same-as-permanent), saving drafts, camera and file uploads, passport (one side) against citizenship (two sides), personal and organization submissions, approval and the lock.
@@ -273,3 +275,7 @@ Top strip: wallet, SMS credits, voice calls and how many services are active or 
 
 ### Wallet
 Balance first, with money still waiting to be confirmed and the SMS and voice credits beside it. If auto-renewals in the next 30 days need more than the balance it says so and offers that exact amount as a quick button. Adding funds is three steps on one screen: pick the payment method (each card shows how to pay), the amount (quick buttons or typed, NPR 100 to 1,000,000), then the transaction ID after paying. Activity can be filtered (All, Money in, Money out, Waiting), shows what each row was in plain words with a status (Done, Waiting for confirmation, Not accepted) and a receipt link, and becomes cards on a phone. Wording and sums are in `includes/shop-view.php`, tested in `tests/money-test.php`.
+
+### Contact buttons and the tab icon
+- **One corner:** WhatsApp, Messenger and "Ask about the services" sit together at the bottom-right of every public page, as round icons that open into a label on hover or keyboard focus. They are not in the header any more, and the footer's social row holds only real social pages (Facebook and the like). The contact section on the home page and the footer's contact list still show them, because that is where a visitor looks for contact details. On a phone the stack sits above the bottom action bar, and it hides while the Ask panel is open.
+- **Tab icon:** Admin → Settings → *Tab icon*. Square PNG, 512 by 512 is best (also JPG, WEBP, ICO; up to 500 KB; no SVG). If none is uploaded the logo is used, so a tab is never blank. It is added to every public, client and admin page and to the iPhone home-screen icon; the file name carries a version so a new icon shows after a refresh.
