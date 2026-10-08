@@ -2,22 +2,36 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 $cid = get_client_id();
+require_once __DIR__ . '/../includes/support-view.php';
 $msg = '';
 $err = '';
-$ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium');
+$ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium', 'topic' => '', 'service_id' => 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     verify_csrf();
     $subject = substr(trim($_POST['subject'] ?? ''), 0, 160);
-    $desc = substr(trim($_POST['description'] ?? ''), 0, 4000);
+    $topic = isset($_POST['topic']) && is_string($_POST['topic']) ? $_POST['topic'] : '';
+    $serviceLabel = '';
+    $serviceId = isset($_POST['service_id']) ? (int) $_POST['service_id'] : 0;
+    if ($serviceId > 0) {
+        $own = $conn->prepare('SELECT service_name FROM client_services WHERE id = ? AND client_id = ? LIMIT 1');
+        $ownClient = (int) $cid;
+        $own->bind_param('ii', $serviceId, $ownClient);
+        $own->execute();
+        $ownRow = db_fetch_assoc($own);
+        $own->close();
+        $serviceLabel = $ownRow ? $ownRow['service_name'] . ' (#' . $serviceId . ')' : '';
+    }
+    $typedDescription = substr(trim($_POST['description'] ?? ''), 0, 3800);
+    $desc = $typedDescription === '' ? '' : substr(support_compose_description($topic, $serviceLabel, $typedDescription), 0, 4000);
     $priority = $_POST['priority'] ?? 'medium';
     $priorities = array('low', 'medium', 'high', 'urgent');
     if (!in_array($priority, $priorities, true)) {
         $priority = 'medium';
     }
-    $ticketDraft = array('subject' => $subject, 'description' => $desc, 'priority' => $priority);
+    $ticketDraft = array('subject' => $subject, 'description' => $typedDescription, 'priority' => $priority, 'topic' => $topic, 'service_id' => $serviceId);
     if ($subject === '' || $desc === '') {
-        $err = 'Subject and description are required.';
+        $err = 'Write a short subject and tell us what happened.';
     } else {
         $stmt = $conn->prepare("INSERT INTO support_tickets (client_id, subject, description, priority) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $cid, $subject, $desc, $priority);
@@ -34,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
                 'Open Admin → Support Tickets.'
             ));
             $msg = 'Support ticket created! We will respond shortly.';
-            $ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium');
+            $ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium', 'topic' => '', 'service_id' => 0);
         } else {
             $err = 'Failed to create ticket.';
         }
@@ -113,8 +127,22 @@ if ($find !== '') {
         $ticketStmt->close();
     }
 }
+$myServices = array();
+$svcStmt = $conn->prepare('SELECT id, service_name FROM client_services WHERE client_id = ? ORDER BY id DESC LIMIT 40');
+$svcStmt->bind_param('i', $cid);
+$svcStmt->execute();
+$myServices = db_fetch_all($svcStmt) ?: array();
+$svcStmt->close();
+$counts = array('open' => 0, 'done' => 0);
+foreach ($ticketRows as $countRow) {
+    $counts[support_group((string) $countRow['status'])]++;
+}
+$show = isset($_GET['show']) && in_array($_GET['show'], array('open', 'done', 'all'), true) ? (string) $_GET['show'] : ($counts['open'] > 0 || !$ticketRows ? 'open' : 'all');
+$shownRows = array_values(array_filter($ticketRows, function ($row) use ($show) {
+    return $show === 'all' || support_group((string) $row['status']) === $show;
+}));
 ?>
-<div class="mb-8">
+<div class="mb-8" id="support-top">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">Support</h1>
     <p class="text-slate-500 text-sm"><?= $find === '' ? 'Open tickets stay in view. Older tickets are in the latest 40.' : 'Matches for “' . e($find) . '”.' ?> <a class="text-brand-400" href="manual.php#support">नेपाली चरण</a></p>
 </div>
@@ -126,98 +154,100 @@ if ($find !== '') {
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
-<div x-data="{ tab: '<?= ($err !== '' && isset($_POST['create_ticket'])) ? 'work' : 'list' ?>' }">
+<?php $startOnForm = ($err !== '' && isset($_POST['create_ticket'])) || isset($_GET['new']); ?>
+<div x-data="{ tab: '<?= $startOnForm ? 'work' : 'list' ?>' }">
 <div class="portal-tabs" role="tablist">
-    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">Tickets</button>
+    <button type="button" role="tab" @click="tab='list'" :class="tab==='list' ? 'is-on' : ''">My tickets <span class="sup-count"><?= (int) $counts['open'] ?></span></button>
     <button type="button" role="tab" @click="tab='work'" :class="tab==='work' ? 'is-on' : ''">New ticket</button>
 </div>
+
 <div x-show="tab==='work'" x-cloak>
-<div class="dash-panel mb-6">
-    <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Open New Ticket</h3></div>
-    <form method="POST" action="" class="p-5 space-y-4">
-        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <div>
-            <label class="block text-slate-400 text-xs font-medium mb-1.5">Subject *</label>
-            <input type="text" name="subject" required class="form-input" placeholder="Brief description of your issue" value="<?= e($ticketDraft['subject']) ?>">
-        </div>
-        <div>
-            <label class="block text-slate-400 text-xs font-medium mb-1.5">Description *</label>
-            <textarea name="description" required rows="4" class="form-input resize-none" placeholder="Describe your issue in detail..."><?= e($ticketDraft['description']) ?></textarea>
-        </div>
-        <div>
-            <label class="block text-slate-400 text-xs font-medium mb-1.5">Priority</label>
-            <select name="priority" class="form-input w-auto">
-                <?php foreach (array('low', 'medium', 'high', 'urgent') as $priorityChoice): ?>
-                    <option value="<?= e($priorityChoice) ?>" <?= $ticketDraft['priority'] === $priorityChoice ? 'selected' : '' ?>><?= e(ucfirst($priorityChoice)) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <button type="submit" name="create_ticket" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Submit Ticket</button>
-    </form>
-</div>
-</div>
-<div x-show="tab==='list'">
-<form method="GET" class="mb-4 flex flex-wrap gap-2">
-    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Subject or message">
-    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
-</form>
-<div class="grid gap-4">
-    <?php if ($ticketRows): ?>
-        <?php foreach ($ticketRows as $t): ?>
-            <div class="dash-panel">
-                <div class="p-5">
-                    <div class="flex items-start justify-between gap-4 mb-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="font-heading font-semibold text-white text-base"><?= e($t['subject']) ?></h3>
-                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full <?=
-                                    $t['priority'] === 'urgent' ? 'bg-red-500/20 text-red-400' :
-                                    ($t['priority'] === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                                    ($t['priority'] === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'))
-                                ?>"><?= ucfirst($t['priority']) ?></span>
-                            </div>
-                            <p class="text-slate-500 text-xs"><?= date('M d, Y · h:i A', strtotime($t['created_at'])) ?></p>
-                        </div>
-                        <span class="px-2 py-1 text-[10px] font-medium rounded-full <?=
-                            $t['status'] === 'open' ? 'bg-green-500/20 text-green-400' :
-                            ($t['status'] === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
-                            ($t['status'] === 'resolved' ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-600/20 text-slate-400'))
-                        ?>"><?= str_replace('_', ' ', ucfirst($t['status'])) ?></span>
-                    </div>
-                    <p class="text-slate-300 text-sm mb-3"><?= e($t['description']) ?></p>
-                    <?php if (!empty($t['admin_reply'])): ?>
-                        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl mb-3">
-                            <p class="text-brand-400 text-xs font-medium mb-1">Support Team Reply:</p>
-                            <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['admin_reply']) ?></p>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($t['client_followup'])): ?>
-                        <div class="p-3 bg-slate-800/50 rounded-xl mb-3">
-                            <p class="text-slate-400 text-xs mb-1">Your follow-ups</p>
-                            <p class="text-slate-300 text-sm whitespace-pre-wrap"><?= e($t['client_followup']) ?></p>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($t['status'] !== 'closed'): ?>
-                        <form method="POST" class="space-y-2">
-                            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                            <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
-                            <label class="block text-slate-400 text-xs font-medium" for="follow-<?= (int) $t['id'] ?>">Add a follow-up</label>
-                            <textarea id="follow-<?= (int) $t['id'] ?>" name="client_followup" rows="3" maxlength="2000" class="form-input" placeholder="What changed, or what you still need"></textarea>
-                            <button type="submit" name="follow_ticket" value="1" class="px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save follow-up</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
+    <section class="sup-quick" aria-label="Quick answers">
+        <h2>Maybe the answer is one tap away</h2>
+        <ul>
+            <?php foreach (support_quick_answers() as $quick): ?>
+                <li><a href="<?= e($quick[2]) ?>"><b><?= e($quick[0]) ?></b><span><?= e($quick[1]) ?></span></a></li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+    <div class="dash-panel mb-6">
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Tell us what happened</h3></div>
+        <form method="POST" action="" class="p-5 sup-form">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <div class="kyc-grid">
+                <div class="kyc-field"><label for="sup-topic" class="block">What is it about?</label>
+                    <select id="sup-topic" name="topic"><option value="">Choose</option>
+                        <?php foreach (support_topics() as $topicKey => $topicLabel): ?><option value="<?= e($topicKey) ?>" <?= $ticketDraft['topic'] === $topicKey ? 'selected' : '' ?>><?= e($topicLabel) ?></option><?php endforeach; ?>
+                    </select></div>
+                <?php if ($myServices): ?>
+                <div class="kyc-field"><label for="sup-service" class="block">Which service? (if any)</label>
+                    <select id="sup-service" name="service_id"><option value="0">None, or not sure</option>
+                        <?php foreach ($myServices as $svcRow): ?><option value="<?= (int) $svcRow['id'] ?>" <?= (int) $ticketDraft['service_id'] === (int) $svcRow['id'] ? 'selected' : '' ?>><?= e($svcRow['service_name']) ?></option><?php endforeach; ?>
+                    </select></div>
+                <?php endif; ?>
             </div>
+            <div class="kyc-field"><label for="sup-subject" class="block">Short title <span class="req-mark" aria-hidden="true">*</span></label>
+                <input id="sup-subject" type="text" name="subject" required maxlength="160" placeholder="For example: SMS to Ncell numbers not arriving" value="<?= e($ticketDraft['subject']) ?>"></div>
+            <div class="kyc-field"><label for="sup-desc" class="block">What happened? <span class="req-mark" aria-hidden="true">*</span></label>
+                <textarea id="sup-desc" name="description" required rows="5" maxlength="3800" placeholder="What did you do, what did you expect, and what happened instead? Add numbers, dates or amounts if you have them."><?= e($ticketDraft['description']) ?></textarea>
+                <small class="field-hint">The more we know now, the fewer questions we ask later.</small></div>
+            <fieldset class="wal-step"><legend><b>?</b> How urgent is it?</legend>
+                <div class="wal-methods">
+                <?php foreach (support_urgency() as $urgencyKey => $urgency): ?>
+                    <label class="wal-method"><input type="radio" name="priority" value="<?= e($urgencyKey) ?>" <?= $ticketDraft['priority'] === $urgencyKey ? 'checked' : '' ?>>
+                        <span><b><?= e($urgency[0]) ?></b><small><?= e($urgency[1]) ?></small></span></label>
+                <?php endforeach; ?>
+                </div>
+            </fieldset>
+            <button type="submit" name="create_ticket" class="co-pay">Send to the team</button>
+        </form>
+    </div>
+</div>
+
+<div x-show="tab==='list'">
+    <nav class="shop-tabs" aria-label="Show" style="position:static;border:0;padding:0 0 12px">
+        <?php foreach (array('open' => 'Open', 'done' => 'Solved or closed', 'all' => 'All') as $key => $label): ?>
+            <a href="support.php?show=<?= e($key) ?><?= $find !== '' ? '&amp;q=' . rawurlencode($find) : '' ?>" class="<?= $show === $key ? 'is-on' : '' ?>"<?= $show === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?><?php if ($key !== 'all'): ?><span><?= (int) $counts[$key] ?></span><?php endif; ?></a>
+        <?php endforeach; ?>
+    </nav>
+    <form method="GET" class="mb-4 flex flex-wrap gap-2">
+        <input type="hidden" name="show" value="<?= e($show) ?>">
+        <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Search your tickets">
+        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+    </form>
+    <div class="grid gap-4">
+    <?php if ($shownRows): ?>
+        <?php foreach ($shownRows as $t): $st = support_status_words((string) $t['status']); ?>
+            <article class="sup-ticket is-<?= e($st[1]) ?>" id="t<?= (int) $t['id'] ?>">
+                <header>
+                    <div><h2><?= e($t['subject']) ?></h2><p>#<?= (int) $t['id'] ?> · opened <?= e(date('j M Y, g:i A', strtotime($t['created_at']))) ?><?= !empty($t['updated_at']) && $t['updated_at'] !== $t['created_at'] ? ' · updated ' . e(date('j M, g:i A', strtotime($t['updated_at']))) : '' ?></p></div>
+                    <span class="svc-pill is-<?= e($st[1]) ?>"><?= e($st[0]) ?></span>
+                </header>
+                <p class="sup-hint"><?= e($st[2]) ?></p>
+                <div class="sup-thread">
+                    <div class="sup-msg is-you"><b>You</b><p><?= e($t['description']) ?></p></div>
+                    <?php if (!empty($t['admin_reply'])): ?><div class="sup-msg is-team"><b>Support team</b><p><?= e($t['admin_reply']) ?></p></div><?php endif; ?>
+                    <?php if (!empty($t['client_followup'])): ?><div class="sup-msg is-you"><b>Your follow-ups</b><p><?= e($t['client_followup']) ?></p></div><?php endif; ?>
+                </div>
+                <?php if ($t['status'] !== 'closed'): ?>
+                    <form method="POST" class="sup-reply">
+                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                        <input type="hidden" name="ticket_id" value="<?= (int) $t['id'] ?>">
+                        <label for="follow-<?= (int) $t['id'] ?>" class="block"><?= $t['status'] === 'resolved' ? 'Not fixed? Tell us here. This opens it again.' : 'Add something' ?></label>
+                        <textarea id="follow-<?= (int) $t['id'] ?>" name="client_followup" rows="3" maxlength="2000" placeholder="What changed, or what you still need"></textarea>
+                        <button type="submit" name="follow_ticket" value="1" class="kyc-btn is-camera" style="border:0">Send</button>
+                    </form>
+                <?php endif; ?>
+            </article>
         <?php endforeach; ?>
     <?php else: ?>
-        <div class="dash-panel p-12 text-center">
-            <p class="text-slate-500 text-sm"><?= $find === '' ? 'No support tickets yet.' : 'No ticket matches that search.' ?></p>
-            <?php if ($find === ''): ?>
-                <button type="button" @click="tab='work'" class="mt-4 px-5 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Open a new ticket</button>
-            <?php endif; ?>
+        <div class="shop-empty">
+            <h2><?= $find !== '' ? 'No ticket matches that search' : ($show === 'done' ? 'Nothing solved or closed yet' : 'No open tickets') ?></h2>
+            <p><?= $find === '' ? 'When something needs the team, open a ticket and follow the whole conversation here.' : 'Clear the search or choose All.' ?></p>
+            <?php if ($find === ''): ?><button type="button" @click="tab='work'" class="shop-btn">Open a ticket</button><?php endif; ?>
         </div>
     <?php endif; ?>
-</div>
+    </div>
 </div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

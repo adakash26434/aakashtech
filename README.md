@@ -285,3 +285,6 @@ The pile of coloured banners is now one list, most urgent first: SMS stock short
 
 ### Company details in the footer
 Admin → Settings → *Company details*: registered name, company registration number, PAN / VAT number and office hours. Whatever is filled in appears in the footer of every public page, including Privacy, Cookies and Terms; empty lines are not shown and nothing is made up. The phone number is not printed (by choice, see Settings → public details).
+
+### Support (client)
+Before opening a ticket the client sees four quick answers (SMS not delivered, top-up not in the wallet, renewal date, identity status). The ticket form asks what it is about and which of their services, so the topic and the service name are written at the top of the ticket and the team does not have to ask; the service is checked to belong to the client. Urgency is chosen in words ("My work is blocked"). Tickets read as a conversation (you, the team, your follow-ups), the status is plain ("Waiting for us", "We are working on it", "Solved"), tabs split Open from Solved or closed, and a solved ticket can be reopened with one message. Wording lives in `includes/support-view.php`.

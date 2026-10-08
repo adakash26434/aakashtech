@@ -174,5 +174,11 @@ check('queue: singular and plural wording', $q[3]['title'] === '1 support ticket
 check('queue: the SMS stock row says how short and for how many', $q[0]['tone'] === 'bad' && strpos($q[0]['help'], '9,000') !== false);
 // Company facts in the footer
 check('company facts: only what was filled in is listed', site_company_facts(array()) === array() && count(site_company_facts(array('company_pan' => ' 601234567 ', 'company_registration' => '', 'office_hours' => 'Sun to Fri'))) === 2 && site_company_facts(array('company_pan' => '601234567'))[0]['value'] === '601234567');
+// Support wording
+require_once $root . '/includes/support-view.php';
+check('support: topic and service go on top of what the client wrote', support_compose_description('sms', 'Domain acme.com.np (#1)', ' It failed ') === "About: SMS or voice\nService: Domain acme.com.np (#1)\n\nIt failed");
+check('support: an unknown topic is ignored and no service adds no line', support_compose_description('nope', '', 'Hello') === 'Hello');
+check('support: status is in plain words and groups into open or done', support_status_words('open')[0] === 'Waiting for us' && support_status_words('resolved')[1] === 'ok' && support_group('in_progress') === 'open' && support_group('closed') === 'done');
+check('support: urgency choices explain themselves', count(support_urgency()) === 4 && strpos(support_urgency()['high'][0], 'blocked') !== false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
