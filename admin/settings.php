@@ -272,6 +272,20 @@ if (isset($_POST['save_homepage'])) {
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Location</label>
                 <input type="text" name="site_location" maxlength="120" class="form-input" value="<?= e($settings['site_location'] ?? '') ?>">
             </div>
+            <div class="sm:col-span-2">
+                <p class="text-slate-300 text-sm font-medium mb-1">Company details shown in the site footer</p>
+                <p class="text-slate-500 text-xs mb-3">Visitors trust a business that shows who it is. Fill in only what is true; empty lines are not shown.</p>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div><label class="block text-slate-400 text-xs font-medium mb-1.5" for="company_legal_name">Registered name</label>
+                        <input id="company_legal_name" type="text" name="company_legal_name" maxlength="120" class="form-input" value="<?= e($settings['company_legal_name'] ?? '') ?>" placeholder="Aakash Technologies Pvt. Ltd."></div>
+                    <div><label class="block text-slate-400 text-xs font-medium mb-1.5" for="company_registration">Company registration number</label>
+                        <input id="company_registration" type="text" name="company_registration" maxlength="40" class="form-input" value="<?= e($settings['company_registration'] ?? '') ?>"></div>
+                    <div><label class="block text-slate-400 text-xs font-medium mb-1.5" for="company_pan">PAN / VAT number</label>
+                        <input id="company_pan" type="text" name="company_pan" maxlength="40" inputmode="numeric" class="form-input" value="<?= e($settings['company_pan'] ?? '') ?>"></div>
+                    <div><label class="block text-slate-400 text-xs font-medium mb-1.5" for="office_hours">Office hours</label>
+                        <input id="office_hours" type="text" name="office_hours" maxlength="120" class="form-input" value="<?= e($settings['office_hours'] ?? '') ?>" placeholder="Sun to Fri, 10:00 to 17:00"></div>
+                </div>
+            </div>
             <div>
                 <label class="block text-slate-400 text-xs font-medium mb-1.5">Line under the logo</label>
                 <input type="text" name="footer_tagline" maxlength="180" class="form-input" value="<?= e($settings['footer_tagline'] ?? '') ?>">

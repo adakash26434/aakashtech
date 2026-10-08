@@ -92,3 +92,8 @@ body:has(.ask-open[aria-expanded="true"]) .guest-chat--dock { display: none; }
     .ask-dock { right: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
     .guest-chat--dock .guest-chat-link, .ask-open { width: 48px; min-width: 48px; height: 48px; min-height: 48px; padding: 0 13px; border-radius: 24px; }
 }
+
+/* Footer: company facts (registered name, registration, PAN/VAT, office hours) */
+.footer-company { margin: 14px 0 0; display: grid; gap: 6px; font-size: 14px; max-width: 34ch; }
+.footer-company div { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.footer-company dt { color: rgba(255, 255, 255, .62); } .footer-company dd { margin: 0; color: #fff; font-weight: 600; }

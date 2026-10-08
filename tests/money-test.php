@@ -172,5 +172,7 @@ check('queue: money and blocked clients come before inquiries', array_map(functi
 check('queue: how long the oldest has waited is said in days', $q[1]['age'] === 'oldest 3 days' && $q[2]['age'] === 'since today' && $q[4]['age'] === '');
 check('queue: singular and plural wording', $q[3]['title'] === '1 support ticket waiting' && $q[2]['title'] === '2 identities to check' && admin_attention_items(array('kyc' => 1))[0]['title'] === '1 identity to check');
 check('queue: the SMS stock row says how short and for how many', $q[0]['tone'] === 'bad' && strpos($q[0]['help'], '9,000') !== false);
+// Company facts in the footer
+check('company facts: only what was filled in is listed', site_company_facts(array()) === array() && count(site_company_facts(array('company_pan' => ' 601234567 ', 'company_registration' => '', 'office_hours' => 'Sun to Fri'))) === 2 && site_company_facts(array('company_pan' => '601234567'))[0]['value'] === '601234567');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

@@ -282,3 +282,6 @@ Balance first, with money still waiting to be confirmed and the SMS and voice cr
 
 ### Admin dashboard: needs your attention
 The pile of coloured banners is now one list, most urgent first: SMS stock short, wallet top-ups to confirm, identities to check, paid domains to register, website and training bookings, hosting and mailbox logins to add, voice jobs, sender names, support tickets, new inquiries, renewals due within 14 days. Each row has the count, what to do, how long the oldest has waited (top-ups, identities, tickets, inquiries, sender names) and a link to the exact page. When nothing waits it says so. The order and wording are in `includes/admin-queue.php` and tested in `tests/money-test.php`.
+
+### Company details in the footer
+Admin → Settings → *Company details*: registered name, company registration number, PAN / VAT number and office hours. Whatever is filled in appears in the footer of every public page, including Privacy, Cookies and Terms; empty lines are not shown and nothing is made up. The phone number is not printed (by choice, see Settings → public details).

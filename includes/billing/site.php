@@ -42,6 +42,10 @@ function site_public_defaults()
         'viber_number' => '',
         'messenger_url' => '',
         'site_location' => defined('SITE_LOCATION') ? SITE_LOCATION : 'Kathmandu, Nepal',
+        'company_legal_name' => '',
+        'company_registration' => '',
+        'company_pan' => '',
+        'office_hours' => '',
         'notice_enabled' => '0',
         'notice_title' => '',
         'notice_body' => '',
@@ -610,4 +614,17 @@ function site_favicon_html($conn, $prefix = '')
     }
     $cache[$prefix] = $html;
     return $html;
+}
+
+/** The company facts a customer looks for before trusting a site. Only what was filled in; nothing is invented. */
+function site_company_facts($settings)
+{
+    $facts = array();
+    foreach (array('company_legal_name' => 'Registered as', 'company_registration' => 'Registration no.', 'company_pan' => 'PAN / VAT no.', 'office_hours' => 'Office hours') as $key => $label) {
+        $value = isset($settings[$key]) ? trim((string) $settings[$key]) : '';
+        if ($value !== '') {
+            $facts[] = array('label' => $label, 'value' => $value);
+        }
+    }
+    return $facts;
 }

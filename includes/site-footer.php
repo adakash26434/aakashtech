@@ -39,6 +39,15 @@ $contactHref = ($navBase === '' ? '' : 'index.php') . '#contact';
                     <?= site_escape($siteLocation) ?>
                 </span>
                 <?php endif; ?>
+                <?php
+                $companyFacts = isset($conn) && $conn ? site_company_facts(site_public_settings($conn)) : array();
+                if ($companyFacts): ?>
+                <dl class="footer-company" aria-label="Company details">
+                    <?php foreach ($companyFacts as $fact): ?>
+                        <div><dt><?= site_escape($fact['label']) ?></dt><dd><?= site_escape($fact['value']) ?></dd></div>
+                    <?php endforeach; ?>
+                </dl>
+                <?php endif; ?>
                 <?php if ($siteSocials): ?>
                 <div class="footer-social" aria-label="Social media">
                     <?php foreach ($siteSocials as $social): ?>
