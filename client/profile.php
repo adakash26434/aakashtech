@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 $cid = get_client_id();
+require_once __DIR__ . '/../includes/profile-view.php';
 $msg = '';
 $err = '';
 
@@ -76,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['totp_action'])) {
     $totpNote = totp_manage_post($conn, 'client', $cid);
 }
 $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) $client['email'] : '');
+$kycNow = billing_kyc_load($conn, (int) $cid);
+$checklist = profile_checklist($client, (string) $kycNow['status']);
+$memberSince = !empty($client['created_at']) ? date('M Y', strtotime($client['created_at'])) : '';
 ?>
 <div class="mb-8">
     <h1 class="font-heading font-bold text-white text-2xl mb-1">My Profile</h1>
@@ -89,11 +93,28 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
     <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
+<section class="pro-card" aria-label="Account at a glance">
+    <div class="pro-who">
+        <?php $avatarTop = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#0b8b7a'; ?>
+        <span class="pro-avatar" style="background: <?= e($avatarTop) ?>"><?= e(strtoupper(substr((string) $client['name'], 0, 1))) ?></span>
+        <div><strong><?= e($client['name']) ?></strong><span><?= e($client['email']) ?><?= !empty($client['phone']) ? ' · ' . e($client['phone']) : '' ?></span><small><?= $memberSince !== '' ? 'Member since ' . e($memberSince) : '' ?></small></div>
+    </div>
+    <div class="pro-check">
+        <div class="pro-bar" role="img" aria-label="<?= (int) $checklist['percent'] ?> percent of your account is set up"><span style="width:<?= (int) $checklist['percent'] ?>%"></span></div>
+        <p><?= (int) $checklist['done'] ?> of <?= (int) $checklist['total'] ?> set up</p>
+        <ul>
+            <?php foreach ($checklist['items'] as $item): ?>
+                <li class="<?= $item['done'] ? 'is-done' : '' ?>"><a href="<?= e($item['href']) ?>"><i aria-hidden="true"><?= $item['done'] ? '✓' : '○' ?></i><span><b><?= e($item['title']) ?></b><small><?= e($item['help']) ?></small></span></a></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</section>
+
 <div class="grid lg:grid-cols-2 gap-6">
     <!-- Profile Info -->
     <div class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Account Information</h3></div>
-        <form method="POST" action="" class="p-5 space-y-4">
+        <form method="POST" action="" class="p-5 space-y-4" id="profile-form">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <?php $avatar = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#0b8b7a'; ?>
             <div class="flex items-center gap-4 mb-2">
@@ -132,23 +153,22 @@ $totpView = totp_manage_view('client', $cid, isset($client['email']) ? (string) 
     <!-- Change Password -->
     <div class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Change Password</h3></div>
-        <form method="POST" action="" class="p-5 space-y-4">
+        <form method="POST" action="" class="p-5 space-y-4 pro-pass" id="password-form">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-            <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Current Password</label>
-                <input type="password" name="current_pass" required class="form-input" placeholder="••••••••">
-            </div>
-            <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">New Password</label>
-                <input type="password" name="new_pass" required class="form-input" placeholder="Min 8 characters">
-            </div>
-            <div>
-                <label class="block text-slate-400 text-xs font-medium mb-1.5">Confirm New Password</label>
-                <input type="password" name="confirm_pass" required class="form-input" placeholder="Repeat new password">
-            </div>
-            <button type="submit" name="change_password" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Change Password</button>
+            <div><label class="block" for="current_pass">Current password</label>
+                <input id="current_pass" type="password" name="current_pass" required autocomplete="current-password" class="form-input"></div>
+            <div><label class="block" for="new_pass">New password</label>
+                <input id="new_pass" type="password" name="new_pass" required minlength="8" autocomplete="new-password" class="form-input" aria-describedby="pass-help" data-meter="pass-meter">
+                <div class="pro-meter" id="pass-meter" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                <small class="field-hint" id="pass-help">At least 8 characters. A few words together, with a number, is strong and easy to remember.</small></div>
+            <div><label class="block" for="confirm_pass">Type the new password again</label>
+                <input id="confirm_pass" type="password" name="confirm_pass" required autocomplete="new-password" class="form-input" data-match="new_pass">
+                <small class="field-hint" id="match-note" aria-live="polite"></small></div>
+            <label class="pro-show"><input type="checkbox" id="show-pass"> Show the passwords</label>
+            <button type="submit" name="change_password" class="co-pay">Change password</button>
         </form>
     </div>
     <?php require __DIR__ . '/../includes/totp-manage-card.php'; ?>
 </div>
+<script defer src="../assets/js/password.js"></script>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

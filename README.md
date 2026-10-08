@@ -288,3 +288,6 @@ Admin → Settings → *Company details*: registered name, company registration 
 
 ### Support (client)
 Before opening a ticket the client sees four quick answers (SMS not delivered, top-up not in the wallet, renewal date, identity status). The ticket form asks what it is about and which of their services, so the topic and the service name are written at the top of the ticket and the team does not have to ask; the service is checked to belong to the client. Urgency is chosen in words ("My work is blocked"). Tickets read as a conversation (you, the team, your follow-ups), the status is plain ("Waiting for us", "We are working on it", "Solved"), tabs split Open from Solved or closed, and a solved ticket can be reopened with one message. Wording lives in `includes/support-view.php`.
+
+### Profile (client)
+Top card: name, email, mobile, member since, and a short checklist (identity verified, address saved, company saved) with a progress bar; each item links to where it is fixed. The password form uses the right `autocomplete` values so phones and password managers offer to fill and to save, shows a strength bar and whether the two new passwords match as you type, and can show the passwords. The server rule is unchanged (at least 8 characters, current password required). Checklist and score rules: `includes/profile-view.php`.

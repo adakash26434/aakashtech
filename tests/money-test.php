@@ -180,5 +180,13 @@ check('support: topic and service go on top of what the client wrote', support_c
 check('support: an unknown topic is ignored and no service adds no line', support_compose_description('nope', '', 'Hello') === 'Hello');
 check('support: status is in plain words and groups into open or done', support_status_words('open')[0] === 'Waiting for us' && support_status_words('resolved')[1] === 'ok' && support_group('in_progress') === 'open' && support_group('closed') === 'done');
 check('support: urgency choices explain themselves', count(support_urgency()) === 4 && strpos(support_urgency()['high'][0], 'blocked') !== false);
+// Profile
+require_once $root . '/includes/profile-view.php';
+$none = profile_checklist(array('address' => '', 'company' => ''), '');
+check('profile: a new account is 0 of 3 and tells what to do first', $none['done'] === 0 && $none['percent'] === 0 && $none['items'][0]['title'] === 'Verify your identity');
+$full = profile_checklist(array('address' => 'Pokhara', 'company' => 'Himal'), 'approved');
+check('profile: a complete account is 3 of 3', $full['done'] === 3 && $full['percent'] === 100);
+check('profile: a pending identity is not counted as done', profile_checklist(array('address' => 'x', 'company' => ''), 'pending')['done'] === 1);
+check('profile: password score rises with length and variety', profile_password_score('abc') === 0 && profile_password_score('abcdefgh') === 1 && profile_password_score('Himal2083') === 3 && profile_password_score('Correct-Horse-9!') === 4);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
