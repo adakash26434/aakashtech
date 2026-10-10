@@ -98,7 +98,7 @@ $memberSince = !empty($client['created_at']) ? date('M Y', strtotime($client['cr
 <section class="pro-card" aria-label="Account at a glance">
     <div class="pro-who">
         <?php $avatarTop = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#097a6d'; ?>
-        <span class="pro-avatar" style="background: <?= e($avatarTop) ?>"><?= e(strtoupper(substr((string) $client['name'], 0, 1))) ?></span>
+        <span class="pro-avatar" style="background: <?= e($avatarTop) ?>"><?= e(mb_strtoupper(mb_substr((string) $client['name'], 0, 1, 'UTF-8'), 'UTF-8')) ?></span>
         <div><strong><?= e($client['name']) ?></strong><span><?= e($client['email']) ?><?= !empty($client['phone']) ? ' · ' . e($client['phone']) : '' ?></span><small><?= $memberSince !== '' ? 'Member since ' . e($memberSince) : '' ?></small></div>
     </div>
     <div class="pro-check">

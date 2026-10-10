@@ -161,8 +161,11 @@ a.svc-stat:hover { border-color: var(--brand-500); }
 @media (max-width: 620px) {
     .wal-balance strong { font-size: 32px; }
     .wal-table thead { display: none; } .wal-table, .wal-table tbody, .wal-table tr, .wal-table td { display: block; width: 100%; }
-    .wal-table tr { padding: 10px 14px; border-bottom: 1px solid var(--line); }
-    .wal-table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; text-align: right; }
+    .wal-table, .wal-table tbody, .wal-table tr, .wal-table td { box-sizing: border-box; max-width: 100%; white-space: normal; }
+    .portal-shell .wal-table { min-width: 0; }
+    .wal-table tr { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+    .wal-table td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+    .wal-table td > * { min-width: 0; }
     .wal-table td::before { content: attr(data-label); color: var(--ink-500); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; text-align: left; flex: none; }
     .wal-table td small { text-align: right; }
 }
@@ -205,3 +208,5 @@ a.svc-stat:hover { border-color: var(--brand-500); }
 .shop-card, .shop-section, .shop-grid > * { min-width: 0; overflow-wrap: anywhere; }
 /* Rate ladder scrolls sideways on a phone instead of widening the page */
 .shop-ladder-wrap { max-width: 100%; overflow-x: auto; }
+/* Profile avatar letter: white on its colour, whatever the portal's generic span colour is */
+.portal-shell span.pro-avatar, .pro-avatar { color: #fff; }
