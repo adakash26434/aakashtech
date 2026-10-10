@@ -69,7 +69,7 @@
             var name = (input.name || "").toLowerCase();
             if (input.type === "text" && !input.inputMode) {
                 if (/phone|mobile|contact_no/.test(name)) { input.inputMode = "tel"; if (!input.autocomplete) { input.autocomplete = "tel"; } }
-                else if (/otp|code|human_check|amount|quantity|qty/.test(name)) { input.inputMode = "numeric"; }
+                else if (/^(otp|human_check|amount|quantity|qty)$/.test(name)) { input.inputMode = "numeric"; }
             }
             if (input.type === "email" && !input.autocomplete) { input.autocomplete = "email"; }
         });

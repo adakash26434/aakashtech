@@ -196,7 +196,11 @@
         last = a; zoom = 1; turn = 0;
         title.textContent = a.getAttribute('data-title');
         open.href = a.getAttribute('data-src');
-        stage.innerHTML = a.getAttribute('data-type') === 'pdf' ? '<iframe title="Document" src="' + a.getAttribute('data-src') + '"></iframe>' : '<img alt="' + a.getAttribute('data-title') + '" src="' + a.getAttribute('data-src') + '">';
+        stage.textContent = '';
+        var node = document.createElement(a.getAttribute('data-type') === 'pdf' ? 'iframe' : 'img');
+        if (node.tagName === 'IFRAME') { node.title = 'Document'; } else { node.alt = a.getAttribute('data-title') || ''; }
+        node.src = a.getAttribute('data-src') || '';
+        stage.appendChild(node);
         box.hidden = false;
         document.body.classList.add('kyc-lock');
         box.querySelector('[data-act=close]').focus();

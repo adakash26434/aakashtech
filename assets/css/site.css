@@ -1100,7 +1100,7 @@ a.solution-row:focus-visible {
 
 .job-band a:hover {
     border-color: var(--site-teal);
-    color: var(--site-teal-deep, #075e54);
+    color: var(--site-teal-dark);
 }
 
 .notice-sample {
@@ -2230,6 +2230,9 @@ a.contact-method:hover strong {
 
 .site-notice-card {
     width: min(440px, 100%);
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    overflow: auto;
     padding: 28px 26px 24px;
     color: var(--site-ink);
     background: #fff;
