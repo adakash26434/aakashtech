@@ -37,8 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
     verify_csrf();
     $id = (int) ($_POST['client_id'] ?? 0);
     if ($id > 0) {
-        $stmt = $conn->prepare("UPDATE client_users SET status = CASE WHEN status = 'active' THEN 'suspended' ELSE 'active' END WHERE id = ?");
-        $stmt->bind_param('i', $id);
+        // Applies only the change the button asked for, and only from the state the page showed.
+        $suspend = (isset($_POST['target']) ? $_POST['target'] : '') !== 'activate';
+        $from = $suspend ? 'active' : 'suspended';
+        $to = $suspend ? 'suspended' : 'active';
+        $stmt = $conn->prepare('UPDATE client_users SET status = ? WHERE id = ? AND status = ?');
+        $stmt->bind_param('sis', $to, $id, $from);
         $stmt->execute();
         $stmt->close();
     }
@@ -289,7 +293,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
                                     <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
-                                    <button type="submit" name="toggle_client"<?= $cl['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
+                                    <input type="hidden" name="target" value="<?= $cl['status'] === 'active' ? 'suspend' : 'activate' ?>"><button type="submit" name="toggle_client"<?= $cl['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                                 </form>
                                 <?php if (isset($cl['totp_secret']) && $cl['totp_secret'] !== ''): ?>
                                     <form method="POST" class="mt-2" onsubmit="return confirm('Reset Google Authenticator for this client? They set it up again at the next sign-in.');">

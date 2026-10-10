@@ -11,6 +11,12 @@ function panel_cipher_key($conn)
     }
     $key = (string) billing_setting($conn, 'panel_cipher_key');
     if (!preg_match('/^[a-f0-9]{64}$/', $key)) {
+        // Passwords are already sealed with a key. Making a new one now would make every saved
+        // cPanel password unreadable, so the key is never replaced once sealing has started.
+        if (billing_setting($conn, 'panel_pass_sealed') === '1') {
+            error_log('cPanel cipher key is missing; sealed passwords cannot be opened until it is restored.');
+            return '';
+        }
         $key = bin2hex(random_bytes(32));
         billing_set_setting($conn, 'panel_cipher_key', $key);
     }

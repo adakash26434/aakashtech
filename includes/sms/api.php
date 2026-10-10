@@ -332,6 +332,55 @@ function sms_api_replay($conn, $clientId, $tokenId, $ref)
     );
 }
 
+// A client_ref is reserved before anything is sent. Two requests that arrive together cannot both
+// pass: the unique key lets only one insert succeed, and the other is told it is in progress.
+function sms_api_ensure_refs($conn)
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    $ready = true;
+    $sql = DB_DRIVER === 'sqlite'
+        ? 'CREATE TABLE IF NOT EXISTS sms_api_refs (id INTEGER PRIMARY KEY AUTOINCREMENT, ref_key TEXT NOT NULL UNIQUE, created_at TEXT DEFAULT CURRENT_TIMESTAMP)'
+        : 'CREATE TABLE IF NOT EXISTS sms_api_refs (id INT AUTO_INCREMENT PRIMARY KEY, ref_key VARCHAR(160) NOT NULL UNIQUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB';
+    try {
+        billing_exec($conn, $sql);
+    } catch (Throwable $exception) {
+        error_log('SMS API reference table could not be created.');
+    }
+}
+
+function sms_api_reserve_ref($conn, $tokenId, $ref)
+{
+    sms_api_ensure_refs($conn);
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('INSERT INTO sms_api_refs (ref_key) VALUES (?)');
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('s', $key);
+    $ok = false;
+    try {
+        $ok = (bool) $stmt->execute();
+    } catch (Throwable $exception) {
+        $ok = false;
+    }
+    $stmt->close();
+    return $ok;
+}
+
+function sms_api_release_ref($conn, $tokenId, $ref)
+{
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('DELETE FROM sms_api_refs WHERE ref_key = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 function sms_api_send($conn)
 {
     list($row, $input) = sms_api_token_row($conn);
@@ -424,6 +473,9 @@ function sms_api_send($conn)
         if ($replay !== null) {
             sms_api_json(200, array('error' => false, 'message' => 'This client_ref was already sent. Nothing was sent or charged again.', 'data' => $replay));
         }
+        if (!sms_api_reserve_ref($conn, $tokenId, $ref)) {
+            sms_api_json(409, array('error' => true, 'message' => 'This client_ref is already being sent. Check the SMS logs before sending it again.', 'data' => array()));
+        }
     }
     $name = (isset($input['name']) && trim((string) $input['name']) !== '') ? (string) $input['name'] : 'API';
     $sender = isset($input['from']) ? (string) $input['from'] : '';
@@ -497,6 +549,10 @@ function sms_api_send($conn)
             $message .= ' Some numbers were not accepted. Those credits were returned.';
         }
         sms_api_json(200, array('error' => false, 'message' => $message, 'data' => $data));
+    }
+    if ($ref !== '') {
+        // Nothing went out, so the ref is free for a corrected retry.
+        sms_api_release_ref($conn, $tokenId, $ref);
     }
     sms_api_json(400, array(
         'error' => true,

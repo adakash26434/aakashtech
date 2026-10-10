@@ -114,5 +114,11 @@ check('books balance: 100 bought = credits left + messages that left (' . $left 
 // Timeouts are unconfirmed (never retried), real refusals keep their own code
 check('vendor: no answer means unconfirmed, a refusal keeps its code', sms_unsure_code(array('ok' => false, 'status' => 0, 'body' => ''), 'line-rejected') === 'unconfirmed' && sms_unsure_code(array('ok' => false, 'status' => 500, 'body' => ''), 'line-rejected') === 'line-rejected');
 check('retry: unconfirmed rows are excluded from the retry query', strpos(file_get_contents(__DIR__ . '/../includes/sms/logs.php'), "error_text <> 'unconfirmed'") !== false);
+// client_ref: only one request can hold a ref at a time; releasing it frees it for a retry
+check('client_ref: the first request reserves the ref', sms_api_reserve_ref($conn, 7, 'order-42') === true);
+check('client_ref: a second request for the same ref is refused while the first is in progress', sms_api_reserve_ref($conn, 7, 'order-42') === false);
+check('client_ref: the same ref on another token is a different reservation', sms_api_reserve_ref($conn, 8, 'order-42') === true);
+sms_api_release_ref($conn, 7, 'order-42');
+check('client_ref: after a release the ref can be sent again', sms_api_reserve_ref($conn, 7, 'order-42') === true);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

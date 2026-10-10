@@ -11,11 +11,17 @@ $goTab = 'account';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
     verify_csrf();
     if (isset($_POST['toggle_client'])) {
-        $stmt = $conn->prepare("UPDATE client_users SET status = CASE WHEN status = 'active' THEN 'suspended' ELSE 'active' END WHERE id = ?");
-        $stmt->bind_param('i', $id);
+        // Only the change the button asked for is applied, and only if the account is still in the
+        // state the page showed. A stale page cannot re-activate a suspended client.
+        $suspend = (isset($_POST['target']) ? $_POST['target'] : '') !== 'activate';
+        $from = $suspend ? 'active' : 'suspended';
+        $to = $suspend ? 'suspended' : 'active';
+        $stmt = $conn->prepare('UPDATE client_users SET status = ? WHERE id = ? AND status = ?');
+        $stmt->bind_param('sis', $to, $id, $from);
         $stmt->execute();
+        $changed = (int) $conn->affected_rows === 1;
         $stmt->close();
-        flash('client_notice', 'Account status updated.');
+        flash('client_notice', $changed ? 'Account status updated.' : 'That account was already changed. Refresh the page and check its status.');
     } elseif (isset($_POST['reset_authenticator'])) {
         totp_clear($conn, 'client', $id);
         flash('client_notice', 'Authenticator reset. The client sets it up again on the next sign-in.');

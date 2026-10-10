@@ -45,7 +45,7 @@ require __DIR__ . '/includes/client-actions.php';
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
-                    <button type="submit" name="toggle_client"<?= $client['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $client['status'] === 'active' ? 'text-red-400' : 'text-green-400' ?>"><?= $client['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
+                    <input type="hidden" name="target" value="<?= $client['status'] === 'active' ? 'suspend' : 'activate' ?>"><button type="submit" name="toggle_client"<?= $client['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $client['status'] === 'active' ? 'text-red-400' : 'text-green-400' ?>"><?= $client['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                 </form>
                 <?php if (trim((string) $client['totp_secret']) !== ''): ?>
                     <form method="POST" onsubmit="return confirm('Reset Google Authenticator for this client?');">
