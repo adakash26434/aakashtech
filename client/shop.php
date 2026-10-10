@@ -109,7 +109,7 @@ $identityNote = shop_identity_note($conn, $cid, array_keys($grouped));
                 <?php elseif ($startBand): ?>
                     <p class="shop-price">From <?= billing_rate_markup($startBand['unit_price'], isset($startBand['offer_price']) ? $startBand['offer_price'] : 0, true, ' each') ?></p>
                     <p class="shop-vat">The more you buy, the lower the rate. 13% VAT is added to the total.</p>
-                    <table class="shop-ladder">
+                    <div class="shop-ladder-wrap"><table class="shop-ladder">
                         <caption class="sr-only">Rate by quantity</caption>
                         <thead><tr><th scope="col">Quantity</th><th scope="col">Each</th></tr></thead>
                         <tbody>
@@ -117,7 +117,7 @@ $identityNote = shop_identity_note($conn, $cid, array_keys($grouped));
                             <tr><th scope="row"><?= number_format($band['min_qty']) ?> to <?= number_format($band['max_qty']) ?></th><td><?= billing_rate_markup($band['unit_price'], isset($band['offer_price']) ? $band['offer_price'] : 0, true, '') ?></td></tr>
                         <?php endforeach; ?>
                         </tbody>
-                    </table>
+                    </table></div>
                 <?php else: ?>
                     <p class="shop-price">Volume rate</p>
                     <p class="shop-vat">The price is shown on the next page, for the quantity you choose.</p>

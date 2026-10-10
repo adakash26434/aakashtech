@@ -18,7 +18,7 @@
 .shop-tabs a:hover { border-color: var(--brand-500); background: var(--brand-50); }
 .shop-tabs a.is-on { background: var(--brand-500); border-color: var(--brand-500); color: #fff; } .shop-tabs a.is-on span { background: rgba(255, 255, 255, .22); color: #fff; }
 .shop-sections { display: grid; gap: 34px; }
-.shop-section { scroll-margin-top: 80px; }
+.shop-section { scroll-margin-top: 80px; min-width: 0; }
 .shop-section-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 14px; }
 .shop-section-head h2 { margin: 0; font-family: var(--font-heading); font-size: 21px; color: var(--ink-900); }
 .shop-section-head p { margin: 2px 0 0; color: var(--ink-500); font-size: 14px; max-width: 62ch; line-height: 1.5; }
@@ -50,7 +50,7 @@
 .shop-empty { text-align: center; padding: 44px 20px; border: 1.5px dashed var(--line); border-radius: var(--radius-lg); background: var(--surface); }
 .shop-empty h2 { margin: 0 0 6px; color: var(--ink-900); } .shop-empty p { margin: 0 0 14px; color: var(--ink-500); }
 .shop-help { margin: 28px 0 0; font-size: 14px; color: var(--ink-500); } .shop-help a { color: var(--brand-600); font-weight: 600; }
-@media (max-width: 620px) { .shop-title { font-size: 24px; } .shop-wallet { width: 100%; } .shop-grid { grid-template-columns: 1fr; } .shop-steps { grid-template-columns: 1fr 1fr; } .shop-price { font-size: 24px; } }
+@media (max-width: 620px) { .shop-title { font-size: 24px; } .shop-wallet { width: 100%; } .shop-grid { grid-template-columns: minmax(0, 1fr); } .shop-steps { grid-template-columns: 1fr 1fr; } .shop-price { font-size: 24px; } }
 
 /* ===== Checkout ===== */
 .co-head { margin-bottom: 18px; }
@@ -200,3 +200,8 @@ a.svc-stat:hover { border-color: var(--brand-500); }
 .pro-meter span.is-on.is-1 { background: var(--bad); } .pro-meter span.is-on.is-2 { background: #d9822b; } .pro-meter span.is-on.is-3 { background: var(--accent-gold); } .pro-meter span.is-on.is-4 { background: var(--ok); }
 .pro-show { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; color: var(--ink-700); cursor: pointer; } .pro-ok { color: var(--ok) !important; font-weight: 600; }
 @media (max-width: 820px) { .pro-card { grid-template-columns: 1fr; } }
+
+/* Cards and sections may shrink to the phone width; long words wrap instead of pushing the page sideways */
+.shop-card, .shop-section, .shop-grid > * { min-width: 0; overflow-wrap: anywhere; }
+/* Rate ladder scrolls sideways on a phone instead of widening the page */
+.shop-ladder-wrap { max-width: 100%; overflow-x: auto; }

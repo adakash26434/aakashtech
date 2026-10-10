@@ -119,7 +119,7 @@ function inquiry_status_class($status)
         <h1 class="font-heading font-bold text-white text-2xl mb-1">Inquiries</h1>
         <p class="text-slate-500 text-sm"><?= $find === '' ? 'Latest 200 contact messages.' : 'Matches for “' . e($find) . '”.' ?></p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
         <?php $findQuery = $find === '' ? '' : '&q=' . rawurlencode($find); ?>
         <a href="inquiries.php<?= $find === '' ? '' : '?q=' . rawurlencode($find) ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'all' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">All</a>
         <a href="?status=new<?= $findQuery ?>" class="px-4 py-2 text-sm rounded-lg <?= $filter === 'new' ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700' ?>">New</a>
