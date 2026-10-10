@@ -208,5 +208,13 @@ $firstTop = billing_request_topup($conn, $cid, 500, $topMethod, 'REF 98765');
 $dupeTop = billing_request_topup($conn, $cid, 500, $topMethod, ' ref98765 ');
 check('top-up: the first reference is accepted', $firstTop === '');
 check('top-up: the same reference again is refused, even with other case or spaces', $dupeTop !== '');
+// Terms: a new client has not accepted; recording the tick makes the gate open
+$conn->query("INSERT INTO client_users (name,email,password,status) VALUES ('Terms','terms@example.com','x','active')");
+$termsId = (int) $conn->insert_id;
+check('terms: a new client has not accepted yet', terms_client_has_accepted($conn, $termsId) === false);
+check('terms: the tick is recorded with the current version', terms_record_acceptance($conn, $termsId) === true && terms_client_has_accepted($conn, $termsId) === true);
+$stored = $conn->query("SELECT terms_version, terms_accepted_at FROM client_users WHERE id = $termsId")->fetch_assoc();
+check('terms: version and time are stored on the account', $stored['terms_version'] === TERMS_VERSION && $stored['terms_accepted_at'] !== '' && $stored['terms_accepted_at'] !== null);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

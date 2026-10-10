@@ -158,6 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Password must be 72 characters or fewer.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
+    } elseif (!isset($_POST['accept_terms']) || $_POST['accept_terms'] !== '1') {
+        $error = 'Read the Terms and Conditions and tick the box to create an account.';
     } else {
         try {
             $taken = billing_client_taken($conn, $email, $phone, $company, 0);
@@ -181,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 if ($newId < 1) {
                     $error = 'The account could not be created. Refresh the page and try again.';
                 } else {
+                    terms_record_acceptance($conn, $newId);
                     billing_mail_client_event($conn, $newId, 'account');
                     $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
                     totp_open_gate($conn, 'client', array(
@@ -331,7 +334,10 @@ try {
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e(auth_math_prompt('register')) ?>? *</label>
                     <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" class="form-input" placeholder="Answer">
                 </div>
-                <p class="text-slate-500 text-xs">Creating the account is your consent to keep the name, email, and mobile for this account. Read the <a href="../privacy.php" class="text-brand-400">privacy policy</a> and the <a href="../terms.php" class="text-brand-400">terms of service</a>.</p>
+                <label class="flex items-start gap-3 text-sm text-slate-300 cursor-pointer">
+                    <input type="checkbox" name="accept_terms" value="1" required class="mt-1 h-5 w-5 shrink-0 accent-brand-500">
+                    <span>I have read the <a href="../terms.php" target="_blank" rel="noopener" class="text-brand-400 underline">Terms and Conditions</a> and the <a href="../privacy.php" target="_blank" rel="noopener" class="text-brand-400 underline">privacy policy</a>, and I accept them. This tick is my digital signature on this account.</span>
+                </label>
                 <button type="submit" name="register" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Create Account
                 </button>

@@ -76,6 +76,7 @@ if (DB_DRIVER === 'sqlite') {
 
 require_once __DIR__ . '/includes/billing.php';
 require_once __DIR__ . '/includes/legal.php';
+require_once __DIR__ . '/includes/terms-accept.php';
 require_once __DIR__ . '/includes/sms-gateway.php';
 require_once __DIR__ . '/includes/hosting-panel.php';
 require_once __DIR__ . '/includes/mail-login.php';
