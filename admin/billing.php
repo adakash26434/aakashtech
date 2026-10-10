@@ -252,7 +252,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="wallet_note">Where it was received</label>
             <input id="wallet_note" name="wallet_note" type="text" maxlength="160" required class="form-input" placeholder="Cash at the office">
         </div>
-        <button type="submit" name="manual_wallet" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Add to wallet</button>
+        <button type="submit" name="manual_wallet" class="btn btn-primary">Add to wallet</button>
     </form>
     <p class="px-5 pb-4 text-slate-500 text-xs">Use this when the client paid in cash or outside eSewa, Khalti, and the bank form. The amount is ready to spend immediately.</p>
 </section>
@@ -315,7 +315,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 </div>
             </div>
         <?php endforeach; ?>
-        <button type="submit" name="save_slabs" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save volume rates</button>
+        <button type="submit" name="save_slabs" value="1" class="btn btn-primary">Save volume rates</button>
     </form>
 </section>
 
@@ -339,7 +339,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 </label>
             <?php endforeach; ?>
         </div>
-        <button type="submit" name="save_prices" value="1" class="mt-5 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save prices</button>
+        <button type="submit" name="save_prices" value="1" class="btn btn-primary mt-5">Save prices</button>
     </form>
 </section>
 </div>
@@ -347,7 +347,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="hidden" name="tab" value="delivery">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or service in the sections below">
-    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+    <button type="submit" class="btn btn-primary">Find</button>
 </form>
 <section class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Hosting logins</h3></div>

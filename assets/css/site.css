@@ -321,6 +321,15 @@ body.site-public textarea {
 .button:hover {
     transform: translateY(-2px);
 }
+/* Keyboard focus and press feedback for every public button (one component: .button) */
+.button:focus-visible {
+    outline: 2px solid var(--brand-600);
+    outline-offset: 3px;
+}
+
+.button:active {
+    transform: translateY(0);
+}
 
 .button--small {
     min-height: 42px;
@@ -418,7 +427,8 @@ body.site-public textarea {
 
 .button--outline:hover {
     background: #fff;
-    border-color: #b7d2ca;
+    border-color: var(--brand-500);
+    color: var(--brand-600);
 }
 
 .menu-toggle {
