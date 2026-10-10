@@ -135,12 +135,18 @@ require __DIR__ . '/includes/services-actions.php';
 </div>
 </div>
 <div x-show="tab==='photos'" x-cloak>
-<div class="dash-panel mb-6">
+<div class="dash-panel mb-6" x-data="{ psvc: '<?= e(array_key_first($posterServices)) ?>' }">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">See rates photos</h3></div>
     <div class="p-5 space-y-5">
         <p class="text-slate-500 text-sm">Upload a photo or poster for a service. It appears at the top of that service page. Leave it empty and nothing is shown.</p>
-        <?php foreach ($posterServices as $slug => $service): ?>
+        <div class="portal-tabs" role="tablist" aria-label="Services">
+<?php foreach ($posterServices as $tabSlug => $tabService): ?>
+    <button type="button" role="tab" @click="psvc='<?= e($tabSlug) ?>'" :class="psvc==='<?= e($tabSlug) ?>' ? 'is-on' : ''" :aria-selected="psvc==='<?= e($tabSlug) ?>'"><?= e($tabService['title'] ?? $tabSlug) ?></button>
+<?php endforeach; ?>
+</div>
+<?php foreach ($posterServices as $slug => $service): ?>
             <?php $posterPreview = site_service_poster($conn, $slug); ?>
+            <div x-show="psvc==='<?= e($slug) ?>'" x-cloak>
             <form method="POST" action="" enctype="multipart/form-data" class="grid sm:grid-cols-[140px_1fr] gap-4 items-center border-t border-slate-800 pt-5 first:border-0 first:pt-0">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="poster_slug" value="<?= e($slug) ?>">
@@ -162,16 +168,22 @@ require __DIR__ . '/includes/services-actions.php';
                     <button type="submit" name="save_poster" class="mt-3 px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save photo</button>
                 </div>
             </form>
+            </div>
         <?php endforeach; ?>
     </div>
 </div>
 </div>
 <div x-show="tab==='words'" x-cloak>
-<div class="dash-panel mb-6">
+<div class="dash-panel mb-6" x-data="{ psvc: '<?= e(array_key_first($posterServices)) ?>' }">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Public service text</h3></div>
     <div class="p-5 space-y-6">
         <p class="text-slate-500 text-sm">The title, summary, and tags are the homepage card. The kicker, opening line, and points are the public service page. One point per line. Leave a page field blank to keep the prepared text.</p>
-        <?php foreach ($posterServices as $slug => $service): ?>
+        <div class="portal-tabs" role="tablist" aria-label="Services">
+<?php foreach ($posterServices as $tabSlug => $tabService): ?>
+    <button type="button" role="tab" @click="psvc='<?= e($tabSlug) ?>'" :class="psvc==='<?= e($tabSlug) ?>' ? 'is-on' : ''" :aria-selected="psvc==='<?= e($tabSlug) ?>'"><?= e($tabService['title'] ?? $tabSlug) ?></button>
+<?php endforeach; ?>
+</div>
+<?php foreach ($posterServices as $slug => $service): ?>
             <?php
             $view = billing_saved_service_view($conn, $slug, $serviceOverrides);
             $pageCopy = billing_public_page($conn, $slug);
@@ -179,6 +191,7 @@ require __DIR__ . '/includes/services-actions.php';
             $guideNotes = isset($guides[$slug]['notes']) ? $guides[$slug]['notes'] : array();
             $pointText = !empty($pageCopy['points_saved']) ? implode("\n", $pageCopy['points']) : implode("\n", $guideNotes);
             ?>
+            <div x-show="psvc==='<?= e($slug) ?>'" x-cloak>
             <form method="POST" action="" class="space-y-3 border-t border-slate-800 pt-5 first:border-0 first:pt-0">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="service_slug" value="<?= e($slug) ?>">
@@ -197,6 +210,7 @@ require __DIR__ . '/includes/services-actions.php';
                 <textarea name="points" maxlength="2000" rows="6" class="form-input"><?= e($pointText) ?></textarea>
                 <button type="submit" name="save_public_service" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save text</button>
             </form>
+            </div>
         <?php endforeach; ?>
     </div>
 </div>
