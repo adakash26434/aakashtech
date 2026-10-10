@@ -284,5 +284,16 @@ check('account limit: ten failed passwords block that account from any address',
 auth_clear_attempts($conn, 'acct-777', 'account');
 check('account limit: a correct password clears the count', auth_attempt_blocked($conn, 'acct-777', 10, 900, 'account') === false);
 
+// AI assistant keys: sealed at rest, opened on read, and never written into a backup.
+$aiSealed = panel_pass_seal($conn, 'AIza-test-key-123');
+check('AI key is stored sealed, not as plain text', $aiSealed !== 'AIza-test-key-123' && strpos($aiSealed, 'enc2:') === 0);
+check('AI key opens back to the same value', panel_pass_open($conn, $aiSealed) === 'AIza-test-key-123');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'ai_gemini_key', 'setting_value' => $aiSealed));
+check('backup redacts the Gemini key', $aiRow['setting_value'] === '');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'ai_deepseek_key', 'setting_value' => 'sk-plain'));
+check('backup redacts the DeepSeek key', $aiRow['setting_value'] === '');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'site_name', 'setting_value' => 'Aakash'));
+check('backup keeps ordinary settings', $aiRow['setting_value'] === 'Aakash');
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

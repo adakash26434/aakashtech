@@ -67,7 +67,8 @@ function backup_redact($table, $row)
     if (($table === 'client_users' || $table === 'admin_users') && array_key_exists('totp_secret', $row)) {
         $row['totp_secret'] = '';
     }
-    if ($table === 'site_settings' && isset($row['setting_key']) && $row['setting_key'] === 'panel_cipher_key') {
+    $secretSettings = array('panel_cipher_key', 'ai_gemini_key', 'ai_deepseek_key');
+    if ($table === 'site_settings' && isset($row['setting_key']) && in_array($row['setting_key'], $secretSettings, true)) {
         $row['setting_value'] = '';
     }
     return $row;
