@@ -257,5 +257,10 @@ check('roles: the existing admin role keeps full access', admin_is_staff() === f
 unset($_SESSION['admin_role']);
 check('roles: no role set means full access, as before', admin_is_staff() === false);
 
+// cPanel passwords: sealed with AES-256-GCM, round-trip, and any change to the stored value is refused
+$panelSealed = panel_pass_seal($conn, 'Panel#Pass1');
+check('panel: a new password is sealed with GCM', strpos($panelSealed, 'enc2:') === 0 && panel_pass_open($conn, $panelSealed) === 'Panel#Pass1');
+check('panel: a changed sealed value does not open', panel_pass_open($conn, substr($panelSealed, 0, -3) . (substr($panelSealed, -3) === 'AAA' ? 'BBB' : 'AAA')) === '');
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

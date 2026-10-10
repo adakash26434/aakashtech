@@ -1,5 +1,11 @@
 <?php
 
+function panel_has_sealed_rows($conn)
+{
+    $result = $conn->query("SELECT id FROM client_services WHERE panel_pass LIKE 'enc1:%' OR panel_pass LIKE 'enc2:%' LIMIT 1");
+    return (bool) ($result && $result->fetch_assoc());
+}
+
 function panel_cipher_key($conn)
 {
     // Preferred: keep the key outside the database (cipher_key in
@@ -13,7 +19,7 @@ function panel_cipher_key($conn)
     if (!preg_match('/^[a-f0-9]{64}$/', $key)) {
         // Passwords are already sealed with a key. Making a new one now would make every saved
         // cPanel password unreadable, so the key is never replaced once sealing has started.
-        if (billing_setting($conn, 'panel_pass_sealed') === '1') {
+        if (panel_has_sealed_rows($conn)) {
             error_log('cPanel cipher key is missing; sealed passwords cannot be opened until it is restored.');
             return '';
         }
@@ -40,30 +46,44 @@ function panel_pass_widen($conn)
 function panel_pass_seal($conn, $plain)
 {
     $plain = (string) $plain;
-    if ($plain === '' || strpos($plain, 'enc1:') === 0 || !function_exists('openssl_encrypt')) {
+    if ($plain === '' || strpos($plain, 'enc1:') === 0 || strpos($plain, 'enc2:') === 0 || !function_exists('openssl_encrypt') || !in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) {
         return $plain;
     }
     $key = panel_cipher_key($conn);
     if ($key === '') {
         return $plain;
     }
-    $iv = random_bytes(16);
-    $cipher = openssl_encrypt($plain, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
-    if (!is_string($cipher) || $cipher === '') {
+    // AES-256-GCM: the tag makes any change to the stored value fail to open.
+    $iv = random_bytes(12);
+    $tag = '';
+    $cipher = openssl_encrypt($plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+    if (!is_string($cipher) || $cipher === '' || strlen((string) $tag) !== 16) {
         return $plain;
     }
-    return 'enc1:' . base64_encode($iv . $cipher);
+    return 'enc2:' . base64_encode($iv . $tag . $cipher);
 }
 
 function panel_pass_open($conn, $stored)
 {
     $stored = (string) $stored;
+    if (strpos($stored, 'enc2:') === 0) {
+        if (!function_exists('openssl_decrypt')) {
+            return '';
+        }
+        $raw = base64_decode(substr($stored, 5), true);
+        if (!is_string($raw) || strlen($raw) < 29) {
+            return '';
+        }
+        $plain = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', panel_cipher_key($conn), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+        return is_string($plain) ? $plain : '';
+    }
     if (strpos($stored, 'enc1:') !== 0) {
         return $stored;
     }
     if (!function_exists('openssl_decrypt')) {
         return '';
     }
+    // Older values sealed with AES-256-CBC stay readable; new seals use GCM.
     $raw = base64_decode(substr($stored, 5), true);
     if (!is_string($raw) || strlen($raw) < 17) {
         return '';
@@ -78,11 +98,11 @@ function panel_pass_migrate($conn)
     if (billing_setting($conn, 'panel_pass_sealed') === '1') {
         return;
     }
-    $result = $conn->query("SELECT id, panel_pass FROM client_services WHERE panel_pass IS NOT NULL AND panel_pass <> '' AND panel_pass NOT LIKE 'enc1:%'");
+    $result = $conn->query("SELECT id, panel_pass FROM client_services WHERE panel_pass IS NOT NULL AND panel_pass <> '' AND panel_pass NOT LIKE 'enc1:%' AND panel_pass NOT LIKE 'enc2:%'");
     if ($result) {
         while ($row = $result->fetch_assoc()) {
             $sealed = panel_pass_seal($conn, (string) $row['panel_pass']);
-            if (strpos($sealed, 'enc1:') !== 0) {
+            if (strpos($sealed, 'enc2:') !== 0) {
                 return;
             }
             $id = (int) $row['id'];

@@ -155,6 +155,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 behavior: reduceMotion ? "auto" : "smooth",
                 block: "start"
             });
+            // Move keyboard focus to the target too, so the next Tab continues from it (skip links).
+            if (!target.hasAttribute("tabindex")) { target.setAttribute("tabindex", "-1"); }
+            target.focus({ preventScroll: true });
         });
     });
 });

@@ -115,3 +115,6 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
 
     <!-- Page Content -->
     <main class="flex-1 p-4 lg:p-8">
+        <?php $staffNotice = flash('admin_notice'); if ($staffNotice !== ''): ?>
+            <div role="alert" class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm"><?= e($staffNotice) ?></div>
+        <?php endif; ?>
