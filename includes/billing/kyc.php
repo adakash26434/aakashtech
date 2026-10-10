@@ -404,13 +404,6 @@ function billing_kyc_submit_detailed($conn, $clientId, $post, $files)
     return array('ok' => true, 'errors' => array(), 'values' => $values, 'message' => '');
 }
 
-/** Older callers: the first message, or an empty string when all went well. */
-function billing_kyc_submit($conn, $clientId, $post, $files)
-{
-    $result = billing_kyc_submit_detailed($conn, $clientId, $post, $files);
-    return $result['ok'] ? '' : $result['message'];
-}
-
 function billing_kyc_decide($conn, $clientId, $decision, $note)
 {
     $clientId = (int) $clientId;

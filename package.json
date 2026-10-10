@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i assets/css/tailwind-input.css -o assets/css/tailwind.css --minify",
-    "test": "php tests/money-test.php && php tests/sms-balance-test.php && php tests/kyc-test.php && php tests/checkout-test.php && php tests/favicon-test.php && php tests/pages-test.php && php tests/admin-pages-test.php && node tests/sms-composer-test.js"
+    "test": "php tests/money-test.php && php tests/sms-balance-test.php && php tests/kyc-test.php && php tests/checkout-test.php && php tests/favicon-test.php && php tests/domain-document-test.php && php tests/pages-test.php && php tests/admin-pages-test.php && node tests/sms-composer-test.js"
   },
-  "devDependencies": { "tailwindcss": "3.4.17" }
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
 }

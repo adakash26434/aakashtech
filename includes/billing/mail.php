@@ -171,21 +171,6 @@ function billing_notify($conn, $subject, $lines)
     }
 }
 
-function billing_client_email($conn, $clientId)
-{
-    $clientId = (int) $clientId;
-    $stmt = $conn->prepare('SELECT email FROM client_users WHERE id = ? LIMIT 1');
-    if (!$stmt) {
-        return '';
-    }
-    $stmt->bind_param('i', $clientId);
-    $stmt->execute();
-    $row = db_fetch_assoc($stmt);
-    $stmt->close();
-    $email = $row ? trim((string) $row['email']) : '';
-    return billing_mail_ok($email) ? $email : '';
-}
-
 function billing_mail_person($conn, $to, $subject, $lines)
 {
     try {
