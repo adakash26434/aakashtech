@@ -282,7 +282,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                             </td>
                             <td class="px-4 py-3 hidden md:table-cell"><span class="text-slate-300 text-sm"><?= e($cl['company'] ?: '—') ?></span></td>
                             <td class="px-4 py-3 hidden lg:table-cell"><?php $clientPhone = preg_replace('/[^0-9+]/', '', (string) $cl['phone']); ?><?php if ($clientPhone !== ''): ?><a class="text-slate-300 text-sm hover:text-brand-300" href="tel:<?= e($clientPhone) ?>"><?= e($cl['phone']) ?></a><?php else: ?><span class="text-slate-300 text-sm"><?= e($cl['phone'] ?: '—') ?></span><?php endif; ?></td>
-                            <td class="px-4 py-3 hidden lg:table-cell"><span class="text-slate-500 text-sm"><?= date('M d, Y', strtotime($cl['created_at'])) ?></span></td>
+                            <td class="px-4 py-3 hidden lg:table-cell whitespace-nowrap"><span class="text-slate-500 text-sm"><?= date('M d, Y', strtotime($cl['created_at'])) ?></span></td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 text-[10px] font-medium rounded-full <?= $cl['status'] === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>"><?= ucfirst($cl['status']) ?></span>
                             </td>
@@ -295,7 +295,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="client_id" value="<?= (int) $cl['id'] ?>">
                                     <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
-                                    <input type="hidden" name="target" value="<?= $cl['status'] === 'active' ? 'suspend' : 'activate' ?>"><button type="submit" name="toggle_client"<?= $cl['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $cl['status'] === 'active' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
+                                    <input type="hidden" name="target" value="<?= $cl['status'] === 'active' ? 'suspend' : 'activate' ?>"><button type="submit" name="toggle_client"<?= $cl['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="<?= $cl['status'] === 'active' ? 'btn btn-danger-quiet' : 'btn btn-secondary btn-sm' ?>"><?= $cl['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                                 </form>
                                 <?php if (isset($cl['totp_secret']) && $cl['totp_secret'] !== ''): ?>
                                     <form method="POST" class="mt-2" onsubmit="return confirm('Reset Google Authenticator for this client? They set it up again at the next sign-in.');">
