@@ -113,17 +113,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = $msg === '' ? 'That visit date could not be cleared.' : '';
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
-        $failed = 0;
+        $failedCodes = array();
         foreach ($_POST['price'] as $code => $value) {
             $offer = isset($_POST['offer'][$code]) ? (string) $_POST['offer'][$code] : '';
             if (billing_update_price($conn, (string) $code, (string) $value, $offer)) {
                 $saved++;
             } else {
-                $failed++;
+                $failedCodes[] = (string) $code;
             }
         }
-        $msg = $saved > 0 && $failed === 0 ? 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.' : '';
-        $err = $failed > 0 ? 'Each offer rate must be lower than its regular rate, or left blank. Regular rates must stay above zero.' : ($saved > 0 ? '' : 'Enter a valid price for each plan.');
+        $failed = count($failedCodes);
+        // Say exactly which plans changed and which did not, so the admin never has to guess.
+        if ($saved > 0 && $failed === 0) {
+            $msg = 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.';
+        } elseif ($saved > 0) {
+            $msg = $saved . ' plan price' . ($saved === 1 ? '' : 's') . ' saved. Not saved: ' . implode(', ', $failedCodes) . '. Check those plans: an offer must be lower than its regular rate, and regular rates must stay above zero.';
+        } else {
+            $err = 'No plan price was saved. Enter a valid price for each plan, and an offer lower than its regular rate or blank.';
+        }
     }
     if ($err === '' && $msg !== '') {
         $doneTab = 'wallet';

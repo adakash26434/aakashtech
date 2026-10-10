@@ -355,11 +355,12 @@ function sms_api_reserve_ref($conn, $tokenId, $ref)
 {
     sms_api_ensure_refs($conn);
     $key = (int) $tokenId . ':' . $ref;
-    $stmt = $conn->prepare('INSERT INTO sms_api_refs (ref_key) VALUES (?)');
+    $stmt = $conn->prepare('INSERT INTO sms_api_refs (ref_key, created_at) VALUES (?, ?)');
     if (!$stmt) {
         return false;
     }
-    $stmt->bind_param('s', $key);
+    $now = date('Y-m-d H:i:s');
+    $stmt->bind_param('ss', $key, $now);
     $ok = false;
     try {
         $ok = (bool) $stmt->execute();
@@ -367,7 +368,48 @@ function sms_api_reserve_ref($conn, $tokenId, $ref)
         $ok = false;
     }
     $stmt->close();
-    return $ok;
+    if ($ok) {
+        return true;
+    }
+    // A reservation with no campaign behind it and older than ten minutes is left over from a request
+    // that died before it sent anything. Free it once and try again.
+    $old = $conn->prepare('SELECT created_at FROM sms_api_refs WHERE ref_key = ? LIMIT 1');
+    if (!$old) {
+        return false;
+    }
+    $old->bind_param('s', $key);
+    $old->execute();
+    $row = db_fetch_assoc($old);
+    $old->close();
+    if (!$row || strtotime((string) $row['created_at']) > time() - 600) {
+        return false;
+    }
+    // The key already includes the token id, so it names one client's send.
+    $campaigns = $conn->prepare('SELECT id FROM sms_campaigns WHERE api_ref = ? LIMIT 1');
+    if (!$campaigns) {
+        return false;
+    }
+    $campaigns->bind_param('s', $key);
+    $campaigns->execute();
+    $hasCampaign = (bool) db_fetch_assoc($campaigns);
+    $campaigns->close();
+    if ($hasCampaign) {
+        return false;
+    }
+    sms_api_release_ref($conn, $tokenId, $ref);
+    $retry = $conn->prepare('INSERT INTO sms_api_refs (ref_key, created_at) VALUES (?, ?)');
+    if (!$retry) {
+        return false;
+    }
+    $retry->bind_param('ss', $key, $now);
+    $again = false;
+    try {
+        $again = (bool) $retry->execute();
+    } catch (Throwable $exception) {
+        $again = false;
+    }
+    $retry->close();
+    return $again;
 }
 
 function sms_api_release_ref($conn, $tokenId, $ref)

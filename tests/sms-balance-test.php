@@ -120,5 +120,11 @@ check('client_ref: a second request for the same ref is refused while the first 
 check('client_ref: the same ref on another token is a different reservation', sms_api_reserve_ref($conn, 8, 'order-42') === true);
 sms_api_release_ref($conn, 7, 'order-42');
 check('client_ref: after a release the ref can be sent again', sms_api_reserve_ref($conn, 7, 'order-42') === true);
+// client_ref left behind by a crashed request (no campaign, an hour old) is freed on the next try
+$staleKey = '9:order-stale';
+$oldStamp = date('Y-m-d H:i:s', time() - 3600);
+$conn->query("INSERT INTO sms_api_refs (ref_key, created_at) VALUES ('$staleKey', '$oldStamp')");
+check('client_ref: a reservation left by a crashed request is freed', sms_api_reserve_ref($conn, 9, 'order-stale') === true);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

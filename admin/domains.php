@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
         $notice = $decision === 'active' ? 'Marked active. A paid year now shows in the client account and renews from the wallet.' : 'The request was declined. If it was already paid, that amount is back in the wallet.';
     }
 }
-$domainClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 200');
+$domainClients = $conn->query('SELECT id, name, email FROM client_users ORDER BY name ASC LIMIT 2000');
 $find = admin_find_text(isset($_GET['q']) ? $_GET['q'] : '');
 $rows = array();
 try {

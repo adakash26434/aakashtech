@@ -433,7 +433,10 @@ function auth_client_ip() {
     if (in_array($header, array('CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For'), true)) {
         $key = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
         if (!empty($_SERVER[$key])) {
-            $first = trim(explode(',', (string) $_SERVER[$key])[0]);
+            // X-Forwarded-For: the first entry is whatever the visitor sent. Our proxy appends the
+            // address it saw, so the last entry is the one to trust.
+            $parts = array_map('trim', explode(',', (string) $_SERVER[$key]));
+            $first = $header === 'X-Forwarded-For' ? (string) end($parts) : $parts[0];
             if (filter_var($first, FILTER_VALIDATE_IP)) {
                 $ip = $first;
             }

@@ -29,6 +29,34 @@ if (isset($_POST['save_homepage'])) {
     $settingsTab = 'security';
 }
 ?>
+// Admin accounts and roles: only the owner or an admin changes them, and nobody changes their own role.
+$roleMsg = '';
+$roleErr = '';
+if (isset($_POST['save_admin_role'])) {
+    verify_csrf();
+    $settingsTab = 'security';
+    $targetAdmin = (int) (isset($_POST['admin_id']) ? $_POST['admin_id'] : 0);
+    $newRole = isset($_POST['role']) ? (string) $_POST['role'] : '';
+    if (admin_is_staff()) {
+        $roleErr = 'Only the owner can change admin roles.';
+    } elseif ($targetAdmin === (int) $_SESSION['admin_id']) {
+        $roleErr = 'You cannot change your own role. Ask another admin.';
+    } elseif (!in_array($newRole, array('owner', 'admin', 'staff'), true)) {
+        $roleErr = 'Choose a valid role.';
+    } else {
+        $roleStmt = $conn->prepare('UPDATE admin_users SET role = ? WHERE id = ?');
+        $roleStmt->bind_param('si', $newRole, $targetAdmin);
+        $roleStmt->execute();
+        $roleStmt->close();
+        $roleMsg = 'Role saved.';
+    }
+}
+$adminAccounts = array();
+$adminList = $conn->query('SELECT id, name, email, role FROM admin_users ORDER BY id ASC');
+while ($adminList && ($adminRow = $adminList->fetch_assoc())) {
+    $adminAccounts[] = $adminRow;
+}
+
 <div x-data="{ tab: '<?= e($settingsTab) ?>' }">
 <div class="portal-tabs" role="tablist">
     <button type="button" @click="tab='mail'" :class="tab==='mail' ? 'is-on' : ''">Mail</button>
@@ -163,9 +191,17 @@ if (isset($_POST['save_homepage'])) {
 <div x-show="tab==='home'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Homepage</h3></div>
-    <form method="POST" class="p-5 space-y-4">
+    <form method="POST" class="p-5 space-y-4" x-data="{ hgroup: 'hero' }">
+<div class="portal-tabs" role="tablist" aria-label="Homepage sections">
+    <button type="button" role="tab" @click="hgroup='hero'" :class="hgroup==='hero' ? 'is-on' : ''" :aria-selected="hgroup==='hero'">Hero</button>
+    <button type="button" role="tab" @click="hgroup='services'" :class="hgroup==='services' ? 'is-on' : ''" :aria-selected="hgroup==='services'">Services</button>
+    <button type="button" role="tab" @click="hgroup='about'" :class="hgroup==='about' ? 'is-on' : ''" :aria-selected="hgroup==='about'">About</button>
+    <button type="button" role="tab" @click="hgroup='process'" :class="hgroup==='process' ? 'is-on' : ''" :aria-selected="hgroup==='process'">How we work</button>
+    <button type="button" role="tab" @click="hgroup='contact'" :class="hgroup==='contact' ? 'is-on' : ''" :aria-selected="hgroup==='contact'">Contact</button>
+</div>
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <p class="text-slate-400 text-sm">These lines are the public front page. The title uses one line per row. Service cards and prices stay under Services.</p>
+<div x-show="hgroup==='hero'" x-cloak>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_eyebrow">Small line above the title</label>
             <input id="home_eyebrow" name="home_eyebrow" maxlength="180" required class="form-input" value="<?= e($settings['home_eyebrow']) ?>">
@@ -182,6 +218,8 @@ if (isset($_POST['save_homepage'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_ribbon">Strip under the title</label>
             <input id="home_ribbon" name="home_ribbon" maxlength="180" required class="form-input" value="<?= e($settings['home_ribbon']) ?>">
         </div>
+</div>
+<div x-show="hgroup==='services'" x-cloak>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_services_kicker">Services label</label>
             <input id="home_services_kicker" name="home_services_kicker" maxlength="80" required class="form-input" value="<?= e($settings['home_services_kicker']) ?>">
@@ -194,6 +232,8 @@ if (isset($_POST['save_homepage'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_services_text">Services paragraph</label>
             <textarea id="home_services_text" name="home_services_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_services_text']) ?></textarea>
         </div>
+</div>
+<div x-show="hgroup==='about'" x-cloak>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_about_heading">About heading</label>
             <input id="home_about_heading" name="home_about_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_about_heading']) ?>">
@@ -202,6 +242,8 @@ if (isset($_POST['save_homepage'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_about_text">About paragraph</label>
             <textarea id="home_about_text" name="home_about_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_about_text']) ?></textarea>
         </div>
+</div>
+<div x-show="hgroup==='process'" x-cloak>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_process_heading">How we work heading</label>
             <input id="home_process_heading" name="home_process_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_process_heading']) ?>">
@@ -210,11 +252,16 @@ if (isset($_POST['save_homepage'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_process_text">How we work paragraph</label>
             <textarea id="home_process_text" name="home_process_text" maxlength="800" rows="3" required class="form-input"><?= e($settings['home_process_text']) ?></textarea>
         </div>
+</div>
+<div x-show="hgroup==='contact'" x-cloak>
         <div>
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="home_contact_heading">Contact heading</label>
             <input id="home_contact_heading" name="home_contact_heading" maxlength="180" required class="form-input" value="<?= e($settings['home_contact_heading']) ?>">
         </div>
+</div>
+<div class="sticky bottom-0 -mx-5 px-5 py-3 bg-white/95 backdrop-blur border-t border-slate-200">
         <button type="submit" name="save_homepage" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save homepage</button>
+</div>
     </form>
 </div>
 </div>
@@ -380,6 +427,31 @@ if (isset($_POST['save_homepage'])) {
             </div>
             <button type="submit" name="change_password" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Change Password</button>
         </form>
+    </div>
+    <div class="dash-panel">
+        <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Admin accounts and roles</h3></div>
+        <div class="p-5 space-y-3">
+            <p class="text-slate-400 text-sm">Owner and admin have full access. Staff can work the queues but cannot move money, change accounts, or grant SMS credit.</p>
+            <?php if ($roleMsg !== ''): ?><div role="status" class="p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm"><?= e($roleMsg) ?></div><?php endif; ?>
+            <?php if ($roleErr !== ''): ?><div role="alert" class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"><?= e($roleErr) ?></div><?php endif; ?>
+            <?php foreach ($adminAccounts as $acct): ?>
+                <form method="POST" class="flex flex-wrap items-center gap-3 border-t border-slate-800 pt-3">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="admin_id" value="<?= (int) $acct['id'] ?>">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white text-sm font-medium"><?= e($acct['name']) ?><?= (int) $acct['id'] === (int) $_SESSION['admin_id'] ? ' <span class="text-slate-500 text-xs">(you)</span>' : '' ?></p>
+                        <p class="text-slate-500 text-xs break-all"><?= e($acct['email']) ?></p>
+                    </div>
+                    <label class="sr-only" for="role-<?= (int) $acct['id'] ?>">Role for <?= e($acct['name']) ?></label>
+                    <select id="role-<?= (int) $acct['id'] ?>" name="role" class="form-input w-auto" <?= admin_is_staff() ? 'disabled' : '' ?>>
+                        <?php foreach (array('owner' => 'Owner', 'admin' => 'Admin', 'staff' => 'Staff') as $roleKey => $roleLabel): ?>
+                            <option value="<?= e($roleKey) ?>" <?= ($acct['role'] === $roleKey || ($acct['role'] === '' && $roleKey === 'admin')) ? 'selected' : '' ?>><?= e($roleLabel) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" name="save_admin_role" value="1" class="btn btn-sm btn-secondary" <?= admin_is_staff() || (int) $acct['id'] === (int) $_SESSION['admin_id'] ? 'disabled' : '' ?>>Save role</button>
+                </form>
+            <?php endforeach; ?>
+        </div>
     </div>
     <?php require __DIR__ . '/../includes/totp-manage-card.php'; ?>
 </div>
