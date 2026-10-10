@@ -92,3 +92,7 @@
 .kyc-decide-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .kyc-approve { min-height: 46px; padding: 0 22px; border: 0; border-radius: var(--radius-md); background: var(--ok); color: #fff; font-weight: 700; cursor: pointer; }
 .kyc-reject { min-height: 46px; padding: 0 22px; border: 1.5px solid var(--bad); border-radius: var(--radius-md); background: var(--surface); color: var(--bad); font-weight: 700; cursor: pointer; }
+
+/* Date of birth: the date and the calendar choice stack, so neither is cut off in a narrow column */
+.kyc-date { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.kyc-date input, .kyc-date select { min-width: 0; width: 100%; }

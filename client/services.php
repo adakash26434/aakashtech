@@ -46,7 +46,7 @@ foreach ($serviceRows as $row) {
         <h1 class="shop-title">My Services</h1>
         <p class="shop-sub">Everything you bought, what it is doing now, and when it renews.</p>
     </div>
-    <a href="shop.php" class="shop-btn" style="margin-top:0">Buy a service</a>
+    <a href="shop.php" class="btn btn-lg btn-primary">Buy a service</a>
 </div>
 <div class="svc-stats">
     <a href="wallet.php" class="svc-stat"><span>Wallet</span><strong><?= e(billing_money_label($balance)) ?></strong><em>Add funds</em></a>
@@ -212,6 +212,6 @@ foreach ($serviceRows as $row) {
         <?php if (!$visibleRows): ?><p class="shop-empty">Nothing in this group yet. Try another filter above.</p><?php endif; ?>
     </div>
 <?php else: ?>
-    <div class="shop-empty"><h2>You have no services yet</h2><p>Buy SMS credits to send messages today, or a domain, hosting, email or website. Everything you buy appears here.</p><a href="shop.php" class="shop-btn">Browse services</a></div>
+    <div class="shop-empty"><h2>You have no services yet</h2><p>Buy SMS credits to send messages today, or a domain, hosting, email or website. Everything you buy appears here.</p><a href="shop.php" class="btn btn-lg btn-primary">Buy a service</a></div>
 <?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
