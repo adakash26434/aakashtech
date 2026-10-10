@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
                 $error = 'We could not open an account with these details. Sign in, then send the domain request.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $color = '#0b8b7a';
+                $color = '#097a6d';
                 $insert = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
                 $insert->bind_param('ssssss', $accountName, $email, $hash, $phone, $company, $color);
                 $insert->execute();

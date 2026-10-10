@@ -262,5 +262,15 @@ $panelSealed = panel_pass_seal($conn, 'Panel#Pass1');
 check('panel: a new password is sealed with GCM', strpos($panelSealed, 'enc2:') === 0 && panel_pass_open($conn, $panelSealed) === 'Panel#Pass1');
 check('panel: a changed sealed value does not open', panel_pass_open($conn, substr($panelSealed, 0, -3) . (substr($panelSealed, -3) === 'AAA' ? 'BBB' : 'AAA')) === '');
 
+// Audit log: an admin submission is recorded by action and id, never by its values
+$_SESSION['admin_id'] = 1; $_SESSION['admin_role'] = 'owner';
+$_POST = array('approve_topup' => '1', 'entry_id' => '42', 'new_password' => 'Secret#99', 'csrf_token' => 'abc');
+audit_log_post($conn);
+$auditRow = audit_recent($conn, 1);
+check('audit: the action and record are logged', isset($auditRow[0]) && strpos($auditRow[0]['action'], 'approve_topup') !== false && strpos($auditRow[0]['target'], 'entry_id=42') !== false);
+check('audit: passwords and tokens are never logged', isset($auditRow[0]) && strpos($auditRow[0]['action'] . $auditRow[0]['target'], 'Secret') === false && strpos($auditRow[0]['action'] . $auditRow[0]['target'], 'new_password') === false);
+$_POST = array();
+unset($_SESSION['admin_id'], $_SESSION['admin_role']);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

@@ -78,6 +78,7 @@ require_once __DIR__ . '/includes/billing.php';
 require_once __DIR__ . '/includes/legal.php';
 require_once __DIR__ . '/includes/terms-accept.php';
 require_once __DIR__ . '/includes/email-verify.php';
+require_once __DIR__ . '/includes/audit.php';
 require_once __DIR__ . '/includes/sms-gateway.php';
 require_once __DIR__ . '/includes/hosting-panel.php';
 require_once __DIR__ . '/includes/mail-login.php';
@@ -231,6 +232,10 @@ function require_admin() {
         exit;
     }
     totp_require_enrolled('admin');
+    // Every admin form submission is recorded (action names and ids only, never values).
+    if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        audit_log_post($conn);
+    }
 }
 
 function require_client() {

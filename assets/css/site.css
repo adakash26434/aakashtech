@@ -3,7 +3,7 @@
     --site-ink: var(--ink-900);
     --site-ink-soft: #25434b;
     --site-muted: #4a626a;
-    --site-faint: #6d8388;
+    --site-faint: #5f7478;
     --type-body: 15px;
     --type-label: 13px;
     --type-input: 16px;
@@ -331,12 +331,12 @@ body.site-public textarea {
 .button--primary {
     color: #fff !important;
     background: linear-gradient(135deg, #0a7d6e 0%, #08705f 50%, #065a50 100%);
-    box-shadow: 0 8px 18px rgba(11, 139, 122, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 18px rgba(9, 122, 109, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .button--primary:hover {
     background: linear-gradient(135deg, var(--brand-600) 0%, #054d45 100%);
-    box-shadow: 0 12px 24px rgba(11, 139, 122, 0.3);
+    box-shadow: 0 12px 24px rgba(9, 122, 109, 0.3);
 }
 
 .faq-wrap {
@@ -364,7 +364,7 @@ body.site-public textarea {
 
 .faq-item[open] {
     border-color: #9fd6c8;
-    box-shadow: 0 10px 24px rgba(11, 139, 122, 0.08);
+    box-shadow: 0 10px 24px rgba(9, 122, 109, 0.08);
 }
 
 .faq-item summary {
@@ -522,7 +522,7 @@ body.site-public textarea {
     flex: 0 0 7px;
     background: var(--site-teal);
     border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(11, 139, 122, 0.12);
+    box-shadow: 0 0 0 4px rgba(9, 122, 109, 0.12);
     animation: dot-pulse 2.6s ease-in-out infinite;
 }
 
@@ -948,7 +948,7 @@ a.solution-row:focus-visible {
     color: var(--site-teal-dark);
     background: var(--site-teal-pale);
     border-radius: 16px;
-    box-shadow: inset 0 0 0 1px rgba(11, 139, 122, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(9, 122, 109, 0.12);
 }
 
 .service-icon svg {
@@ -1284,7 +1284,7 @@ a.solution-row:focus-visible {
     height: 18px;
     margin-top: 2px;
     border-radius: 50%;
-    background: var(--site-teal-pale) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.5 9.2 7.4 12l6.1-6.2' fill='none' stroke='%230b8b7a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px no-repeat;
+    background: var(--site-teal-pale) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.5 9.2 7.4 12l6.1-6.2' fill='none' stroke='%23097a6d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px no-repeat;
 }
 
 .plain-steps {
@@ -1939,7 +1939,7 @@ a.contact-method:hover strong {
 .form-field select:focus,
 .form-field textarea:focus {
     border-color: var(--site-teal);
-    box-shadow: 0 0 0 3px rgba(11, 139, 122, 0.12);
+    box-shadow: 0 0 0 3px rgba(9, 122, 109, 0.12);
 }
 
 .domain-page {
@@ -2456,8 +2456,8 @@ a.contact-method:hover strong {
 }
 
 @keyframes dot-pulse {
-    0%, 100% { box-shadow: 0 0 0 4px rgba(11, 139, 122, 0.12); }
-    50% { box-shadow: 0 0 0 9px rgba(11, 139, 122, 0.04); }
+    0%, 100% { box-shadow: 0 0 0 4px rgba(9, 122, 109, 0.12); }
+    50% { box-shadow: 0 0 0 9px rgba(9, 122, 109, 0.04); }
 }
 
 @keyframes orbit-spin {
@@ -2479,7 +2479,7 @@ a.contact-method:hover strong {
 }
 
 :focus-visible {
-    outline: 3px solid rgba(11, 139, 122, 0.55);
+    outline: 3px solid rgba(9, 122, 109, 0.55);
     outline-offset: 3px;
 }
 

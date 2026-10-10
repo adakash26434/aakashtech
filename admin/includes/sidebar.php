@@ -12,6 +12,7 @@ $navItems = [
     'sms-line.php'   => ['SMS line', 'radio'],
     'sms-report.php' => ['SMS report', 'chart-no-axes-column'],
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
+    'audit.php'      => ['Audit log', 'history'],
     'settings.php'   => ['Settings', 'settings'],
     'manual.php'     => ['मार्गदर्शन', 'book-open'],
 ];

@@ -17,7 +17,7 @@ try {
     error_log('Client profile could not be read.');
 }
 if (!$client) {
-    $client = array('name' => get_client_name(), 'email' => '', 'phone' => '', 'company' => '', 'address' => '', 'status' => 'active', 'avatar_color' => '#0b8b7a', 'password' => '');
+    $client = array('name' => get_client_name(), 'email' => '', 'phone' => '', 'company' => '', 'address' => '', 'status' => 'active', 'avatar_color' => '#097a6d', 'password' => '');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
@@ -97,7 +97,7 @@ $memberSince = !empty($client['created_at']) ? date('M Y', strtotime($client['cr
 
 <section class="pro-card" aria-label="Account at a glance">
     <div class="pro-who">
-        <?php $avatarTop = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#0b8b7a'; ?>
+        <?php $avatarTop = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#097a6d'; ?>
         <span class="pro-avatar" style="background: <?= e($avatarTop) ?>"><?= e(strtoupper(substr((string) $client['name'], 0, 1))) ?></span>
         <div><strong><?= e($client['name']) ?></strong><span><?= e($client['email']) ?><?= !empty($client['phone']) ? ' · ' . e($client['phone']) : '' ?></span><small><?= $memberSince !== '' ? 'Member since ' . e($memberSince) : '' ?></small></div>
     </div>
@@ -118,7 +118,7 @@ $memberSince = !empty($client['created_at']) ? date('M Y', strtotime($client['cr
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Account Information</h3></div>
         <form method="POST" action="" class="p-5 space-y-4" id="profile-form">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-            <?php $avatar = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#0b8b7a'; ?>
+            <?php $avatar = (isset($client['avatar_color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $client['avatar_color'])) ? $client['avatar_color'] : '#097a6d'; ?>
             <div class="flex items-center gap-4 mb-2">
                 <div class="portal-avatar-letter w-16 h-16 rounded-2xl flex items-center justify-center font-heading font-bold text-white text-2xl" style="background: <?= e($avatar) ?>"><?= strtoupper(substr($client['name'], 0, 1)) ?></div>
                 <div>

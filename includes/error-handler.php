@@ -25,7 +25,7 @@ function app_error_page_html($reference)
         . '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f8f6;color:#102b35;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Devanagari",sans-serif;padding:24px}'
         . 'main{max-width:480px;background:#fff;border:1px solid #dce8e4;border-radius:16px;padding:32px;box-shadow:0 12px 32px rgba(16,43,53,.1)}'
         . 'h1{font-size:24px;margin:0 0 12px}p{line-height:1.7;margin:0 0 12px;color:#25434b}code{background:#f1f7f5;padding:2px 8px;border-radius:6px;font-size:15px}'
-        . 'a{display:inline-block;margin-top:8px;min-height:44px;line-height:44px;padding:0 22px;border-radius:12px;background:#0b8b7a;color:#fff;text-decoration:none;font-weight:600}</style></head>'
+        . 'a{display:inline-block;margin-top:8px;min-height:44px;line-height:44px;padding:0 22px;border-radius:12px;background:#097a6d;color:#fff;text-decoration:none;font-weight:600}</style></head>'
         . '<body><main><h1>Something went wrong</h1>'
         . '<p>We could not finish that. Your money and messages were not changed by this error. Please try again in a minute.</p>'
         . '<p>If it keeps happening, tell us this code: <code>' . $ref . '</code></p>'

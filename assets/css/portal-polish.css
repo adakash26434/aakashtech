@@ -1,5 +1,5 @@
 /* Aakash Technologies — client + admin portal polish. Loaded after portal.css; refines only. */
-:root { --pp-ring: 0 0 0 3px rgba(11,139,122,.35); --pp-ease: cubic-bezier(.22,1,.36,1); }
+:root { --pp-ring: 0 0 0 3px rgba(9,122,109,.35); --pp-ease: cubic-bezier(.22,1,.36,1); }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 ::selection { background: var(--brand-500); color: #fff; }
@@ -38,7 +38,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 
 /* SMS composer: calmer numbers box, clearer send button, safer sticky bar */
 .portal-shell .sms-actionbar { box-shadow: 0 -12px 30px rgba(16,43,53,.1); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
-.portal-shell #sms-send button[name="send_sms"], .portal-shell #sms-send button[type="submit"] { box-shadow: 0 10px 24px rgba(11,139,122,.28); }
+.portal-shell #sms-send button[name="send_sms"], .portal-shell #sms-send button[type="submit"] { box-shadow: 0 10px 24px rgba(9,122,109,.28); }
 .portal-shell textarea.sms-numbers, .portal-shell #sms-text { min-height: 8.5rem; }
 .portal-shell .sms-count-chip { font-variant-numeric: tabular-nums; }
 
@@ -58,13 +58,13 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .portal-shell .text-slate-100, .portal-shell .text-slate-200, .portal-shell .text-gray-100, .portal-shell .text-gray-200 { color: #25434b; }
 .portal-shell [class*="bg-slate-900"], .portal-shell [class*="bg-slate-950"], .portal-shell [class*="bg-gray-900"] { background-color: #f1f7f5; color: var(--ink-900); border-color: #dce8e4; }
 .portal-shell [class*="bg-slate-800"]:not(button):not(a):not([class*="bg-brand"]), .portal-shell [class*="bg-slate-700"]:not(button):not(a) { background-color: #eaf3f0; color: var(--ink-900); }
-.portal-shell ::placeholder { color: #6d8388; opacity: 1; }
+.portal-shell ::placeholder { color: #5f7478; opacity: 1; }
 .portal-shell input, .portal-shell select, .portal-shell textarea { color: var(--ink-900); }
 
 /* Manuals (Nepali guides): readable line height for Devanagari, jump links that stay in view */
 .portal-shell nav[aria-label="खण्ड"], .portal-shell nav[aria-label="Sections"] { position: sticky; top: 0; z-index: 5; padding: 10px 0; background: var(--surface-paper, #fbfdfc); border-bottom: 1px solid var(--line, #dce8e4); }
 .portal-shell nav[aria-label="खण्ड"] a, .portal-shell nav[aria-label="Sections"] a { min-height: 40px; display: inline-flex; align-items: center; transition: background-color .2s, border-color .2s; }
-.portal-shell nav[aria-label="खण्ड"] a:hover, .portal-shell nav[aria-label="Sections"] a:hover { background: var(--brand-50, #e5f5f0); border-color: var(--brand-500, #0b8b7a); }
+.portal-shell nav[aria-label="खण्ड"] a:hover, .portal-shell nav[aria-label="Sections"] a:hover { background: var(--brand-50, #e5f5f0); border-color: var(--brand-500, #097a6d); }
 .portal-shell section.dash-panel[id] { scroll-margin-top: 84px; }
 .portal-shell section.dash-panel[id] :is(li, p) { line-height: 1.85; font-size: 15px; max-width: 78ch; }
 .portal-shell section.dash-panel[id] :is(ol, ul) { padding-bottom: 4px; }
