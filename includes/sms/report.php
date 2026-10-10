@@ -124,7 +124,7 @@ function sms_dlr_handle($conn)
 {
     header('Content-Type: application/json; charset=utf-8');
     $expected = defined('SMS_DLR_KEY') ? (string) SMS_DLR_KEY : '';
-    $given = isset($_GET['key']) ? (string) $_GET['key'] : '';
+    $given = isset($_SERVER['HTTP_X_CRON_KEY']) ? (string) $_SERVER['HTTP_X_CRON_KEY'] : (isset($_GET['key']) ? (string) $_GET['key'] : '');
     if ($expected === '' || !hash_equals($expected, $given)) {
         http_response_code(403);
         echo json_encode(array('ok' => false, 'message' => 'Forbidden'));

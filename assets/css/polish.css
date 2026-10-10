@@ -1,7 +1,7 @@
 /* Aakash Technologies — UI polish layer. Loaded after site.css; only refines, never replaces. */
 :root {
     --ui-radius: 16px;
-    --ui-ring: 0 0 0 3px rgba(11, 139, 122, 0.35);
+    --ui-ring: 0 0 0 3px rgba(9, 122, 109, 0.35);
     --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --header-h: 72px;
 }
@@ -25,7 +25,7 @@ body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; 
 .button, .button--small { min-height: 44px; transition: transform 0.25s var(--ui-ease), box-shadow 0.25s var(--ui-ease), background-color 0.2s; }
 .button:hover { transform: translateY(-2px); }
 .button:active { transform: translateY(0) scale(0.98); }
-.button--primary { box-shadow: 0 10px 24px rgba(11, 139, 122, 0.28); }
+.button--primary { box-shadow: 0 10px 24px rgba(9, 122, 109, 0.28); }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
     outline: 2px solid var(--site-teal-dark); outline-offset: 3px; box-shadow: var(--ui-ring); border-radius: 8px;
 }

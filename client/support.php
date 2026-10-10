@@ -4,6 +4,8 @@ require_once __DIR__ . '/includes/sidebar.php';
 $cid = get_client_id();
 require_once __DIR__ . '/../includes/support-view.php';
 $msg = '';
+// A saved message is shown once, after the redirect that follows a successful submit.
+$msg = flash('support_notice');
 $err = '';
 $ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium', 'topic' => '', 'service_id' => 0);
 
@@ -47,8 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
                 'Client: ' . billing_notify_client_label($conn, $cid),
                 'Open Admin → Support Tickets.'
             ));
-            $msg = 'Support ticket created! We will respond shortly.';
-            $ticketDraft = array('subject' => '', 'description' => '', 'priority' => 'medium', 'topic' => '', 'service_id' => 0);
+            flash('support_notice', 'Support ticket created! We will respond shortly.');
+            $stmt->close();
+            header('Location: support.php');
+            exit;
         } else {
             $err = 'Failed to create ticket.';
         }
@@ -88,7 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_ticket'])) {
                     'Client: ' . billing_notify_client_label($conn, $cid),
                     'Open Admin → Support Tickets.'
                 ));
-                $msg = 'Follow-up saved. The team can read it on this ticket.';
+                flash('support_notice', 'Follow-up saved. The team can read it on this ticket.');
+                header('Location: support.php');
+                exit;
             } else {
                 $err = 'The follow-up could not be saved.';
             }
@@ -151,7 +157,7 @@ $shownRows = array_values(array_filter($ticketRows, function ($row) use ($show) 
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
 <?php endif; ?>
 <?php if ($err): ?>
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
+    <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
 <?php $startOnForm = ($err !== '' && isset($_POST['create_ticket'])) || isset($_GET['new']); ?>

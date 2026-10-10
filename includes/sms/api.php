@@ -151,11 +151,11 @@ function sms_api_input()
             $input = $json;
         }
     }
-    foreach (array($_POST, $_GET) as $bag) {
-        foreach ($bag as $key => $value) {
-            if (!isset($input[$key])) {
-                $input[$key] = $value;
-            }
+    // Only the POST body and a JSON body are read. The URL query string is ignored, so a
+    // message or token in a link never reaches access logs, referrers or prefetchers.
+    foreach ($_POST as $key => $value) {
+        if (!isset($input[$key])) {
+            $input[$key] = $value;
         }
     }
     $header = '';
@@ -280,8 +280,8 @@ function sms_api_receipt($conn, $clientId, $campaignId)
 
 function sms_api_token_row($conn)
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
-        sms_api_json(405, array('error' => true, 'message' => 'Use POST or GET.', 'data' => array()));
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sms_api_json(405, array('error' => true, 'message' => 'Use POST. Sending by GET is no longer accepted.', 'data' => array()));
     }
     $input = sms_api_input();
     $token = isset($input['auth_token']) ? trim((string) $input['auth_token']) : '';
@@ -293,6 +293,134 @@ function sms_api_token_row($conn)
         sms_api_json(401, array('error' => true, 'message' => 'The provided auth token is not valid.', 'data' => array()));
     }
     return array($row, $input);
+}
+
+// A client_ref names one send. If the same ref comes again, the earlier receipt is returned
+// and nothing is sent or charged. Refs are scoped to the token that sent them.
+function sms_api_replay($conn, $clientId, $tokenId, $ref)
+{
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('SELECT id FROM sms_campaigns WHERE client_id = ? AND api_ref = ? ORDER BY id ASC');
+    $stmt->bind_param('is', $clientId, $key);
+    $stmt->execute();
+    $found = db_fetch_all($stmt);
+    $stmt->close();
+    if (!$found) {
+        return null;
+    }
+    $valid = array();
+    $invalid = array();
+    $credits = 0;
+    foreach ($found as $campaign) {
+        $receipt = sms_api_receipt($conn, $clientId, (int) $campaign['id']);
+        $valid = array_merge($valid, $receipt['valid']);
+        $invalid = array_merge($invalid, $receipt['invalid']);
+        $credits += (int) $receipt['credits'];
+    }
+    $balance = billing_unit_balances($conn, $clientId);
+    $balance = (int) $balance['sms'];
+    return array(
+        'count' => count($valid),
+        'failed' => count($invalid),
+        'credits_used' => 0,
+        'balance' => $balance,
+        'available_credit' => $balance,
+        'valid' => $valid,
+        'invalid' => $invalid,
+        'replayed' => true,
+        'original_credits_used' => $credits
+    );
+}
+
+// A client_ref is reserved before anything is sent. Two requests that arrive together cannot both
+// pass: the unique key lets only one insert succeed, and the other is told it is in progress.
+function sms_api_ensure_refs($conn)
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    $ready = true;
+    $sql = DB_DRIVER === 'sqlite'
+        ? 'CREATE TABLE IF NOT EXISTS sms_api_refs (id INTEGER PRIMARY KEY AUTOINCREMENT, ref_key TEXT NOT NULL UNIQUE, created_at TEXT DEFAULT CURRENT_TIMESTAMP)'
+        : 'CREATE TABLE IF NOT EXISTS sms_api_refs (id INT AUTO_INCREMENT PRIMARY KEY, ref_key VARCHAR(160) NOT NULL UNIQUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB';
+    try {
+        billing_exec($conn, $sql);
+    } catch (Throwable $exception) {
+        error_log('SMS API reference table could not be created.');
+    }
+}
+
+function sms_api_reserve_ref($conn, $tokenId, $ref)
+{
+    sms_api_ensure_refs($conn);
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('INSERT INTO sms_api_refs (ref_key, created_at) VALUES (?, ?)');
+    if (!$stmt) {
+        return false;
+    }
+    $now = date('Y-m-d H:i:s');
+    $stmt->bind_param('ss', $key, $now);
+    $ok = false;
+    try {
+        $ok = (bool) $stmt->execute();
+    } catch (Throwable $exception) {
+        $ok = false;
+    }
+    $stmt->close();
+    if ($ok) {
+        return true;
+    }
+    // A reservation with no campaign behind it and older than ten minutes is left over from a request
+    // that died before it sent anything. Free it once and try again.
+    $old = $conn->prepare('SELECT created_at FROM sms_api_refs WHERE ref_key = ? LIMIT 1');
+    if (!$old) {
+        return false;
+    }
+    $old->bind_param('s', $key);
+    $old->execute();
+    $row = db_fetch_assoc($old);
+    $old->close();
+    if (!$row || strtotime((string) $row['created_at']) > time() - 600) {
+        return false;
+    }
+    // The key already includes the token id, so it names one client's send.
+    $campaigns = $conn->prepare('SELECT id FROM sms_campaigns WHERE api_ref = ? LIMIT 1');
+    if (!$campaigns) {
+        return false;
+    }
+    $campaigns->bind_param('s', $key);
+    $campaigns->execute();
+    $hasCampaign = (bool) db_fetch_assoc($campaigns);
+    $campaigns->close();
+    if ($hasCampaign) {
+        return false;
+    }
+    sms_api_release_ref($conn, $tokenId, $ref);
+    $retry = $conn->prepare('INSERT INTO sms_api_refs (ref_key, created_at) VALUES (?, ?)');
+    if (!$retry) {
+        return false;
+    }
+    $retry->bind_param('ss', $key, $now);
+    $again = false;
+    try {
+        $again = (bool) $retry->execute();
+    } catch (Throwable $exception) {
+        $again = false;
+    }
+    $retry->close();
+    return $again;
+}
+
+function sms_api_release_ref($conn, $tokenId, $ref)
+{
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('DELETE FROM sms_api_refs WHERE ref_key = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 function sms_api_send($conn)
@@ -378,6 +506,19 @@ function sms_api_send($conn)
     }
     $clientId = (int) $row['client_id'];
     $tokenId = (int) $row['id'];
+    $ref = isset($input['client_ref']) ? trim((string) $input['client_ref']) : '';
+    if ($ref !== '') {
+        if (!preg_match('/^[A-Za-z0-9_.-]{1,64}$/', $ref)) {
+            sms_api_json(400, array('error' => true, 'message' => 'client_ref can use letters, numbers, dot, dash and underscore, up to 64 characters.', 'data' => array()));
+        }
+        $replay = sms_api_replay($conn, $clientId, $tokenId, $ref);
+        if ($replay !== null) {
+            sms_api_json(200, array('error' => false, 'message' => 'This client_ref was already sent. Nothing was sent or charged again.', 'data' => $replay));
+        }
+        if (!sms_api_reserve_ref($conn, $tokenId, $ref)) {
+            sms_api_json(409, array('error' => true, 'message' => 'This client_ref is already being sent. Check the SMS logs before sending it again.', 'data' => array()));
+        }
+    }
     $name = (isset($input['name']) && trim((string) $input['name']) !== '') ? (string) $input['name'] : 'API';
     $sender = isset($input['from']) ? (string) $input['from'] : '';
     $valid = array();
@@ -407,6 +548,14 @@ function sms_api_send($conn)
             'source' => 'api',
             'token_id' => $tokenId
         ));
+        if ($ref !== '' && !empty($result['campaign_id'])) {
+            $refKey = $tokenId . ':' . $ref;
+            $tag = $conn->prepare('UPDATE sms_campaigns SET api_ref = ? WHERE id = ? AND client_id = ?');
+            $campaignForRef = (int) $result['campaign_id'];
+            $tag->bind_param('sii', $refKey, $campaignForRef, $clientId);
+            $tag->execute();
+            $tag->close();
+        }
         if (isset($result['balance'])) {
             $balance = (int) $result['balance'];
         }
@@ -442,6 +591,10 @@ function sms_api_send($conn)
             $message .= ' Some numbers were not accepted. Those credits were returned.';
         }
         sms_api_json(200, array('error' => false, 'message' => $message, 'data' => $data));
+    }
+    if ($ref !== '') {
+        // Nothing went out, so the ref is free for a corrected retry.
+        sms_api_release_ref($conn, $tokenId, $ref);
     }
     sms_api_json(400, array(
         'error' => true,

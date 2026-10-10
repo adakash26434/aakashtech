@@ -1,4 +1,6 @@
 <?php
+// Nepal time for every date, renewal and dedupe comparison, whatever the server's zone is.
+date_default_timezone_set('Asia/Kathmandu');
 /**
  * Aakash Technologies — Database Configuration & Auth
  * Compatible with PHP 7.4+ and PHP 8.x
@@ -74,6 +76,9 @@ if (DB_DRIVER === 'sqlite') {
 
 require_once __DIR__ . '/includes/billing.php';
 require_once __DIR__ . '/includes/legal.php';
+require_once __DIR__ . '/includes/terms-accept.php';
+require_once __DIR__ . '/includes/email-verify.php';
+require_once __DIR__ . '/includes/audit.php';
 require_once __DIR__ . '/includes/sms-gateway.php';
 require_once __DIR__ . '/includes/hosting-panel.php';
 require_once __DIR__ . '/includes/mail-login.php';
@@ -196,6 +201,22 @@ function is_client_logged_in() {
     return isset($_SESSION['client_id']) && !empty($_SESSION['client_id']);
 }
 
+/**
+ * Roles: 'owner' and 'admin' have full access. 'staff' can work the queues but cannot move money,
+ * change an account's status or password, grant or take SMS credit, or open a client's portal.
+ */
+function admin_is_staff() {
+    return isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'staff';
+}
+
+function admin_deny_if_staff() {
+    if (admin_is_staff()) {
+        flash('admin_notice', 'Only the owner can make that change. Ask the owner to do it.');
+        header('Location: ' . (string) $_SERVER['REQUEST_URI']);
+        exit;
+    }
+}
+
 function require_admin() {
     global $conn;
     $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
@@ -211,6 +232,10 @@ function require_admin() {
         exit;
     }
     totp_require_enrolled('admin');
+    // Every admin form submission is recorded (action names and ids only, never values).
+    if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        audit_log_post($conn);
+    }
 }
 
 function require_client() {
@@ -379,7 +404,8 @@ function auth_password_still_current($conn, $kind)
         : 'SELECT password FROM client_users WHERE id = ?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        return true;
+        // Fail closed: if the password can't be checked, the session is not trusted.
+        return false;
     }
     $stmt->bind_param('i', $id);
     $stmt->execute();
@@ -407,7 +433,10 @@ function auth_client_ip() {
     if (in_array($header, array('CF-Connecting-IP', 'X-Real-IP', 'X-Forwarded-For'), true)) {
         $key = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
         if (!empty($_SERVER[$key])) {
-            $first = trim(explode(',', (string) $_SERVER[$key])[0]);
+            // X-Forwarded-For: the first entry is whatever the visitor sent. Our proxy appends the
+            // address it saw, so the last entry is the one to trust.
+            $parts = array_map('trim', explode(',', (string) $_SERVER[$key]));
+            $first = $header === 'X-Forwarded-For' ? (string) end($parts) : $parts[0];
             if (filter_var($first, FILTER_VALIDATE_IP)) {
                 $ip = $first;
             }
@@ -475,7 +504,7 @@ function auth_ensure_client_table($conn)
             company TEXT DEFAULT NULL,
             address TEXT DEFAULT NULL,
             status TEXT DEFAULT 'active',
-            avatar_color TEXT DEFAULT '#06b6d4',
+            avatar_color TEXT DEFAULT '#0e7490',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
@@ -484,7 +513,7 @@ function auth_ensure_client_table($conn)
             'company' => 'TEXT DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "TEXT DEFAULT 'active'",
-            'avatar_color' => "TEXT DEFAULT '#06b6d4'",
+            'avatar_color' => "TEXT DEFAULT '#0e7490'",
             'login_notice_at' => 'TEXT DEFAULT NULL',
             'login_notice_ip' => "TEXT DEFAULT ''"
         );
@@ -498,7 +527,7 @@ function auth_ensure_client_table($conn)
             company VARCHAR(255) DEFAULT NULL,
             address TEXT DEFAULT NULL,
             status VARCHAR(20) DEFAULT 'active',
-            avatar_color VARCHAR(20) DEFAULT '#06b6d4',
+            avatar_color VARCHAR(20) DEFAULT '#0e7490',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_email (email),
@@ -509,7 +538,7 @@ function auth_ensure_client_table($conn)
             'company' => 'VARCHAR(255) DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "VARCHAR(20) DEFAULT 'active'",
-            'avatar_color' => "VARCHAR(20) DEFAULT '#06b6d4'",
+            'avatar_color' => "VARCHAR(20) DEFAULT '#0e7490'",
             'login_notice_at' => 'DATETIME DEFAULT NULL',
             'login_notice_ip' => "VARCHAR(45) DEFAULT ''"
         );
@@ -634,10 +663,10 @@ function db_fetch_assoc($stmt) {
     return $copy;
 }
 
-function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds) {
+function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds, $ipKey = null) {
     try {
         $scope = substr((string) $scope, 0, 20);
-        $ip = auth_client_ip();
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
         $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
         if (!$stmt) {
@@ -653,10 +682,59 @@ function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds) {
     }
 }
 
-function auth_note_attempt($conn, $scope) {
+/**
+ * For endpoints where every request counts (a domain request, a resend). Counting and recording
+ * happen under one lock per scope and address, so a burst of parallel requests cannot all pass the
+ * check before any of them is recorded. Returns true when the request may go ahead (and records it).
+ * On SQLite there is no named lock; the check and insert still run in one request.
+ */
+function auth_attempt_reserve($conn, $scope, $limit, $windowSeconds) {
     try {
         $scope = substr((string) $scope, 0, 20);
         $ip = auth_client_ip();
+        $lockName = substr('aakash:' . $scope . ':' . $ip, 0, 60);
+        $locked = false;
+        if (DB_DRIVER !== 'sqlite') {
+            $lock = $conn->prepare('SELECT GET_LOCK(?, 5) AS got');
+            $lock->bind_param('s', $lockName);
+            $lock->execute();
+            $got = db_fetch_assoc($lock);
+            $lock->close();
+            $locked = $got && (string) $got['got'] === '1';
+            if (!$locked) {
+                return false;
+            }
+        }
+        $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
+        $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
+        $stmt->bind_param('sss', $scope, $ip, $since);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        $allowed = !$row || (int) $row['c'] < (int) $limit;
+        if ($allowed) {
+            $now = date('Y-m-d H:i:s');
+            $insert = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
+            $insert->bind_param('sss', $scope, $ip, $now);
+            $insert->execute();
+            $insert->close();
+        }
+        if ($locked) {
+            $release = $conn->prepare('SELECT RELEASE_LOCK(?)');
+            $release->bind_param('s', $lockName);
+            $release->execute();
+            $release->close();
+        }
+        return $allowed;
+    } catch (Throwable $exception) {
+        return true;
+    }
+}
+
+function auth_note_attempt($conn, $scope, $ipKey = null) {
+    try {
+        $scope = substr((string) $scope, 0, 20);
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $now = date('Y-m-d H:i:s');
         $stmt = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
         if (!$stmt) {
@@ -678,10 +756,10 @@ function auth_note_attempt($conn, $scope) {
     }
 }
 
-function auth_clear_attempts($conn, $scope) {
+function auth_clear_attempts($conn, $scope, $ipKey = null) {
     try {
         $scope = substr((string) $scope, 0, 20);
-        $ip = auth_client_ip();
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $stmt = $conn->prepare('DELETE FROM login_attempts WHERE scope = ? AND ip = ?');
         if (!$stmt) {
             return;

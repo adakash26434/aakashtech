@@ -195,10 +195,10 @@ if ($type !== 'all') {
 </nav>
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="hidden" name="type" value="<?= e($type) ?>">
-    <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Search by note, type or status">
-    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+    <input type="search" name="q" value="<?= e($find) ?>" class="form-input flex-1 min-w-0 max-w-sm" aria-label="Search wallet activity" placeholder="Search by note, type or status">
+    <button type="submit" class="btn btn-lg btn-primary shrink-0">Find</button>
 </form>
-<p class="wal-sum">Shown below: money in <b class="is-in"><?= e(billing_money_label($totals['in'])) ?></b> · money out <b><?= e(billing_money_label($totals['out'])) ?></b></p>
+<p class="wal-sum">Last 30 entries below: money in <b class="is-in"><?= e(billing_money_label($totals['in'])) ?></b> · money out <b><?= e(billing_money_label($totals['out'])) ?></b></p>
 <section class="dash-panel overflow-hidden">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white"><?= $find === '' ? 'Wallet activity' : 'Matches for “' . e($find) . '”' ?></h3></div>
     <div class="overflow-x-auto">

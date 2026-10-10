@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $storedPassword = ($error === '' && $admin) ? (string) $admin['password'] : '';
         $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
         if ($passwordMatches && $admin && (int) $admin['is_active'] === 1) {
-            auth_clear_attempts($conn, 'admin');
+            // Failures are cleared only after the second factor passes (totp.php), not here.
             totp_open_gate($conn, 'admin', array(
                 'id' => (int) $admin['id'],
                 'name' => $admin['name'],
@@ -107,7 +107,7 @@ try {
         <form method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-5">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
             <?php if ($error): ?>
-                <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+                <div role="alert" class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
             <?php endif; ?>
 
             <div>

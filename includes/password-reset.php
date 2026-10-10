@@ -93,7 +93,7 @@ function password_reset_consume($conn, $token, $password)
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
         return 'This link has expired. Ask for a new one.';
     }
-    if (strlen((string) $password) < 8) {
+    if (strlen((string) $password) < 8 || strlen((string) $password) > 72) {
         return 'Use a password of at least 8 characters.';
     }
     $hash = hash('sha256', $token);
@@ -110,6 +110,15 @@ function password_reset_consume($conn, $token, $password)
         return 'This link has expired. Ask for a new one.';
     }
     $clientId = (int) $row['client_id'];
+    // Claim the token first. A second request with the same link finds it gone and changes nothing.
+    $claim = $conn->prepare('DELETE FROM password_resets WHERE token_hash = ?');
+    $claim->bind_param('s', $hash);
+    $claim->execute();
+    $claimed = billing_affected($conn) === 1;
+    $claim->close();
+    if (!$claimed) {
+        return 'This link has expired. Ask for a new one.';
+    }
     $passHash = password_hash((string) $password, PASSWORD_DEFAULT);
     $active = 'active';
     $update = $conn->prepare('UPDATE client_users SET password = ? WHERE id = ? AND status = ?');
@@ -120,6 +129,17 @@ function password_reset_consume($conn, $token, $password)
     $update->execute();
     $changed = (int) $conn->affected_rows > 0;
     $update->close();
+    if ($changed) {
+        // Proving the email is enough to reset the password, so it also clears the authenticator
+        // that was attached to the account. Someone who only knew the old password, or who
+        // enrolled their own phone first, cannot keep the owner out. The owner enrolls again at sign-in.
+        $untotp = $conn->prepare("UPDATE client_users SET totp_secret = '', totp_last_step = 0 WHERE id = ?");
+        if ($untotp) {
+            $untotp->bind_param('i', $clientId);
+            $untotp->execute();
+            $untotp->close();
+        }
+    }
     password_reset_clear($conn, $clientId);
     if (!$changed) {
         return 'This link has expired. Ask for a new one.';

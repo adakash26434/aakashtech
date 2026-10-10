@@ -6,7 +6,13 @@
 
 # Private server settings (use cpanel-config.sample.php as the template)
 cpanel-config.local.php
+# The live server copy is edited by hand, so git must not track or overwrite it.
+cpanel-config.php
 .env
 *.bak
 *.old
 node_modules/
+
+# Customer documents must never be committed (they are served only through the app)
+uploads/kyc/
+uploads/domains/

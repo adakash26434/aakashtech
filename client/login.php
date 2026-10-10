@@ -54,10 +54,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             $client = null;
             $error = 'Sign-in could not be completed. Try again in a moment.';
         }
+        // Per account as well as per address: a botnet spread over many addresses still meets the limit
+        // on the account it is guessing. Only failed passwords count, and a correct password clears them.
+        // A locked account gets the same answer as a wrong password, so the message does not reveal that the account exists.
+        if ($error === '' && $client && auth_attempt_blocked($conn, 'acct-' . (int) $client['id'], 10, 900, 'account')) {
+            $client = null;
+        }
         $storedPassword = ($error === '' && $client) ? (string) $client['password'] : '';
         $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
+        if ($passwordMatches && $client) {
+            auth_clear_attempts($conn, 'acct-' . (int) $client['id'], 'account');
+        } elseif ($error === '' && $client) {
+            auth_note_attempt($conn, 'acct-' . (int) $client['id'], 'account');
+        }
         if ($passwordMatches && $client && $client['status'] === 'active') {
-            auth_clear_attempts($conn, 'client');
+            // Failures are cleared only after the second factor passes (totp.php), not here.
             $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
             totp_open_gate($conn, 'client', array(
                 'id' => (int) $client['id'],
@@ -68,9 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             exit;
         } elseif ($error === '') {
             auth_note_attempt($conn, 'client');
-            $error = ($client && $client['status'] !== 'active')
-                ? 'Your account is suspended. Contact support.'
-                : 'Invalid email or password.';
+            if ($client && $client['status'] === 'pending' && $passwordMatches) {
+                $error = 'Confirm your email address first. Open the link we sent you. Use Send it again below if it did not arrive.';
+            } else {
+                $error = ($client && $client['status'] !== 'active')
+                    ? 'Your account is suspended. Contact support.'
+                    : 'Invalid email or password.';
+            }
         }
     }
 }
@@ -153,8 +168,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Enter a 10-digit mobile number.';
     } elseif (strlen($password) < 8) {
         $error = 'Password must be at least 8 characters.';
+    } elseif (strlen($password) > 72) {
+        // bcrypt ignores everything after 72 bytes, so a longer password would be silently cut.
+        $error = 'Password must be 72 characters or fewer.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
+    } elseif (!isset($_POST['accept_terms']) || $_POST['accept_terms'] !== '1') {
+        $error = 'Read the Terms and Conditions and tick the box to create an account.';
     } else {
         try {
             $taken = billing_client_taken($conn, $email, $phone, $company, 0);
@@ -162,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 auth_note_attempt($conn, 'register');
                 $error = $taken;
             } else {
-                $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+                $colors = array('#0e7490', '#6d28d9', '#be185d', '#b45309', '#047857', '#b91c1c');
                 $avatar_color = $colors[array_rand($colors)];
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $conn->prepare("INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)");
@@ -178,14 +198,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 if ($newId < 1) {
                     $error = 'The account could not be created. Refresh the page and try again.';
                 } else {
-                    billing_mail_client_event($conn, $newId, 'account');
-                    $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
-                    totp_open_gate($conn, 'client', array(
-                        'id' => $newId,
-                        'name' => $name,
-                        'email' => $email
-                    ), $next);
-                    header('Location: two-factor.php');
+                    terms_record_acceptance($conn, $newId);
+                    // The account waits for the link sent to this address. It cannot sign in before that.
+                    $waiting = 'pending';
+                    $markPending = $conn->prepare('UPDATE client_users SET status = ? WHERE id = ?');
+                    $markPending->bind_param('si', $waiting, $newId);
+                    $markPending->execute();
+                    $markPending->close();
+                    email_verify_issue($conn, $newId, $email);
+                    flash('login_notice', 'Account created. We sent a confirmation link to ' . $email . '. Open it to activate the account, then sign in.');
+                    header('Location: login.php');
                     exit;
                 }
             }
@@ -255,7 +277,7 @@ try {
             <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($loginNotice) ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-            <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+            <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
         <?php endif; ?>
 
         <?php if (!$showRegister): ?>
@@ -263,21 +285,22 @@ try {
             <form method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-5">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div>
-                    <label class="block text-slate-300 text-sm font-medium mb-2">Email Address</label>
-                    <input type="email" name="email" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
+                    <label for="login-email" class="block text-slate-300 text-sm font-medium mb-2">Email Address</label>
+                    <input type="email" id="login-email" name="email" value="<?= e($_POST['email'] ?? '') ?>" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
                 </div>
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-2">
-                        <label class="block text-slate-300 text-sm font-medium">Password</label>
+                        <label for="login-password" class="block text-slate-300 text-sm font-medium">Password</label>
                         <a href="forgot-password.php" class="text-brand-400 text-sm">Forgot password?</a>
                     </div>
-                    <input type="password" name="password" required autocomplete="current-password" class="form-input" placeholder="••••••••">
+                    <input type="password" id="login-password" name="password" required autocomplete="current-password" class="form-input" placeholder="••••••••">
                     <p class="text-slate-500 text-xs mt-2">Reset sends a link to this email. The link works for 30 minutes.</p>
                 </div>
                 <button type="submit" name="login" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Sign In
                 </button>
                 <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
+                <p class="text-slate-500 text-xs"><a href="resend-verify.php" class="text-brand-400 underline">Did not get the confirmation email? Send it again</a></p>
             </form>
             <p class="text-center text-slate-600 text-sm mt-6">
                 Don't have an account? <a href="?action=register" class="text-brand-400 hover:text-brand-300 font-medium">Register here</a><br>
@@ -328,7 +351,10 @@ try {
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="human_check">What is <?= e(auth_math_prompt('register')) ?>? *</label>
                     <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" class="form-input" placeholder="Answer">
                 </div>
-                <p class="text-slate-500 text-xs">Creating the account is your consent to keep the name, email, and mobile for this account. Read the <a href="../privacy.php" class="text-brand-400">privacy policy</a> and the <a href="../terms.php" class="text-brand-400">terms of service</a>.</p>
+                <label class="flex items-start gap-3 text-sm text-slate-300 cursor-pointer">
+                    <input type="checkbox" name="accept_terms" value="1" required class="mt-1 h-5 w-5 shrink-0 accent-brand-500">
+                    <span>I have read the <a href="../terms.php" target="_blank" rel="noopener" class="text-brand-400 underline">Terms and Conditions</a> and the <a href="../privacy.php" target="_blank" rel="noopener" class="text-brand-400 underline">privacy policy</a>, and I accept them. This tick is my digital signature on this account.</span>
+                </label>
                 <button type="submit" name="register" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">
                     Create Account
                 </button>

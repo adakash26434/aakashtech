@@ -106,6 +106,15 @@ function billing_mail_send($to, $subject, $body, $from, $fromName, $replyTo = ''
     $to = trim((string) $to);
     $from = trim((string) $from);
     $replyTo = trim((string) $replyTo);
+    // Test and development only: when MAIL_OUTBOX_DIR is set, the message is written to a file
+    // instead of being sent. Production leaves it unset, so nothing changes there.
+    $outbox = getenv('MAIL_OUTBOX_DIR');
+    if (is_string($outbox) && $outbox !== '' && is_dir($outbox)) {
+        $file = rtrim($outbox, '/') . '/' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.eml';
+        $text = 'To: ' . $to . "\nFrom: " . $from . "\nSubject: " . (string) $subject . "\n\n" . str_replace("\r", '', (string) $body) . "\n";
+        file_put_contents($file, $text);
+        return array('ok' => true, 'error' => '');
+    }
     if (!billing_mail_ok($replyTo)) {
         $replyTo = $from;
     }

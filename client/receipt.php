@@ -48,7 +48,7 @@ $title = $isCredit ? 'Payment receipt' : 'Wallet charge';
         .note { margin-top: 24px; font-size: 12px; color: #5b7169; border-top: 1px solid #e3ede8; padding-top: 12px; }
         .actions { max-width: 640px; margin: 16px auto 0; display: flex; gap: 8px; }
         .actions a, .actions button { font: inherit; font-size: 14px; padding: 8px 16px; border-radius: 10px; border: 1px solid #c9dad2; background: #fff; color: #075e54; cursor: pointer; text-decoration: none; }
-        .actions button { background: #0b8b7a; color: #fff; border-color: #0b8b7a; }
+        .actions button { background: #097a6d; color: #fff; border-color: #097a6d; }
         @media print { body { background: #fff; padding: 0; } .receipt { border: 0; } .actions { display: none; } }
     </style>
 </head>

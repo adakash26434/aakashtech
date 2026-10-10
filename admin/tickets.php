@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_ticket'])) {
             $ticketClient = (int) $ticketRow['client_id'];
             $ticketSubject = (string) $ticketRow['subject'];
             $previousReply = (string) $ticketRow['admin_reply'];
-            if ($reply === '') {
+            // A blank box keeps the reply the client already sees, unless the clear box is ticked.
+            if ($reply === '' && empty($_POST['clear_reply'])) {
                 $reply = $previousReply;
             }
         }
@@ -123,6 +124,7 @@ if ($find !== '') {
                         <?php if ($find !== ''): ?><input type="hidden" name="q" value="<?= e($find) ?>"><?php endif; ?>
                         <label class="block text-slate-400 text-xs font-medium" for="reply-<?= (int) $t['id'] ?>">Reply</label>
                         <textarea id="reply-<?= (int) $t['id'] ?>" name="admin_reply" rows="3" maxlength="4000" class="form-input" placeholder="Write the reply the client will see"><?= e(isset($t['admin_reply']) ? $t['admin_reply'] : '') ?></textarea>
+                        <label class="inline-flex items-center gap-2 text-slate-400 text-xs"><input type="checkbox" name="clear_reply" value="1" class="w-4 h-4"> Remove the reply the client sees</label>
                         <div class="flex gap-2 flex-wrap">
                         <select name="status" class="form-input w-auto">
                             <option value="open" <?= $t['status'] === 'open' ? 'selected' : '' ?>>Open</option>

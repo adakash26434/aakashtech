@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         if (!$logo['ok']) {
             $err = $logo['error'];
         } else {
-            if (!empty($_POST['remove_logo'])) {
+            if (!empty($_POST['remove_logo']) && $logo['path'] === null) {
                 $dir = dirname(__DIR__, 2) . '/uploads';
                 foreach (glob($dir . '/site-logo.*') as $old) {
                     if (is_file($old)) {
@@ -238,8 +238,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai'])) {
     }
     $geminiInput = trim((string) (isset($_POST['ai_gemini_key']) ? $_POST['ai_gemini_key'] : ''));
     $deepseekInput = trim((string) (isset($_POST['ai_deepseek_key']) ? $_POST['ai_deepseek_key'] : ''));
-    $geminiKey = billing_setting($conn, 'ai_gemini_key');
-    $deepseekKey = billing_setting($conn, 'ai_deepseek_key');
+    // The keys are stored sealed (same cipher as the hosting passwords); open them here so the checks below compare plain text.
+    $geminiKey = panel_pass_open($conn, billing_setting($conn, 'ai_gemini_key'));
+    $deepseekKey = panel_pass_open($conn, billing_setting($conn, 'ai_deepseek_key'));
     if (!empty($_POST['clear_gemini'])) {
         $geminiKey = '';
     } elseif ($geminiInput !== '') {
@@ -258,8 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai'])) {
         $err = 'Paste a DeepSeek key, or choose Gemini.';
     } else {
         billing_set_setting($conn, 'ai_provider', $provider);
-        billing_set_setting($conn, 'ai_gemini_key', $geminiKey);
-        billing_set_setting($conn, 'ai_deepseek_key', $deepseekKey);
+        billing_set_setting($conn, 'ai_gemini_key', $geminiKey === '' ? '' : panel_pass_seal($conn, $geminiKey));
+        billing_set_setting($conn, 'ai_deepseek_key', $deepseekKey === '' ? '' : panel_pass_seal($conn, $deepseekKey));
         $msg = $provider === '' ? 'The public assistant is off.' : 'The public assistant will answer from the service pages.';
     }
 }

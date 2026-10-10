@@ -1,6 +1,6 @@
 <?php
 // Run: php tests/money-test.php   (uses a throw-away SQLite file; exits non-zero on failure)
-putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . sys_get_temp_dir() . '/aakash-money-test.sqlite');
+putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . sys_get_temp_dir() . '/aakash-money-test.sqlite'); putenv('ESEWA_ID=9800000000');
 @unlink(sys_get_temp_dir() . '/aakash-money-test.sqlite');
 $_SERVER['HTTP_HOST'] = 'localhost';
 chdir(dirname(__DIR__));
@@ -188,5 +188,112 @@ $full = profile_checklist(array('address' => 'Pokhara', 'company' => 'Himal'), '
 check('profile: a complete account is 3 of 3', $full['done'] === 3 && $full['percent'] === 100);
 check('profile: a pending identity is not counted as done', profile_checklist(array('address' => 'x', 'company' => ''), 'pending')['done'] === 1);
 check('profile: password score rises with length and variety', profile_password_score('abc') === 0 && profile_password_score('abcdefgh') === 1 && profile_password_score('Himal2083') === 3 && profile_password_score('Correct-Horse-9!') === 4);
+// Renewal claim: two requests for the same period must not both charge
+$conn->query("INSERT INTO client_services (client_id, service_name, next_renewal) VALUES ($cid, 'Renew test', '2026-01-01')");
+$renewId = (int) $conn->insert_id;
+check('renewal claim: the first request takes the period', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === true);
+check('renewal claim: a second request for the same period is refused', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === false);
+// Domain refund: a repeated "Return to wallet" must credit the wallet once
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, detail_label) VALUES ($cid, 'Domain test', 'domain-com', 'active', 2000, 'acme.com')");
+$domId = (int) $conn->insert_id;
+$before = bal($conn, $cid);
+$firstRefund = billing_refund_domain($conn, $domId);
+$secondRefund = billing_refund_domain($conn, $domId);
+check('domain refund: the first return credits the wallet once', $firstRefund === '' && bal($conn, $cid) == $before + 2000.0);
+check('domain refund: a second return is refused and credits nothing', $secondRefund !== '' && bal($conn, $cid) == $before + 2000.0);
+// Top-up: one payment reference cannot be sent twice (case and spaces ignored)
+$topMethods = billing_payment_methods($conn);
+$topMethod = $topMethods[0]['code'];
+$firstTop = billing_request_topup($conn, $cid, 500, $topMethod, 'REF 98765');
+$dupeTop = billing_request_topup($conn, $cid, 500, $topMethod, ' ref98765 ');
+check('top-up: the first reference is accepted', $firstTop === '');
+check('top-up: the same reference again is refused, even with other case or spaces', $dupeTop !== '');
+// Terms: a new client has not accepted; recording the tick makes the gate open
+$conn->query("INSERT INTO client_users (name,email,password,status) VALUES ('Terms','terms@example.com','x','active')");
+$termsId = (int) $conn->insert_id;
+check('terms: a new client has not accepted yet', terms_client_has_accepted($conn, $termsId) === false);
+check('terms: the tick is recorded with the current version', terms_record_acceptance($conn, $termsId) === true && terms_client_has_accepted($conn, $termsId) === true);
+$stored = $conn->query("SELECT terms_version, terms_accepted_at FROM client_users WHERE id = $termsId")->fetch_assoc();
+check('terms: version and time are stored on the account', $stored['terms_version'] === TERMS_VERSION && $stored['terms_accepted_at'] !== '' && $stored['terms_accepted_at'] !== null);
+
+// Email verification: a pending account opens with its link once, and not after it expires
+email_verify_ensure_columns($conn);
+$emailToken = str_repeat('ab', 32);
+$emailHash = hash('sha256', $emailToken);
+$future = date('Y-m-d H:i:s', time() + 3600);
+$past = date('Y-m-d H:i:s', time() - 3600);
+$conn->query("INSERT INTO client_users (name,email,password,status,email_verify_hash,email_verify_expires) VALUES ('Mail','mail@example.com','x','pending','$emailHash','$future')");
+$mailId = (int) $conn->insert_id;
+check('email: a pending account is opened by its link', email_verify_consume($conn, $emailToken) === $mailId);
+check('email: the same link does not open it again', email_verify_consume($conn, $emailToken) === 0);
+check('email: the account is active after the link', (string) $conn->query("SELECT status FROM client_users WHERE id = $mailId")->fetch_assoc()['status'] === 'active');
+$oldToken = str_repeat('cd', 32);
+$conn->query("INSERT INTO client_users (name,email,password,status,email_verify_hash,email_verify_expires) VALUES ('Old','old@example.com','x','pending','" . hash('sha256', $oldToken) . "','$past')");
+check('email: an expired link does not open the account', email_verify_consume($conn, $oldToken) === 0);
+check('email: a malformed token is refused', email_verify_consume($conn, 'not-a-token') === 0);
+
+// Auto-renew: an ended term cannot be switched back on (no surprise charge); a lapsed one expires
+$conn->query("INSERT INTO client_users (name,email,password,status) VALUES ('Sub','sub@example.com','x','active')");
+$subId = (int) $conn->insert_id;
+billing_ensure_wallet($conn, $subId);
+$endedDate = date('Y-m-d', strtotime('-10 days'));
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, billing_cycle, auto_renew, next_renewal) VALUES ($subId, 'Ended plan', 'email-1', 'active', 2000, 'yearly', 0, '$endedDate')");
+$endedId = (int) $conn->insert_id;
+check('auto-renew: an ended term cannot be switched on', billing_set_auto_renew($conn, $subId, $endedId, true) === false);
+billing_process_renewals($conn, $subId);
+check('auto-renew: a lapsed service with auto-renew off is marked expired', (string) $conn->query("SELECT status FROM client_services WHERE id = $endedId")->fetch_assoc()['status'] === 'expired');
+$futureDate = date('Y-m-d', strtotime('+60 days'));
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, billing_cycle, auto_renew, next_renewal) VALUES ($subId, 'Live plan', 'email-1', 'active', 2000, 'yearly', 0, '$futureDate')");
+$liveId = (int) $conn->insert_id;
+check('auto-renew: a service still in its term can be switched on', billing_set_auto_renew($conn, $subId, $liveId, true) === true);
+
+// Roles: staff are limited; owner and the existing admin role keep full access
+$_SESSION['admin_role'] = 'staff';
+check('roles: a staff admin is recognised', admin_is_staff() === true);
+$_SESSION['admin_role'] = 'owner';
+check('roles: an owner is not staff', admin_is_staff() === false);
+$_SESSION['admin_role'] = 'admin';
+check('roles: the existing admin role keeps full access', admin_is_staff() === false);
+unset($_SESSION['admin_role']);
+check('roles: no role set means full access, as before', admin_is_staff() === false);
+
+// cPanel passwords: sealed with AES-256-GCM, round-trip, and any change to the stored value is refused
+$panelSealed = panel_pass_seal($conn, 'Panel#Pass1');
+check('panel: a new password is sealed with GCM', strpos($panelSealed, 'enc2:') === 0 && panel_pass_open($conn, $panelSealed) === 'Panel#Pass1');
+check('panel: a changed sealed value does not open', panel_pass_open($conn, substr($panelSealed, 0, -3) . (substr($panelSealed, -3) === 'AAA' ? 'BBB' : 'AAA')) === '');
+
+// Audit log: an admin submission is recorded by action and id, never by its values
+$_SESSION['admin_id'] = 1; $_SESSION['admin_role'] = 'owner';
+$_POST = array('approve_topup' => '1', 'entry_id' => '42', 'new_password' => 'Secret#99', 'csrf_token' => 'abc');
+audit_log_post($conn);
+$auditRow = audit_recent($conn, 1);
+check('audit: the action and record are logged', isset($auditRow[0]) && strpos($auditRow[0]['action'], 'approve_topup') !== false && strpos($auditRow[0]['target'], 'entry_id=42') !== false);
+check('audit: passwords and tokens are never logged', isset($auditRow[0]) && strpos($auditRow[0]['action'] . $auditRow[0]['target'], 'Secret') === false && strpos($auditRow[0]['action'] . $auditRow[0]['target'], 'new_password') === false);
+$_POST = array();
+unset($_SESSION['admin_id'], $_SESSION['admin_role']);
+
+// Rate limit that counts every request: the limit holds even when the requests come in a burst
+$burstScope = 'test-burst';
+$burstResults = array();
+for ($burst = 0; $burst < 7; $burst++) { $burstResults[] = auth_attempt_reserve($conn, $burstScope, 5, 3600); }
+check('rate limit: the first five requests go ahead and the sixth is refused', array_sum($burstResults) === 5 && $burstResults[4] === true && $burstResults[5] === false);
+
+// Per-account sign-in limit: failures follow the account, not the address, and a correct password clears them
+for ($guess = 0; $guess < 10; $guess++) { auth_note_attempt($conn, 'acct-777', 'account'); }
+check('account limit: ten failed passwords block that account from any address', auth_attempt_blocked($conn, 'acct-777', 10, 900, 'account') === true);
+auth_clear_attempts($conn, 'acct-777', 'account');
+check('account limit: a correct password clears the count', auth_attempt_blocked($conn, 'acct-777', 10, 900, 'account') === false);
+
+// AI assistant keys: sealed at rest, opened on read, and never written into a backup.
+$aiSealed = panel_pass_seal($conn, 'AIza-test-key-123');
+check('AI key is stored sealed, not as plain text', $aiSealed !== 'AIza-test-key-123' && strpos($aiSealed, 'enc2:') === 0);
+check('AI key opens back to the same value', panel_pass_open($conn, $aiSealed) === 'AIza-test-key-123');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'ai_gemini_key', 'setting_value' => $aiSealed));
+check('backup redacts the Gemini key', $aiRow['setting_value'] === '');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'ai_deepseek_key', 'setting_value' => 'sk-plain'));
+check('backup redacts the DeepSeek key', $aiRow['setting_value'] === '');
+$aiRow = backup_redact('site_settings', array('setting_key' => 'site_name', 'setting_value' => 'Aakash'));
+check('backup keeps ordinary settings', $aiRow['setting_value'] === 'Aakash');
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

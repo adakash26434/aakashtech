@@ -282,11 +282,11 @@ function totp_set_step($conn, $kind, $id, $step)
     $table = $kind === 'admin' ? 'admin_users' : 'client_users';
     $step = (int) $step;
     $id = (int) $id;
-    $stmt = $conn->prepare('UPDATE ' . $table . ' SET totp_last_step = ? WHERE id = ?');
+    $stmt = $conn->prepare('UPDATE ' . $table . ' SET totp_last_step = ? WHERE id = ? AND totp_last_step < ?');
     if (!$stmt) {
         return;
     }
-    $stmt->bind_param('ii', $step, $id);
+    $stmt->bind_param('iii', $step, $id, $step);
     $stmt->execute();
     $stmt->close();
 }

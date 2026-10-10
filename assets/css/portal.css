@@ -287,7 +287,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-shell .form-input::placeholder {
-    color: #87988f;
+    color: #5f7478;
 }
 
 .portal-shell .form-input:hover {
@@ -297,7 +297,7 @@ body.portal-shell.bg-dark-950,
 .portal-shell .form-input:focus {
     border-color: var(--portal-brand);
     background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(11, 139, 122, 0.13);
+    box-shadow: 0 0 0 3px rgba(9, 122, 109, 0.13);
 }
 
 .portal-shell select.form-input option {
@@ -407,7 +407,7 @@ body.portal-shell.bg-dark-950,
 }
 
 .portal-shell.portal-auth form button {
-    box-shadow: 0 10px 24px rgba(11, 139, 122, 0.18);
+    box-shadow: 0 10px 24px rgba(9, 122, 109, 0.18);
 }
 
 .field-hint {
@@ -455,7 +455,7 @@ body.portal-shell.bg-dark-950,
 .portal-shell input:focus-visible,
 .portal-shell select:focus-visible,
 .portal-shell textarea:focus-visible {
-    outline: 3px solid rgba(11, 139, 122, 0.32);
+    outline: 3px solid rgba(9, 122, 109, 0.32);
     outline-offset: 2px;
 }
 
@@ -492,7 +492,7 @@ body.portal-shell.bg-dark-950,
 
 .portal-shell ::selection {
     color: var(--portal-brand-dark);
-    background: rgba(11, 139, 122, 0.16);
+    background: rgba(9, 122, 109, 0.16);
 }
 
 @media (max-width: 640px) {
@@ -514,7 +514,7 @@ body.portal-shell.bg-dark-950,
     min-width: 22px;
     padding: 1px 7px;
     border-radius: 999px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: linear-gradient(135deg, #b45309, #92400e);
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -530,7 +530,7 @@ body.portal-shell.bg-dark-950,
     background-image: linear-gradient(135deg, #0a7d6e 0%, #08705f 50%, #065a50 100%);
     border: 1px solid #065a50;
     color: #fff;
-    box-shadow: 0 6px 16px rgba(11, 139, 122, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 16px rgba(9, 122, 109, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
     transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
@@ -540,13 +540,13 @@ body.portal-shell.bg-dark-950,
 .portal-shell a[class~="from-brand-500"]:hover {
     filter: saturate(1.15);
     transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(11, 139, 122, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 22px rgba(9, 122, 109, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .portal-shell button[class~="bg-brand-500"]:active,
 .portal-shell a[class~="bg-brand-500"]:active {
     transform: translateY(0);
-    box-shadow: 0 3px 8px rgba(11, 139, 122, 0.25);
+    box-shadow: 0 3px 8px rgba(9, 122, 109, 0.25);
 }
 
 .portal-shell button[class~="bg-brand-500"]:disabled,
@@ -662,7 +662,7 @@ body.portal-shell.bg-dark-950,
 
 .portal-tabs button.is-on {
     background-image: linear-gradient(135deg, #0a7d6e, #065a50);
-    box-shadow: 0 6px 14px rgba(11, 139, 122, 0.22);
+    box-shadow: 0 6px 14px rgba(9, 122, 109, 0.22);
 }
 
 .portal-shell button:focus-visible,

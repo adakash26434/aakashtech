@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_line'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['take_sms'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $reversed = sms_admin_reverse(
         $conn,
@@ -60,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['take_sms'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_sms'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $granted = sms_admin_grant(
         $conn,
@@ -92,8 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $err === '' && $msg !== '' && (isset($_POST['grant_sms']) || isset($_POST['take_sms']) || isset($_POST['decision']) || isset($_POST['save_line']))) {
-    $doneTab = isset($_POST['decision']) ? 'names' : (isset($_POST['save_line']) ? 'line' : 'credits');
+// A test SMS or a balance check must not be sent again by a reload, so its result is shown after a redirect.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $err === '' && $msg !== '' && (isset($_POST['grant_sms']) || isset($_POST['take_sms']) || isset($_POST['decision']) || isset($_POST['save_line']) || isset($_POST['test_line']) || isset($_POST['check_balance']))) {
+    $doneTab = isset($_POST['decision']) ? 'names' : ((isset($_POST['save_line']) || isset($_POST['test_line']) || isset($_POST['check_balance'])) ? 'line' : 'credits');
     flash('sms_line_notice', $msg);
     header('Location: sms-line.php?tab=' . $doneTab);
     exit;
@@ -175,7 +178,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
     <form method="GET" class="p-4 flex flex-wrap gap-2 border-b border-slate-800">
         <input type="hidden" name="tab" value="clients">
         <input type="search" name="q" value="<?= e($usageFind) ?>" class="form-input max-w-sm" placeholder="Client name, email, mobile, or message">
-        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+        <button type="submit" class="btn btn-primary">Find</button>
     </form>
     <?php if ($usage['rows']): ?>
         <div class="overflow-x-auto">
@@ -241,7 +244,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="grant_note">Reason</label>
             <input id="grant_note" name="grant_note" type="text" maxlength="160" required class="form-input" placeholder="Paid at the office">
         </div>
-        <button type="submit" name="grant_sms" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl" onclick="var s=document.getElementById('grant_client'); var n=document.getElementById('grant_credits'); return !s.value || !n.value || confirm('Add ' + n.value + ' SMS credits to ' + s.options[s.selectedIndex].text.split(' · ')[0] + '?');">Add credits</button>
+        <button type="submit" name="grant_sms" class="btn btn-primary" onclick="var s=document.getElementById('grant_client'); var n=document.getElementById('grant_credits'); return !s.value || !n.value || confirm('Add ' + n.value + ' SMS credits to ' + s.options[s.selectedIndex].text.split(' · ')[0] + '?');">Add credits</button>
     </form>
 </div>
 
@@ -340,7 +343,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <input type="checkbox" name="refund_undelivered" value="1" <?= sms_refund_undelivered_on($conn) ? 'checked' : '' ?> class="mt-1">
                 <span class="block text-slate-300 text-sm leading-relaxed"><b>Return credits when the phone network says a message was not delivered.</b> Clients are never charged for a message that did not arrive. Needs delivery reports from your provider (see the README). Messages the SMS line refuses are always returned.</span>
             </label>
-            <button type="submit" name="save_line" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save line</button>
+            <button type="submit" name="save_line" class="btn btn-primary" onclick="var p=document.getElementById('sms_line_provider'); if (p && p.value==='') { return confirm('Disconnect the SMS line? Saving Not connected removes the stored bulk key, and every client send stops until you connect again.'); }">Save line</button>
         </form>
     </div>
     <div class="space-y-6">
@@ -349,7 +352,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
             <form method="POST" class="p-5 space-y-3">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <p class="text-slate-400 text-sm">Reads the credits left on the account you buy from. For Aakash SMS that is sms/v4/credit. Clients still spend only the credits they bought here.</p>
-                <button type="submit" name="check_balance" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">Check line balance</button>
+                <button type="submit" name="check_balance" class="btn btn-secondary">Check line balance</button>
             </form>
         </div>
         <div class="dash-panel">
@@ -358,7 +361,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <p class="text-slate-400 text-sm">Sends “Aakash Technologies line check.” to one number. This spends credit on the bought account.</p>
                 <input type="text" name="test_number" class="form-input" placeholder="98XXXXXXXX" inputmode="numeric">
-                <button type="submit" name="test_line" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">Send check</button>
+                <button type="submit" name="test_line" class="btn btn-secondary" onclick="return confirm('Send a real test SMS? It uses one bulk credit.')">Send check</button>
             </form>
         </div>
         <div class="dash-panel">
@@ -407,7 +410,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <option value="<?= e($historyState) ?>" <?= $historyStatus === $historyState ? 'selected' : '' ?>><?= e(ucfirst($historyState)) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+        <button type="submit" class="btn btn-primary">Find</button>
         <?php if ($historyClient > 0 || $usageFind !== '' || $historyStatus !== ''): ?>
             <a href="sms-line.php?tab=history" class="px-4 py-2 text-slate-400 text-sm">Clear</a>
         <?php endif; ?>

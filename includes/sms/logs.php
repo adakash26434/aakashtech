@@ -67,7 +67,8 @@ function sms_load_send($conn, $clientId, $campaignId, $failedOnly)
     }
     if ($failedOnly) {
         $failed = 'failed';
-        $stmt = $conn->prepare('SELECT recipient FROM sms_messages WHERE campaign_id = ? AND client_id = ? AND status = ? ORDER BY id ASC');
+        // Unconfirmed sends may already have reached the phone, so they are never retried.
+        $stmt = $conn->prepare("SELECT recipient FROM sms_messages WHERE campaign_id = ? AND client_id = ? AND status = ? AND error_text <> 'unconfirmed' ORDER BY id ASC");
         $stmt->bind_param('iis', $campaignId, $clientId, $failed);
     } else {
         $stmt = $conn->prepare('SELECT recipient FROM sms_messages WHERE campaign_id = ? AND client_id = ? ORDER BY id ASC');

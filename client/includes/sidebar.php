@@ -43,7 +43,7 @@ if ($panelNav || $mailNav || $siteNav) {
 $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Menu';
 ?>
 <aside id="client-sidebar" class="fixed top-0 left-0 z-40 h-screen w-64 bg-dark-900 border-r border-dark-800 flex flex-col transition-transform duration-300 lg:translate-x-0"
-       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full invisible lg:visible'">
     <?php $identity = site_portal_identity($conn); ?>
     <div class="h-20 flex items-center gap-3 px-5 border-b border-dark-800">
         <?php if ($identity['logo'] !== ''): ?>
@@ -111,7 +111,7 @@ $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Men
                 <p>Office view of <?= e(get_client_name()) ?>. The client is not signed in here. Their password and authenticator were not used.</p>
                 <form method="POST" action="logout.php">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm rounded-xl">Back to admin</button>
+                    <button type="submit" class="office-back px-4 py-2 text-sm font-semibold rounded-xl">Back to admin</button>
                 </form>
             </div>
         <?php endif; ?>

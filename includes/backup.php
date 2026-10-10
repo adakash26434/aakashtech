@@ -58,6 +58,22 @@ function backup_tables($conn)
     return $names;
 }
 
+/**
+ * Secrets that must never sit in a backup file: TOTP seeds and the key that unlocks saved
+ * cPanel passwords. They are written as empty values; the live database keeps them.
+ */
+function backup_redact($table, $row)
+{
+    if (($table === 'client_users' || $table === 'admin_users') && array_key_exists('totp_secret', $row)) {
+        $row['totp_secret'] = '';
+    }
+    $secretSettings = array('panel_cipher_key', 'ai_gemini_key', 'ai_deepseek_key');
+    if ($table === 'site_settings' && isset($row['setting_key']) && in_array($row['setting_key'], $secretSettings, true)) {
+        $row['setting_value'] = '';
+    }
+    return $row;
+}
+
 /** Writes the dump into $path (a .sql.gz file). Returns the number of rows saved, or -1 on failure. */
 function backup_write($conn, $path)
 {
@@ -85,6 +101,7 @@ function backup_write($conn, $path)
         $batch = array();
         $columns = '';
         while ($rows && ($row = $rows->fetch_assoc())) {
+            $row = backup_redact($table, $row);
             if ($columns === '') {
                 $columns = '(' . implode(', ', array_map(function ($c) { return DB_DRIVER === 'sqlite' ? '"' . $c . '"' : '`' . $c . '`'; }, array_keys($row))) . ')';
             }

@@ -45,7 +45,7 @@ require __DIR__ . '/includes/client-actions.php';
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
-                    <button type="submit" name="toggle_client"<?= $client['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $client['status'] === 'active' ? 'text-red-400' : 'text-green-400' ?>"><?= $client['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
+                    <input type="hidden" name="target" value="<?= $client['status'] === 'active' ? 'suspend' : 'activate' ?>"><button type="submit" name="toggle_client"<?= $client['status'] === 'active' ? ' onclick="return confirm(\'Suspend this client? They cannot sign in until you activate them again.\')"' : '' ?> class="text-sm bg-transparent border-0 cursor-pointer p-0 <?= $client['status'] === 'active' ? 'text-red-400' : 'text-green-400' ?>"><?= $client['status'] === 'active' ? 'Suspend' : 'Activate' ?></button>
                 </form>
                 <?php if (trim((string) $client['totp_secret']) !== ''): ?>
                     <form method="POST" onsubmit="return confirm('Reset Google Authenticator for this client?');">
@@ -92,8 +92,8 @@ require __DIR__ . '/includes/client-actions.php';
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= (int) $client['id'] ?>">
                     <p class="text-slate-400 text-sm">Set a password when they are at the office. It is shown once on this page so you can tell them. The email says the password changed and does not include it.</p>
-                    <input name="new_password" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="New password, at least 8 characters" value="<?= e($passwordOne) ?>">
-                    <input name="new_password_again" type="text" required minlength="8" maxlength="72" autocomplete="off" class="form-input" placeholder="Type it again" value="<?= e($passwordTwo) ?>">
+                    <input name="new_password" type="password" required minlength="8" maxlength="72" autocomplete="new-password" class="form-input" placeholder="New password, at least 8 characters">
+                    <input name="new_password_again" type="password" required minlength="8" maxlength="72" autocomplete="new-password" class="form-input" placeholder="Type it again">
                     <button type="submit" name="set_password" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Save password</button>
                 </form>
             </div>

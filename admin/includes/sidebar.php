@@ -12,6 +12,7 @@ $navItems = [
     'sms-line.php'   => ['SMS line', 'radio'],
     'sms-report.php' => ['SMS report', 'chart-no-axes-column'],
     'tickets.php'    => ['Support Tickets', 'life-buoy'],
+    'audit.php'      => ['Audit log', 'history'],
     'settings.php'   => ['Settings', 'settings'],
     'manual.php'     => ['मार्गदर्शन', 'book-open'],
 ];
@@ -39,7 +40,7 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
 ?>
 <!-- Sidebar -->
 <aside class="fixed top-0 left-0 z-40 h-screen w-64 bg-dark-900 border-r border-dark-800 flex flex-col transition-transform duration-300 lg:translate-x-0"
-       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" id="admin-sidebar">
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full invisible lg:visible'" id="admin-sidebar">
     <!-- Logo -->
     <?php $identity = site_portal_identity($conn); ?>
     <div class="h-20 flex items-center gap-3 px-5 border-b border-dark-800">
@@ -73,7 +74,7 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
     <!-- User & Logout -->
     <div class="border-t border-dark-800 p-3">
         <div class="flex items-center gap-3 px-3 py-2 mb-2">
-            <div class="w-9 h-9 rounded-lg bg-brand-500/20 flex items-center justify-center font-heading font-bold text-brand-400 text-sm"><?= strtoupper(substr(get_admin_name(), 0, 1)) ?></div>
+            <div class="w-9 h-9 rounded-lg bg-brand-500/20 flex items-center justify-center font-heading font-bold text-brand-400 text-sm"><?= mb_strtoupper(mb_substr(get_admin_name(), 0, 1, 'UTF-8'), 'UTF-8') ?></div>
             <div class="min-w-0">
                 <p class="text-white text-sm font-medium truncate"><?= e(get_admin_name()) ?></p>
                 <p class="text-slate-500 text-xs truncate"><?= e($_SESSION['admin_email'] ?? '') ?></p>
@@ -115,3 +116,6 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
 
     <!-- Page Content -->
     <main class="flex-1 p-4 lg:p-8">
+        <?php $staffNotice = flash('admin_notice'); if ($staffNotice !== ''): ?>
+            <div role="alert" class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm"><?= e($staffNotice) ?></div>
+        <?php endif; ?>

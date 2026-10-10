@@ -36,15 +36,29 @@ require __DIR__ . '/includes/sms-portal-actions.php';
         </div>
     </div>
 <?php else: ?>
-    <?php if (!$kycReady): ?>
-        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">More than 100 SMS needs KYC. <?= number_format((int) $unverifiedRoom) ?> SMS are still open on this account. Please update KYC. <a href="kyc.php" class="text-brand-300">Update KYC</a></div>
-    <?php endif; ?>
-    <?php if (!$route['connected']): ?>
-        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">SMS credits stay on this account. Sending opens when the line is connected.</div>
-    <?php elseif ((int) $balances['sms'] < 1): ?>
-        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm">This account has no SMS credits. <a href="shop.php?service=bulk-sms" class="text-brand-300">Buy credit</a> before sending.</div>
-    <?php elseif ((int) $balances['sms'] < 100): ?>
-        <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-200 text-sm"><?= number_format((int) $balances['sms']) ?> SMS credits left. <a href="shop.php?service=bulk-sms" class="text-brand-300">Buy more</a> before a larger send is refused.</div>
+    <?php
+    // One card for everything that limits this send, instead of a stack of separate banners.
+    $sendNotes = array();
+    if (!$kycReady) {
+        $sendNotes[] = 'Over 100 SMS needs KYC. ' . number_format((int) $unverifiedRoom) . ' SMS are still open. <a href="kyc.php" class="text-brand-300 underline">Update KYC</a>';
+    }
+    if (!$route['connected']) {
+        $sendNotes[] = 'Your credits stay on this account. Sending opens when the SMS line is connected.';
+    } elseif ((int) $balances['sms'] < 1) {
+        $sendNotes[] = 'No SMS credits left. <a href="shop.php?service=bulk-sms" class="text-brand-300 underline">Buy credit</a> before sending.';
+    } elseif ((int) $balances['sms'] < 100) {
+        $sendNotes[] = number_format((int) $balances['sms']) . ' credits left. <a href="shop.php?service=bulk-sms" class="text-brand-300 underline">Buy more</a> before a larger send is refused.';
+    }
+    ?>
+    <?php if ($sendNotes): ?>
+        <div class="sms-notes" role="note">
+            <p class="sms-notes-title">Before you send</p>
+            <ul>
+                <?php foreach ($sendNotes as $sendNote): ?>
+                    <li><?= $sendNote ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
     <?php endif; ?>
     <div class="grid lg:grid-cols-5 gap-6 mb-6">
         <div class="dash-panel lg:col-span-5 min-w-0">
@@ -110,8 +124,10 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                             </select>
                         <button type="button" class="sms-clear" x-show="String(numbers || '').trim() !== ''" x-cloak @click="if (confirm('Clear all numbers?')) { numbers = ''; reviewing = false; importNote = ''; }">Clear</button>
                     </div>
-                    <input type="text" inputmode="numeric" autocomplete="off" class="form-input mb-2" placeholder="Type one mobile, then press Enter" @keydown.enter.prevent="addNumber($event.target)">
-                    <textarea id="sms-numbers" name="numbers" x-model="numbers" required rows="9" autocomplete="off" class="form-input sms-numbers" placeholder="9800000001&#10;Ram, 9800000002" @input="reviewing = false; reviewNote = ''"><?= e($values['numbers']) ?></textarea>
+                    <div class="sms-field">
+                        <input type="text" inputmode="numeric" autocomplete="off" class="sms-field-add" aria-label="Add one mobile number" placeholder="Add a mobile, then Enter" @keydown.enter.prevent="addNumber($event.target)">
+                        <textarea id="sms-numbers" name="numbers" x-model="numbers" required rows="7" autocomplete="off" class="sms-numbers" aria-label="Mobile numbers, one per line" placeholder="One number per line, for example&#10;9800000001&#10;Ram, 9800000002" @input="reviewing = false; reviewNote = ''"><?= e($values['numbers']) ?></textarea>
+                    </div>
                     <div class="sms-recipients" x-show="estimate().count || estimate().bad || estimate().dupes" x-cloak aria-live="polite">
                         <span class="sms-pill is-ok" x-show="estimate().count"><b x-text="estimate().count"></b> valid</span>
                         <span class="sms-pill is-note" x-show="estimate().dupes"><b x-text="estimate().dupes"></b> repeated, counted once</span>
@@ -156,8 +172,12 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                     <div class="sms-step-head">
                         <span class="sms-step-no">2</span>
                         <label class="sms-step-title" for="sms-text">Message</label>
-                        <select class="form-input sms-tool-select ml-auto" @change="pickTemplate($event.target.value); $event.target.selectedIndex = 0">
-                            <option value="">Insert a sample</option>
+                    </div>
+                    <textarea id="sms-text" name="message_content" x-model="text" required rows="7" maxlength="1000" autocomplete="off" class="form-input sms-message" placeholder="Type the exact text people should receive" @input="reviewing = false; reviewNote = ''"><?= e($values['message_content']) ?></textarea>
+                    <div class="sms-tools sms-tools-under">
+                        <label class="sms-tools-label" for="sms-sample">Start from</label>
+                        <select id="sms-sample" class="form-input sms-tool-select" @change="pickTemplate($event.target.value); $event.target.selectedIndex = 0">
+                            <option value="">Pick one</option>
                             <optgroup label="सहकारी नमूना">
                                 <?php foreach ($sampleMessages as $sampleMessage): ?>
                                     <option value="<?= e($sampleMessage['id']) ?>"><?= e($sampleMessage['label']) ?></option>
@@ -172,7 +192,6 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                             <?php endif; ?>
                         </select>
                     </div>
-                    <textarea id="sms-text" name="message_content" x-model="text" required rows="9" maxlength="1000" autocomplete="off" class="form-input" placeholder="The exact text people should receive" @input="reviewing = false; reviewNote = ''"><?= e($values['message_content']) ?></textarea>
                     <label class="flex items-center gap-2 text-sm text-slate-600 mt-2" x-show="smsHasNames(numbers) || nameFirst()" x-cloak>
                         <input type="checkbox" :checked="nameFirst()" @change="setNameFirst($event.target.checked)">
                         Start each SMS with the person's name
@@ -249,7 +268,7 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" class="px-4 py-3 text-slate-400 text-sm" x-show="reviewing" x-cloak @click="reviewing = false">Back</button>
                         <button type="button" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl" x-show="!reviewing" @click="openReview()">Review</button>
-                        <button type="submit" name="send_sms" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="!reviewing" :aria-busy="sending" :class="sending ? 'opacity-60 cursor-progress' : ''" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
+                        <button type="submit" name="send_sms" <?= !$route['connected'] ? 'disabled' : '' ?> class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="!reviewing" :aria-busy="sending" :class="sending ? 'opacity-60 cursor-progress' : ''" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
                     </div>
                 </div>
             </form>

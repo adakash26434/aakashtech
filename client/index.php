@@ -257,7 +257,7 @@ try {
         <div class="p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h2 class="font-heading font-semibold text-white text-base">Email</h2>
-                <p class="text-slate-500 text-sm">Opens the inbox at mail.the-domain after that name is pointed. Sign in with the mailbox address shown here and the password the team sent.</p>
+                <p class="text-slate-500 text-sm">Opens the inbox at <?= e(mail_login_domain($mail)) ?> after that name is pointed. Sign in with the mailbox address shown here and the password the team sent.</p>
                 <?php
                 $mailNames = array();
                 foreach ($mailAccounts as $mailNameRow) {

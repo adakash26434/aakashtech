@@ -25,11 +25,13 @@ $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     if (isset($_POST['approve_topup'])) {
+        admin_deny_if_staff();
         $msg = billing_approve_topup($conn, (int) $_POST['entry_id'])
             ? 'Top-up added to the client wallet.'
             : '';
         $err = $msg === '' ? 'That top-up could not be confirmed.' : '';
     } elseif (isset($_POST['manual_wallet'])) {
+        admin_deny_if_staff();
         $walletError = billing_admin_wallet_credit(
             $conn,
             isset($_POST['wallet_client']) ? (int) $_POST['wallet_client'] : 0,
@@ -46,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = $slabError === '' ? 'SMS and voice rates updated. A filled offer rate replaces that row until you clear it. The selected row is the Starts from price on the homepage.' : '';
         $err = $slabError;
     } elseif (isset($_POST['refund_domain'])) {
+        admin_deny_if_staff();
         $refundError = billing_refund_domain($conn, (int) $_POST['service_id']);
         $msg = $refundError === '' ? 'The domain amount is back in the client wallet, and that order will not renew.' : '';
         $err = $refundError;
@@ -110,17 +113,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = $msg === '' ? 'That visit date could not be cleared.' : '';
     } elseif (isset($_POST['save_prices']) && isset($_POST['price']) && is_array($_POST['price'])) {
         $saved = 0;
-        $failed = 0;
+        $failedCodes = array();
         foreach ($_POST['price'] as $code => $value) {
             $offer = isset($_POST['offer'][$code]) ? (string) $_POST['offer'][$code] : '';
             if (billing_update_price($conn, (string) $code, (string) $value, $offer)) {
                 $saved++;
             } else {
-                $failed++;
+                $failedCodes[] = (string) $code;
             }
         }
-        $msg = $saved > 0 && $failed === 0 ? 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.' : '';
-        $err = $failed > 0 ? 'Each offer rate must be lower than its regular rate, or left blank. Regular rates must stay above zero.' : ($saved > 0 ? '' : 'Enter a valid price for each plan.');
+        $failed = count($failedCodes);
+        // Say exactly which plans changed and which did not, so the admin never has to guess.
+        if ($saved > 0 && $failed === 0) {
+            $msg = 'Plan prices updated. New purchases use these amounts, including any offer rate. Existing renewals keep the price from when they were bought.';
+        } elseif ($saved > 0) {
+            $msg = $saved . ' plan price' . ($saved === 1 ? '' : 's') . ' saved. Not saved: ' . implode(', ', $failedCodes) . '. Check those plans: an offer must be lower than its regular rate, and regular rates must stay above zero.';
+        } else {
+            $err = 'No plan price was saved. Enter a valid price for each plan, and an offer lower than its regular rate or blank.';
+        }
     }
     if ($err === '' && $msg !== '') {
         $doneTab = 'wallet';
@@ -212,7 +222,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                                 <form method="POST" class="flex gap-2">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="entry_id" value="<?= (int) $row['id'] ?>">
-                                    <button type="submit" name="approve_topup" value="1" class="text-brand-400 text-sm">Confirm</button>
+                                    <button type="submit" name="approve_topup" value="1" class="text-brand-400 text-sm" onclick="return confirm('Confirm this payment and credit the client wallet? Check the reference in your bank or eSewa/Khalti first.')">Confirm</button>
                                     <button type="submit" name="reject_topup" value="1" class="text-red-400 text-sm" onclick="return confirm('Reject this payment? The client wallet is not credited.')">Reject</button>
                                 </form>
                             </td>
@@ -249,7 +259,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
             <label class="block text-slate-400 text-xs font-medium mb-1.5" for="wallet_note">Where it was received</label>
             <input id="wallet_note" name="wallet_note" type="text" maxlength="160" required class="form-input" placeholder="Cash at the office">
         </div>
-        <button type="submit" name="manual_wallet" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Add to wallet</button>
+        <button type="submit" name="manual_wallet" class="btn btn-primary">Add to wallet</button>
     </form>
     <p class="px-5 pb-4 text-slate-500 text-xs">Use this when the client paid in cash or outside eSewa, Khalti, and the bank form. The amount is ready to spend immediately.</p>
 </section>
@@ -312,7 +322,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 </div>
             </div>
         <?php endforeach; ?>
-        <button type="submit" name="save_slabs" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save volume rates</button>
+        <button type="submit" name="save_slabs" value="1" class="btn btn-primary">Save volume rates</button>
     </form>
 </section>
 
@@ -336,7 +346,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 </label>
             <?php endforeach; ?>
         </div>
-        <button type="submit" name="save_prices" value="1" class="mt-5 px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save prices</button>
+        <button type="submit" name="save_prices" value="1" class="btn btn-primary mt-5">Save prices</button>
     </form>
 </section>
 </div>
@@ -344,7 +354,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
 <form method="GET" class="mb-4 flex flex-wrap gap-2">
     <input type="hidden" name="tab" value="delivery">
     <input type="search" name="q" value="<?= e($find) ?>" class="form-input max-w-sm" placeholder="Client or service in the sections below">
-    <button type="submit" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Find</button>
+    <button type="submit" class="btn btn-primary">Find</button>
 </form>
 <section class="dash-panel overflow-hidden mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Hosting logins</h3></div>
@@ -456,7 +466,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_training" value="1" class="text-brand-400 text-xs">Save visit</button>
                     <?php if ((string) $row['panel_user'] !== ''): ?>
-                        <button type="submit" name="clear_training" value="1" class="text-slate-500 text-xs">Clear date</button>
+                        <button type="submit" name="clear_training" value="1" class="text-slate-500 text-xs" onclick="return confirm('Clear this training date?')">Clear date</button>
                     <?php endif; ?>
                 </div>
             </form>

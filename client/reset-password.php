@@ -6,8 +6,18 @@ if (is_client_logged_in()) {
     exit;
 }
 
-$token = isset($_POST['token']) ? (string) $_POST['token'] : (isset($_GET['token']) ? (string) $_GET['token'] : '');
-$token = strtolower(trim($token));
+// The token arrives once in the emailed link. Move it into the session and redirect to a clean URL,
+// so it does not stay in the address bar, browser history or the page's Referer header.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['token'])) {
+    $fromLink = strtolower(trim((string) $_GET['token']));
+    if (preg_match('/^[a-f0-9]{64}$/', $fromLink)) {
+        $_SESSION['reset_token'] = $fromLink;
+    }
+    header('Location: reset-password.php');
+    exit;
+}
+
+$token = isset($_SESSION['reset_token']) ? (string) $_SESSION['reset_token'] : '';
 if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
     $token = '';
 }
@@ -20,7 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {
-        $error = password_reset_consume($conn, $token, $password);
+        $error = $token === '' ? 'This link has expired. Ask for a new one.' : password_reset_consume($conn, $token, $password);
+        unset($_SESSION['reset_token']);
         if ($error === '') {
             flash('login_notice', 'Password saved. Sign in with the new password and the authenticator code.');
             header('Location: login.php');
@@ -68,11 +79,10 @@ try {
             </div>
         <?php else: ?>
             <?php if ($error): ?>
-                <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+                <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
             <?php endif; ?>
             <form method="POST" class="bg-dark-900 border border-dark-800 rounded-2xl p-8 space-y-4">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                <input type="hidden" name="token" value="<?= e($token) ?>">
                 <div>
                     <label class="block text-slate-300 text-sm font-medium mb-2" for="password">New password</label>
                     <input id="password" type="password" name="password" required autocomplete="new-password" class="form-input" placeholder="At least 8 characters">

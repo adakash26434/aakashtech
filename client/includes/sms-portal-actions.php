@@ -139,7 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
     } elseif (billing_posted($_POST, 'legal_accept') !== '1') {
         $err = 'Accept the declaration before this can be sent.';
     } else {
-        $_SESSION['sms_declared'] = $cid;
         $scheduled = trim($values['scheduled_at']);
         if ($scheduled !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $scheduled)) {
             $scheduled = '';
@@ -160,6 +159,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
             'source' => 'dashboard'
         ));
         if (!empty($result['ok'])) {
+            // The same form must not send again on a browser refresh or resubmit prompt.
+            billing_form_guard_clear('send-sms');
+            // The declaration is given again for every send, not carried over.
+            unset($_SESSION['sms_declared']);
             $msg = $result['message'];
             if (!empty($result['campaign_id'])) {
                 if (empty($result['background'])) {

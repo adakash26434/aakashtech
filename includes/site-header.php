@@ -45,7 +45,7 @@ $guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site
                 <i data-lucide="user-round" aria-hidden="true"></i>
                 <span>Client portal</span>
             </a>
-            <a class="button button--small button--primary nav-cta" href="<?= $navBase ?>#services">
+            <a class="btn btn-sm btn-primary nav-cta" href="<?= $navBase ?>#services">
                 See services
                 <i data-lucide="arrow-up-right" aria-hidden="true"></i>
             </a>
@@ -78,6 +78,6 @@ $guestChats = (isset($publicSite) && function_exists('site_guest_chats')) ? site
             <i data-lucide="user-round" aria-hidden="true"></i>
             Client portal
         </a>
-        <a class="button button--primary mobile-nav-cta" href="client/shop.php">Buy or book</a>
+        <a class="btn btn-lg btn-primary mobile-nav-cta" href="client/shop.php">Buy or book</a>
     </nav>
 </header>

@@ -163,14 +163,32 @@ function billing_kyc_reference($value, $max)
     return is_string($value) ? $value : '';
 }
 
+/**
+ * Where new identity documents are kept. This folder sits outside the web root (on cPanel,
+ * one level above public_html), so a file can never be fetched by URL. Documents are read
+ * only through kyc-file.php, which checks the signed-in role first.
+ */
+function billing_kyc_root()
+{
+    if (defined('KYC_STORAGE_DIR') && (string) KYC_STORAGE_DIR !== '') {
+        return rtrim((string) KYC_STORAGE_DIR, '/');
+    }
+    return dirname(__DIR__, 3) . '/private-kyc';
+}
+
 function billing_kyc_safe_path($clientId, $relative)
 {
     $clientId = (int) $clientId;
     $relative = str_replace('\\', '/', (string) $relative);
-    if (!preg_match('#^uploads/kyc/' . $clientId . '/[a-f0-9]{32}\.(pdf|jpg|png|webp)$#', $relative)) {
+    $ext = '(pdf|jpg|png|webp)';
+    if (preg_match('#^kyc/' . $clientId . '/[a-f0-9]{32}\.' . $ext . '$#', $relative)) {
+        $full = billing_kyc_root() . '/' . $relative;
+    } elseif (preg_match('#^uploads/kyc/' . $clientId . '/[a-f0-9]{32}\.' . $ext . '$#', $relative)) {
+        // Documents saved before the move. They stay readable until they are moved across.
+        $full = dirname(__DIR__, 2) . '/' . $relative;
+    } else {
         return '';
     }
-    $full = dirname(__DIR__, 2) . '/' . $relative;
     return is_file($full) ? $full : '';
 }
 
@@ -222,16 +240,12 @@ function billing_kyc_store_file($clientId, $slot, $file)
         }
         $ext = $imageTypes[$image[2]];
     }
-    $dir = dirname(__DIR__, 2) . '/uploads/kyc/' . $clientId;
-    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+    $dir = billing_kyc_root() . '/kyc/' . $clientId;
+    if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
         return array('ok' => false, 'error' => 'The document folder could not be created.');
     }
-    $guard = $dir . '/.htaccess';
-    if (!is_file($guard)) {
-        file_put_contents($guard, "Require all denied\nDeny from all\n");
-    }
-    $relative = 'uploads/kyc/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
-    $target = dirname(__DIR__, 2) . '/' . $relative;
+    $relative = 'kyc/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
+    $target = billing_kyc_root() . '/' . $relative;
     $moved = !empty($GLOBALS['KYC_TEST_UPLOADS']) ? copy($file['tmp_name'], $target) : move_uploaded_file($file['tmp_name'], $target);
     if (!$moved) {
         return array('ok' => false, 'error' => 'The document could not be saved.');
@@ -560,7 +574,8 @@ function billing_kyc_send($conn, $clientId, $slot)
     header('Content-Type: ' . $types[$ext]);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
-    $showHere = $ext !== 'pdf' || (isset($_GET['inline']) && $_GET['inline'] === '1');
+    // PDFs can carry active content, so they are always downloaded, never rendered on this site.
+    $showHere = $ext !== 'pdf';
     header('Content-Disposition: ' . ($showHere ? 'inline' : 'attachment') . '; filename="identity-document.' . $ext . '"');
     header('Content-Length: ' . (string) filesize($full));
     readfile($full);

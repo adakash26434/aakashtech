@@ -115,7 +115,7 @@ if ($find !== '') {
                                     <form method="POST" class="mt-2">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="campaign_id" value="<?= (int) $c['id'] ?>">
-                                        <button type="submit" name="place_voice" value="1" class="text-brand-400 text-xs">Mark placed</button>
+                                        <button type="submit" name="place_voice" value="1" class="text-brand-400 text-xs" onclick="return confirm('Mark this voice send as placed? It uses the client’s voice credits.')">Mark placed</button>
                                     </form>
                                 <?php elseif (isset($c['channel']) && $c['channel'] === 'voice' && $c['status'] === 'sent'): ?>
                                     <form method="POST" class="mt-2">

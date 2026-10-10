@@ -111,5 +111,20 @@ check('scheduled: cancelling returns every credit', credits($conn, $cid) === $be
 $left = credits($conn, $cid);
 $used = (int) $conn->query("SELECT COALESCE(SUM(parts),0) AS n FROM sms_messages WHERE client_id = $cid AND status IN ('sent','queued','sending') AND NOT (delivery = 'failed' AND error_text = 'refunded')")->fetch_assoc()['n'];
 check('books balance: 100 bought = credits left + messages that left (' . $left . ' + ' . $used . ')', 100 === $left + $used);
+// Timeouts are unconfirmed (never retried), real refusals keep their own code
+check('vendor: no answer means unconfirmed, a refusal keeps its code', sms_unsure_code(array('ok' => false, 'status' => 0, 'body' => ''), 'line-rejected') === 'unconfirmed' && sms_unsure_code(array('ok' => false, 'status' => 500, 'body' => ''), 'line-rejected') === 'line-rejected');
+check('retry: unconfirmed rows are excluded from the retry query', strpos(file_get_contents(__DIR__ . '/../includes/sms/logs.php'), "error_text <> 'unconfirmed'") !== false);
+// client_ref: only one request can hold a ref at a time; releasing it frees it for a retry
+check('client_ref: the first request reserves the ref', sms_api_reserve_ref($conn, 7, 'order-42') === true);
+check('client_ref: a second request for the same ref is refused while the first is in progress', sms_api_reserve_ref($conn, 7, 'order-42') === false);
+check('client_ref: the same ref on another token is a different reservation', sms_api_reserve_ref($conn, 8, 'order-42') === true);
+sms_api_release_ref($conn, 7, 'order-42');
+check('client_ref: after a release the ref can be sent again', sms_api_reserve_ref($conn, 7, 'order-42') === true);
+// client_ref left behind by a crashed request (no campaign, an hour old) is freed on the next try
+$staleKey = '9:order-stale';
+$oldStamp = date('Y-m-d H:i:s', time() - 3600);
+$conn->query("INSERT INTO sms_api_refs (ref_key, created_at) VALUES ('$staleKey', '$oldStamp')");
+check('client_ref: a reservation left by a crashed request is freed', sms_api_reserve_ref($conn, 9, 'order-stale') === true);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

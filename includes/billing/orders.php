@@ -319,7 +319,7 @@ function billing_admin_create_client($conn, $name, $email, $phone, $company, $pa
     if ($taken !== '') {
         return array('ok' => false, 'error' => $taken, 'id' => 0);
     }
-    $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+    $colors = array('#0e7490', '#6d28d9', '#be185d', '#b45309', '#047857', '#b91c1c');
     $avatar = $colors[array_rand($colors)];
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
@@ -444,7 +444,8 @@ function billing_admin_add_service($conn, $clientId, $planCode, $quantity, $deta
     $name = $service['title'] . ' — ' . $plan['name'];
     $description = (string) $plan['summary'];
     $detail = billing_plain_line($detail, 180);
-    $price = ($needs === 'sms' || $needs === 'voice') ? '0.00' : billing_money(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0));
+    // Same rule as a client purchase: the stored and renewed amount includes 13% VAT.
+    $price = ($needs === 'sms' || $needs === 'voice') ? '0.00' : billing_money(billing_vat_bill(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0))['total']);
     $brief = array('Added by' => 'the team', 'Payment' => 'Taken outside the wallet');
     if ($detail !== '') {
         $brief['Detail'] = $detail;
@@ -597,9 +598,11 @@ function billing_refund_domain($conn, $serviceId)
         return 'That order has no amount to return.';
     }
     $clientId = (int) $row['client_id'];
-    billing_wallet_credit($conn, $clientId, $price);
     $note = 'Domain not available' . ($row['detail_label'] !== '' ? ': ' . $row['detail_label'] : '');
-    billing_record_entry($conn, $clientId, $price, 'credit', 'refund', 'completed', 'wallet', $note, $serviceId);
+
+    // Close the order first, guarded on status = 'active'. Only the request that wins that
+    // update credits the wallet, so two submits cannot refund the same order twice.
+    billing_tx($conn, 'begin');
     $status = 'refunded';
     $update = $conn->prepare("UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND status = 'active'");
     $update->bind_param('si', $status, $serviceId);
@@ -607,8 +610,12 @@ function billing_refund_domain($conn, $serviceId)
     $saved = billing_affected($conn) === 1;
     $update->close();
     if (!$saved) {
-        return 'The wallet was credited, but the order status could not be changed. Check this order before trying again.';
+        billing_tx($conn, 'rollback');
+        return 'That domain order is no longer active.';
     }
+    billing_wallet_credit($conn, $clientId, $price);
+    billing_record_entry($conn, $clientId, $price, 'credit', 'refund', 'completed', 'wallet', $note, $serviceId);
+    billing_tx($conn, 'commit');
     billing_mail_client_event($conn, $clientId, 'refund', array(
         'amount' => $price,
         'note' => $note
@@ -641,29 +648,13 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     if (!is_array($brief) || !isset($brief['Added by']) || $brief['Added by'] !== 'the team') {
         return array('error' => 'This service was paid from the wallet. It is not an office add, so it stays.', 'message' => '');
     }
-    $extra = '';
-    $creditNote = isset($brief['Credit note']) ? (int) $brief['Credit note'] : 0;
-    $kind = (string) $row['unit_kind'];
-    $quantity = (int) $row['unit_quantity'];
-    if ($creditNote > 0 && function_exists('sms_admin_reverse')) {
-        $reversed = sms_admin_reverse($conn, $clientId, $creditNote);
-        if ($reversed['error'] !== '' && strpos($reversed['error'], 'already sent') === false && strpos($reversed['error'], 'already taken') === false) {
-            return array('error' => $reversed['error'], 'message' => '');
-        }
-        $extra = $reversed['error'] !== '' ? $reversed['error'] : $reversed['message'];
-    } elseif (($kind === 'sms' || $kind === 'voice_calls') && $quantity > 0) {
-        $left = (int) billing_unit_balances($conn, $clientId)[$kind];
-        $take = $left < $quantity ? $left : $quantity;
-        if ($take > 0 && !billing_take_units($conn, $clientId, $kind, $take)) {
-            return array('error' => 'The credits could not be taken back. The balance changed while this was saving.', 'message' => '');
-        }
-        if ($take < $quantity) {
-            $extra = number_format($quantity - $take) . ' were already used, so ' . number_format($take) . ' were taken back.';
-        }
-    }
+    // Close the service first, guarded on its open status. Only the request that wins this
+    // update takes credits back, so two take-backs cannot both remove them.
+    billing_tx($conn, 'begin');
     $closed = 'expired';
     $update = $conn->prepare('UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND client_id = ? AND status IN (\'active\', \'booked\')');
     if (!$update) {
+        billing_tx($conn, 'rollback');
         return array('error' => 'The service could not be closed.', 'message' => '');
     }
     $update->bind_param('sii', $closed, $serviceId, $clientId);
@@ -671,8 +662,33 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     $closedOk = billing_affected($conn) === 1;
     $update->close();
     if (!$closedOk) {
+        billing_tx($conn, 'rollback');
         return array('error' => 'That service is already closed.', 'message' => '');
     }
+
+    $extra = '';
+    $creditNote = isset($brief['Credit note']) ? (int) $brief['Credit note'] : 0;
+    $kind = (string) $row['unit_kind'];
+    $quantity = (int) $row['unit_quantity'];
+    if ($creditNote > 0 && function_exists('sms_admin_reverse')) {
+        $reversed = sms_admin_reverse($conn, $clientId, $creditNote);
+        if ($reversed['error'] !== '' && strpos($reversed['error'], 'already sent') === false && strpos($reversed['error'], 'already taken') === false) {
+            billing_tx($conn, 'rollback');
+            return array('error' => $reversed['error'], 'message' => '');
+        }
+        $extra = $reversed['error'] !== '' ? $reversed['error'] : $reversed['message'];
+    } elseif (($kind === 'sms' || $kind === 'voice_calls') && $quantity > 0) {
+        $left = (int) billing_unit_balances($conn, $clientId)[$kind];
+        $take = $left < $quantity ? $left : $quantity;
+        if ($take > 0 && !billing_take_units($conn, $clientId, $kind, $take)) {
+            billing_tx($conn, 'rollback');
+            return array('error' => 'The credits could not be taken back. The balance changed while this was saving.', 'message' => '');
+        }
+        if ($take < $quantity) {
+            $extra = number_format($quantity - $take) . ' were already used, so ' . number_format($take) . ' were taken back.';
+        }
+    }
+    billing_tx($conn, 'commit');
     $message = 'Service taken back. It will not renew.';
     if ($extra !== '') {
         $message .= ' ' . $extra;
@@ -680,11 +696,27 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     return array('error' => '', 'message' => $message);
 }
 
+/**
+ * Turns auto-renew on or off. Turning it on for a term that has already ended is refused: the
+ * client renews that service by buying it again, so no charge happens without a fresh order.
+ * Returns true when the change is saved.
+ */
 function billing_set_auto_renew($conn, $clientId, $serviceId, $enabled)
 {
     $clientId = (int) $clientId;
     $serviceId = (int) $serviceId;
     $enabled = $enabled ? 1 : 0;
+    if ($enabled) {
+        $today = date('Y-m-d');
+        $check = $conn->prepare("SELECT next_renewal FROM client_services WHERE id = ? AND client_id = ? AND billing_cycle IN ('monthly', 'yearly') LIMIT 1");
+        $check->bind_param('ii', $serviceId, $clientId);
+        $check->execute();
+        $term = db_fetch_assoc($check);
+        $check->close();
+        if ($term && (string) $term['next_renewal'] !== '' && (string) $term['next_renewal'] < $today) {
+            return false;
+        }
+    }
     $stmt = $conn->prepare("UPDATE client_services SET auto_renew = ? WHERE id = ? AND client_id = ? AND billing_cycle IN ('monthly', 'yearly')");
     $stmt->bind_param('iii', $enabled, $serviceId, $clientId);
     $stmt->execute();
@@ -705,10 +737,34 @@ function billing_log_renewal($conn, $serviceId, $clientId, $amount, $result, $no
     $stmt->close();
 }
 
+// Moves next_renewal forward only if it still holds the value we read. Returns false when
+// another request already renewed this service for the same period.
+function billing_claim_renewal($conn, $serviceId, $expectedNext, $newNext)
+{
+    $stmt = $conn->prepare('UPDATE client_services SET next_renewal = ? WHERE id = ? AND next_renewal = ?');
+    $serviceId = (int) $serviceId;
+    $stmt->bind_param('sis', $newNext, $serviceId, $expectedNext);
+    $stmt->execute();
+    $ok = billing_affected($conn) === 1;
+    $stmt->close();
+    return $ok;
+}
+
 function billing_process_renewals($conn, $clientId = null)
 {
     $today = date('Y-m-d');
     $stats = array('renewed' => 0, 'waiting' => 0, 'suspended' => 0);
+    // Recurring services whose term ended without auto-renew are expired, not left looking active.
+    if ($clientId) {
+        $lapse = $conn->prepare("UPDATE client_services SET status = 'expired' WHERE client_id = ? AND auto_renew = 0 AND billing_cycle IN ('monthly', 'yearly') AND status = 'active' AND next_renewal IS NOT NULL AND next_renewal <> '' AND next_renewal < ?");
+        $lapseClient = (int) $clientId;
+        $lapse->bind_param('is', $lapseClient, $today);
+    } else {
+        $lapse = $conn->prepare("UPDATE client_services SET status = 'expired' WHERE auto_renew = 0 AND billing_cycle IN ('monthly', 'yearly') AND status = 'active' AND next_renewal IS NOT NULL AND next_renewal <> '' AND next_renewal < ?");
+        $lapse->bind_param('s', $today);
+    }
+    $lapse->execute();
+    $lapse->close();
     if ($clientId) {
         $clientId = (int) $clientId;
         $stmt = $conn->prepare("SELECT * FROM client_services WHERE client_id = ? AND auto_renew = 1 AND billing_cycle IN ('monthly', 'yearly') AND status IN ('active', 'past_due', 'suspended') AND next_renewal IS NOT NULL AND next_renewal != '' AND next_renewal <= ?");
@@ -732,15 +788,20 @@ function billing_process_renewals($conn, $clientId = null)
         $ownerId = (int) $row['client_id'];
         $amount = (float) $row['price'];
         $cycle = (string) $row['billing_cycle'];
-        if (billing_wallet_debit($conn, $ownerId, $amount)) {
-            $base = (string) $row['next_renewal'];
-            if ($base < $today) {
-                $base = $today;
-            }
-            $next = billing_add_cycle($base, $cycle);
+        $base = (string) $row['next_renewal'];
+        if ($base < $today) {
+            $base = $today;
+        }
+        $next = billing_add_cycle($base, $cycle);
+
+        // Claim the period and debit the wallet in one transaction. If another tab or cron run
+        // already moved next_renewal, the claim fails and nothing is charged twice.
+        billing_tx($conn, 'begin');
+        $claimed = billing_claim_renewal($conn, $serviceId, (string) $row['next_renewal'], $next);
+        if ($claimed && billing_wallet_debit($conn, $ownerId, $amount)) {
             $active = 'active';
-            $update = $conn->prepare('UPDATE client_services SET status = ?, next_renewal = ?, end_date = ?, grace_until = NULL, last_attempt_on = ? WHERE id = ?');
-            $update->bind_param('ssssi', $active, $next, $next, $today, $serviceId);
+            $update = $conn->prepare('UPDATE client_services SET status = ?, end_date = ?, grace_until = NULL, last_attempt_on = ? WHERE id = ?');
+            $update->bind_param('sssi', $active, $next, $today, $serviceId);
             $update->execute();
             $update->close();
             $renewKind = (string) ($row['unit_kind'] ?? '');
@@ -751,12 +812,17 @@ function billing_process_renewals($conn, $clientId = null)
             }
             billing_record_entry($conn, $ownerId, $amount, 'debit', 'renewal', 'completed', 'wallet', (string) $row['service_name'], $serviceId);
             billing_log_renewal($conn, $serviceId, $ownerId, $amount, 'renewed', 'Renewed through ' . $next);
+            billing_tx($conn, 'commit');
             billing_mail_client_event($conn, $ownerId, 'renewed', array(
                 'service' => (string) $row['service_name'],
                 'amount' => billing_money($amount),
                 'next' => $next
             ));
             $stats['renewed']++;
+            continue;
+        }
+        billing_tx($conn, 'rollback');
+        if (!$claimed) {
             continue;
         }
 

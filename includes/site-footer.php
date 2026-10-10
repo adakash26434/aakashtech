@@ -130,6 +130,6 @@ if ($aiReady) {
     include __DIR__ . '/site-ask.php';
 }
 ?><nav class="mobile-cta" aria-label="Quick actions">
-    <a class="button button--outline" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/index.php#contact">Ask a question</a>
-    <a class="button button--primary" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/client/shop.php">Buy or book</a>
+    <a class="btn btn-lg btn-secondary" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/index.php#contact">Ask a question</a>
+    <a class="btn btn-lg btn-primary" href="<?= site_escape(rtrim(site_canonical_origin(), '/')) ?>/client/shop.php">Buy or book</a>
 </nav>

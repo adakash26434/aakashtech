@@ -11,15 +11,24 @@ $goTab = 'account';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
     verify_csrf();
     if (isset($_POST['toggle_client'])) {
-        $stmt = $conn->prepare("UPDATE client_users SET status = CASE WHEN status = 'active' THEN 'suspended' ELSE 'active' END WHERE id = ?");
-        $stmt->bind_param('i', $id);
+        admin_deny_if_staff();
+        // Only the change the button asked for is applied, and only if the account is still in the
+        // state the page showed. A stale page cannot re-activate a suspended client.
+        $suspend = (isset($_POST['target']) ? $_POST['target'] : '') !== 'activate';
+        $from = $suspend ? 'active' : 'suspended';
+        $to = $suspend ? 'suspended' : 'active';
+        $stmt = $conn->prepare('UPDATE client_users SET status = ? WHERE id = ? AND status = ?');
+        $stmt->bind_param('sis', $to, $id, $from);
         $stmt->execute();
+        $changed = (int) $conn->affected_rows === 1;
         $stmt->close();
-        flash('client_notice', 'Account status updated.');
+        flash('client_notice', $changed ? 'Account status updated.' : 'That account was already changed. Refresh the page and check its status.');
     } elseif (isset($_POST['reset_authenticator'])) {
+        admin_deny_if_staff();
         totp_clear($conn, 'client', $id);
         flash('client_notice', 'Authenticator reset. The client sets it up again on the next sign-in.');
     } elseif (isset($_POST['open_portal'])) {
+        admin_deny_if_staff();
         $opened = client_office_open($conn, $id);
         if ($opened === '') {
             while (ob_get_level() > 0) {
@@ -42,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id > 0) {
             flash('client_notice', 'A reset link was emailed. It works for 30 minutes. The current password stays until they choose a new one.');
         }
     } elseif (isset($_POST['set_password'])) {
+        admin_deny_if_staff();
         $newPassword = isset($_POST['new_password']) ? (string) $_POST['new_password'] : '';
         $again = isset($_POST['new_password_again']) ? (string) $_POST['new_password_again'] : '';
         if ($newPassword !== $again) {

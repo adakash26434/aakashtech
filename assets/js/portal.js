@@ -37,7 +37,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     button.classList.add("is-busy");
                 });
             }, 0);
-            // Allow a retry if the page stays (validation or network failure).
+            // Allow a retry only if the page is still here after a long wait (a stalled network).
+            // SMS, KYC and billing requests can take well over 15 seconds, so a shorter wait
+            // lets a second click send the same request twice.
             setTimeout(function () {
                 form.dataset.submitted = "0";
                 sending = false;
@@ -45,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     button.disabled = false;
                     button.classList.remove("is-busy");
                 });
-            }, 15000);
+            }, 90000);
         });
     });
     window.addEventListener("beforeunload", function (event) {

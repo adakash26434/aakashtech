@@ -31,7 +31,14 @@ $fundsLeft = $balance;
 <?php if ($notice): ?><div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div><?php endif; ?>
 <?php if (!$rows): ?>
-    <div class="dash-panel"><div class="p-6 text-slate-400 text-sm">No domain request yet.</div></div>
+    <div class="dash-panel"><div class="p-8 text-center">
+        <p class="text-white font-semibold">No domain request yet</p>
+        <p class="text-slate-400 text-sm mt-1">Check a name first. When it is free, request it here and pay from your wallet.</p>
+        <div class="mt-5 flex flex-wrap justify-center gap-2">
+            <a class="btn btn-lg btn-primary" href="domain.php">Register a name</a>
+            <a class="btn btn-lg btn-secondary" href="whois.php">WHOIS check up</a>
+        </div>
+    </div></div>
 <?php endif; ?>
 <?php foreach ($rows as $row): ?>
     <?php

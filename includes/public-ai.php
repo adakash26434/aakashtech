@@ -12,10 +12,10 @@ function site_ai_provider($conn)
 function site_ai_key($conn, $provider)
 {
     if ($provider === 'gemini') {
-        return trim((string) billing_setting($conn, 'ai_gemini_key'));
+        return trim(panel_pass_open($conn, billing_setting($conn, 'ai_gemini_key')));
     }
     if ($provider === 'deepseek') {
-        return trim((string) billing_setting($conn, 'ai_deepseek_key'));
+        return trim(panel_pass_open($conn, billing_setting($conn, 'ai_deepseek_key')));
     }
     return '';
 }

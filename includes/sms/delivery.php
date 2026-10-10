@@ -428,7 +428,8 @@ function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
                 $result = sms_vendor_send($conn, $chunkNumbers, $groupText, $sender);
             } catch (Throwable $exception) {
                 error_log('SMS line error: ' . $exception->getMessage());
-                $result = array('code' => 'line-error', 'rejected' => array());
+                // An exception can come after the provider already accepted the batch.
+                $result = array('code' => 'unconfirmed', 'rejected' => array());
             }
             billing_tx($conn, 'begin');
             try {
@@ -647,12 +648,16 @@ function sms_cancel_scheduled($conn, $clientId, $campaignId)
     $draft = 'draft';
     $scheduled = 'scheduled';
     $channel = 'sms';
+    // Status change, message failures and credit return succeed or fail together. A crash
+    // halfway would otherwise leave a draft with held messages and no refund.
+    billing_tx($conn, 'begin');
     $stmt = $conn->prepare('UPDATE sms_campaigns SET status = ?, scheduled_at = NULL WHERE id = ? AND client_id = ? AND status = ? AND channel = ?');
     $stmt->bind_param('siiss', $draft, $campaignId, $clientId, $scheduled, $channel);
     $stmt->execute();
     $changed = (int) $conn->affected_rows > 0;
     $stmt->close();
     if (!$changed) {
+        billing_tx($conn, 'rollback');
         return '';
     }
     $queued = 'queued';
@@ -662,6 +667,7 @@ function sms_cancel_scheduled($conn, $clientId, $campaignId)
     $held = db_fetch_all($rows);
     $rows->close();
     if (!$held) {
+        billing_tx($conn, 'commit');
         return 'released';
     }
     $ids = array();
@@ -674,6 +680,7 @@ function sms_cancel_scheduled($conn, $clientId, $campaignId)
     if ($credits > 0) {
         billing_add_units($conn, $clientId, 'sms', $credits);
     }
+    billing_tx($conn, 'commit');
     return 'refunded';
 }
 

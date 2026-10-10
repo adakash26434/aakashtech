@@ -35,7 +35,7 @@ try {
     $history = sms_admin_history($conn, $historyClient, $usageFind, $historyStatus);
     $vendorStock = sms_vendor_stock($conn, false);
     $clientsHolding = sms_clients_holding($conn);
-    $grantClients = $conn->query("SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left FROM client_users c LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = 'sms' ORDER BY c.name ASC LIMIT 300");
+    $grantClients = $conn->query("SELECT c.id, c.name, c.email, COALESCE(u.balance, 0) AS sms_left FROM client_users c LEFT JOIN client_units u ON u.client_id = c.id AND u.unit_kind = 'sms' ORDER BY c.name ASC LIMIT 2000");
     $pendingResult = $conn->query("SELECT COUNT(*) AS c FROM sms_sender_names WHERE status = 'pending'");
     $pendingRow = $pendingResult ? $pendingResult->fetch_assoc() : null;
     $pendingNames = $pendingRow ? (int) $pendingRow['c'] : 0;

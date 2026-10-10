@@ -99,6 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
         }
     }
     $clientId = $loggedIn ? (int) get_client_id() : 0;
+    if ($error === '' && !$loggedIn && $conn && !auth_attempt_reserve($conn, 'domain-request', 5, 3600)) {
+        $error = 'Too many domain requests from this connection. Try again in an hour.';
+    }
     if ($error === '' && !$loggedIn) {
         $email = $accountEmail;
         $phone = auth_mobile_number($accountPhone);
@@ -113,10 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
             $company = $holderKind === 'organization' ? $holderName : '';
             $taken = billing_client_taken($conn, $email, $phone, $company, 0);
             if ($taken !== '') {
-                $error = $taken . ' Sign in, then send the domain request.';
+                // Same wording for every email, so this form cannot be used to find out who has an account.
+                $error = 'We could not open an account with these details. Sign in, then send the domain request.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $color = '#0b8b7a';
+                $color = '#097a6d';
                 $insert = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
                 $insert->bind_param('ssssss', $accountName, $email, $hash, $phone, $company, $color);
                 $insert->execute();
@@ -293,7 +297,7 @@ if (!isset($accountPhone)) {
                     </select>
                         <label for="human_check">What is <?= site_escape(auth_math_prompt('domain-check')) ?>?</label>
                         <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
-                        <button class="button button--primary" type="submit" name="check_domain" value="1">Check availability</button>
+                        <button class="btn btn-lg btn-primary" type="submit" name="check_domain" value="1">Check availability</button>
                     </form>
                     <?php if ($offer && $offer['status'] === 'taken'): ?>
                         <p class="domain-result domain-result--taken"><?= site_escape($offer['domain']) ?> is already registered. Choose another name.</p>
@@ -325,7 +329,7 @@ if (!isset($accountPhone)) {
                             <?php if (domain_is_np($offer['tld'])): ?>
                                 <div class="domain-span">
                                     <label for="document">Required document</label>
-                                    <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a JPG or PNG.</p>
+                                    <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a PDF, JPG, PNG, or WEBP file.</p>
                                     <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
                                 </div>
                             <?php endif; ?>
@@ -356,7 +360,7 @@ if (!isset($accountPhone)) {
                             </div>
                         </div>
                         <p class="domain-note">Sending the request does not take the payment. If the wallet does not cover this year, the next page asks for that amount. After it is confirmed, pay the bill under My domains.</p>
-                        <button class="button button--primary" type="submit" name="request_domain" value="1">Send registration request</button>
+                        <button class="btn btn-lg btn-primary" type="submit" name="request_domain" value="1">Send registration request</button>
                     </form>
                 </div>
             <?php endif; ?>

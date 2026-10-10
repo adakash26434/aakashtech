@@ -601,7 +601,9 @@ function site_favicon_html($conn, $prefix = '')
         $path = site_logo_file(isset($settings['logo_path']) ? $settings['logo_path'] : '');
     }
     if ($path === '') {
-        return '';
+        // No icon uploaded yet: an empty icon link stops the browser requesting /favicon.ico and getting a 404.
+        $cache[$prefix] = '<link rel="icon" href="data:,">';
+        return $cache[$prefix];
     }
     $full = dirname(__DIR__, 2) . '/' . $path;
     $version = is_file($full) ? (int) filemtime($full) : 0;

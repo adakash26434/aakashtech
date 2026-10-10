@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_token'])) {
     }
 }
 
+$msg = flash('api_notice');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_sms'])) {
     verify_csrf();
     $phoneStmt = $conn->prepare('SELECT phone FROM client_users WHERE id = ?');
@@ -65,7 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_sms'])) {
             'source' => 'dashboard'
         ));
         if (!empty($tested['ok'])) {
-            $msg = 'A test code was sent to ' . $ownMobile . '. One credit was used. Check SMS logs if it does not arrive.';
+            // Redirect so a reload cannot send another test code and spend another credit.
+            flash('api_notice', 'A test code was sent to ' . $ownMobile . '. One credit was used. Check SMS logs if it does not arrive.');
+            header('Location: sms-api.php');
+            exit;
         } else {
             $err = $tested['error'];
         }
@@ -186,7 +190,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
                                     <form method="POST">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="token_id" value="<?= (int) $token['id'] ?>">
-                                        <button type="submit" name="revoke_token" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer">Revoke</button>
+                                        <button type="submit" name="revoke_token" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer" onclick="return confirm('Revoke this token? Any system using it will stop sending right away.')">Revoke</button>
                                     </form>
                                 <?php endif; ?>
                             </div>
@@ -204,7 +208,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Send SMS</h3></div>
     <div class="p-5 space-y-4 text-sm text-slate-300">
-        <p>Put this token in a website, app, or office software. Three fields send the SMS. POST and GET both work. A JSON body works too. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
+        <p>Put this token in a website, app, or office software. Three fields send the SMS. Send it as POST only: GET is refused, and anything in the web address is ignored, so keep the token in the body or the header. A JSON body works too. Add an optional <code class="text-brand-300">client_ref</code> (letters, numbers, dot, dash or underscore, up to 64 characters) when you might retry: the same ref returns the first result and sends nothing or charges nothing again. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
         <p class="text-slate-400 break-all">URL <?= e($sendUrl) ?></p>
         <div class="overflow-x-auto">
             <table class="w-full text-left">
@@ -369,10 +373,15 @@ document.querySelectorAll('pre[class~="bg-slate-900/70"]').forEach(function (blo
     button.className = 'sms-code-copy';
     button.textContent = 'Copy';
     button.addEventListener('click', function () {
-        if (!navigator.clipboard) return;
-        navigator.clipboard.writeText(block.textContent).then(function () {
-            button.textContent = 'Copied';
+        var label = function (text) {
+            button.textContent = text;
             setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+        };
+        if (!navigator.clipboard) { label('Copy not supported'); return; }
+        navigator.clipboard.writeText(block.textContent).then(function () {
+            label('Copied');
+        }, function () {
+            label('Copy failed');
         });
     });
     wrap.appendChild(button);
