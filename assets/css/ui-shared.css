@@ -115,6 +115,10 @@ body:has(.ask-open[aria-expanded="true"]) .guest-chat--dock { display: none; }
 .btn.btn-danger-quiet:hover, .portal-shell form .btn.btn-danger-quiet:hover { background: #fdecea; border-color: #b42318; }
 .btn.btn-sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
 .btn.btn-lg { min-height: 52px; padding: 0 22px; font-size: 16px; border-radius: 12px; }
+/* Phones: small buttons grow to a comfortable thumb target (44px). */
+@media (max-width: 720px) {
+    .btn.btn-sm, .btn.btn-danger-quiet, .portal-shell form .btn.btn-sm, .portal-shell form .btn.btn-danger-quiet { min-height: 44px; }
+}
 
 /* Header call-to-action: the shared .btn display must not bring the desktop CTA back on phones */
 @media (max-width: 1080px) {
