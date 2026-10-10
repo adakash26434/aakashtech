@@ -56,8 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         }
         // Per account as well as per address: a botnet spread over many addresses still meets the limit
         // on the account it is guessing. Only failed passwords count, and a correct password clears them.
+        // A locked account gets the same answer as a wrong password, so the message does not reveal that the account exists.
         if ($error === '' && $client && auth_attempt_blocked($conn, 'acct-' . (int) $client['id'], 10, 900, 'account')) {
-            $error = 'Too many failed attempts on this account. Wait 15 minutes and try again.';
+            $client = null;
         }
         $storedPassword = ($error === '' && $client) ? (string) $client['password'] : '';
         $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
