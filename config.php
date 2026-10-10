@@ -501,7 +501,7 @@ function auth_ensure_client_table($conn)
             company TEXT DEFAULT NULL,
             address TEXT DEFAULT NULL,
             status TEXT DEFAULT 'active',
-            avatar_color TEXT DEFAULT '#06b6d4',
+            avatar_color TEXT DEFAULT '#0e7490',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )");
@@ -510,7 +510,7 @@ function auth_ensure_client_table($conn)
             'company' => 'TEXT DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "TEXT DEFAULT 'active'",
-            'avatar_color' => "TEXT DEFAULT '#06b6d4'",
+            'avatar_color' => "TEXT DEFAULT '#0e7490'",
             'login_notice_at' => 'TEXT DEFAULT NULL',
             'login_notice_ip' => "TEXT DEFAULT ''"
         );
@@ -524,7 +524,7 @@ function auth_ensure_client_table($conn)
             company VARCHAR(255) DEFAULT NULL,
             address TEXT DEFAULT NULL,
             status VARCHAR(20) DEFAULT 'active',
-            avatar_color VARCHAR(20) DEFAULT '#06b6d4',
+            avatar_color VARCHAR(20) DEFAULT '#0e7490',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_email (email),
@@ -535,7 +535,7 @@ function auth_ensure_client_table($conn)
             'company' => 'VARCHAR(255) DEFAULT NULL',
             'address' => 'TEXT DEFAULT NULL',
             'status' => "VARCHAR(20) DEFAULT 'active'",
-            'avatar_color' => "VARCHAR(20) DEFAULT '#06b6d4'",
+            'avatar_color' => "VARCHAR(20) DEFAULT '#0e7490'",
             'login_notice_at' => 'DATETIME DEFAULT NULL',
             'login_notice_ip' => "VARCHAR(45) DEFAULT ''"
         );

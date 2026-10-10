@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 auth_note_attempt($conn, 'register');
                 $error = $taken;
             } else {
-                $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+                $colors = array('#0e7490', '#6d28d9', '#be185d', '#b45309', '#047857', '#b91c1c');
                 $avatar_color = $colors[array_rand($colors)];
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $conn->prepare("INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)");

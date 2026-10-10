@@ -319,7 +319,7 @@ function billing_admin_create_client($conn, $name, $email, $phone, $company, $pa
     if ($taken !== '') {
         return array('ok' => false, 'error' => $taken, 'id' => 0);
     }
-    $colors = array('#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444');
+    $colors = array('#0e7490', '#6d28d9', '#be185d', '#b45309', '#047857', '#b91c1c');
     $avatar = $colors[array_rand($colors)];
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $conn->prepare('INSERT INTO client_users (name, email, password, phone, company, avatar_color) VALUES (?, ?, ?, ?, ?, ?)');
