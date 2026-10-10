@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_poster'])) {
         if (!$poster['ok']) {
             $err = $poster['error'];
         } else {
-            if (!empty($_POST['remove_poster'])) {
+            if (!empty($_POST['remove_poster']) && $poster['path'] === null) {
                 $dir = dirname(__DIR__, 2) . '/uploads';
                 foreach (glob($dir . '/service-poster-' . $slug . '.*') as $old) {
                     if (is_file($old)) {

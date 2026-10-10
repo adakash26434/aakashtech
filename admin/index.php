@@ -85,7 +85,7 @@ try {
         'senders' => admin_waiting_since($conn, "SELECT MIN(created_at) FROM sms_sender_names WHERE status = 'pending'")
     );
     $recent_inquiries = $conn->query("SELECT * FROM inquiries ORDER BY created_at DESC LIMIT 5");
-    $recent_clients = $conn->query("SELECT id, name, email, company, status, created_at FROM client_users ORDER BY created_at DESC LIMIT 5");
+    $recent_clients = $conn->query("SELECT id, name, email, company, status, created_at, avatar_color FROM client_users ORDER BY created_at DESC LIMIT 5");
 } catch (Throwable $exception) {
     error_log('Admin dashboard could not be loaded.');
 }
@@ -187,7 +187,7 @@ admin_attention_render(admin_attention_items(array(
             <?php if ($recent_clients && $recent_clients->num_rows > 0): ?>
                 <?php while ($cl = $recent_clients->fetch_assoc()): ?>
                     <div class="p-4 hover:bg-slate-800/50 transition flex items-center gap-3">
-                        <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color'] ?? '#06b6d4') ?>"><?= strtoupper(substr($cl['name'], 0, 1)) ?></div>
+                        <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color'] ?? '#06b6d4') ?>"><?= mb_strtoupper(mb_substr($cl['name'], 0, 1, 'UTF-8'), 'UTF-8') ?></div>
                         <div class="flex-1 min-w-0">
                             <a href="client.php?id=<?= (int) $cl['id'] ?>" class="text-white font-medium text-sm truncate block hover:text-brand-300"><?= e($cl['name']) ?></a>
                             <p class="text-slate-500 text-xs truncate"><?= e($cl['email']) ?></p>

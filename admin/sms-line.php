@@ -358,7 +358,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <p class="text-slate-400 text-sm">Sends “Aakash Technologies line check.” to one number. This spends credit on the bought account.</p>
                 <input type="text" name="test_number" class="form-input" placeholder="98XXXXXXXX" inputmode="numeric">
-                <button type="submit" name="test_line" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition">Send check</button>
+                <button type="submit" name="test_line" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-xl transition" onclick="return confirm('Send a real test SMS? It uses one bulk credit.')">Send check</button>
             </form>
         </div>
         <div class="dash-panel">

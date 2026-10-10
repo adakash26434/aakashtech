@@ -99,6 +99,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
         }
     }
     $clientId = $loggedIn ? (int) get_client_id() : 0;
+    if ($error === '' && !$loggedIn && $conn && auth_attempt_blocked($conn, 'domain-request', 5, 3600)) {
+        $error = 'Too many domain requests from this connection. Try again in an hour.';
+    } elseif ($error === '' && !$loggedIn && $conn) {
+        auth_note_attempt($conn, 'domain-request');
+    }
     if ($error === '' && !$loggedIn) {
         $email = $accountEmail;
         $phone = auth_mobile_number($accountPhone);
@@ -113,7 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
             $company = $holderKind === 'organization' ? $holderName : '';
             $taken = billing_client_taken($conn, $email, $phone, $company, 0);
             if ($taken !== '') {
-                $error = $taken . ' Sign in, then send the domain request.';
+                // Same wording for every email, so this form cannot be used to find out who has an account.
+                $error = 'We could not open an account with these details. Sign in, then send the domain request.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $color = '#0b8b7a';
@@ -325,7 +331,7 @@ if (!isset($accountPhone)) {
                             <?php if (domain_is_np($offer['tld'])): ?>
                                 <div class="domain-span">
                                     <label for="document">Required document</label>
-                                    <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a JPG or PNG.</p>
+                                    <p class="domain-note">An individual attaches citizenship, a passport, a driving licence, a voter card, an NRN card, or a Nepal resident visa. An organization attaches its registration certificate. Use a PDF, JPG, PNG, or WEBP file.</p>
                                     <input id="document" name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
                                 </div>
                             <?php endif; ?>

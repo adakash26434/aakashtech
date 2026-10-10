@@ -456,7 +456,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                 <div class="flex items-center gap-4">
                     <button type="submit" name="save_training" value="1" class="text-brand-400 text-xs">Save visit</button>
                     <?php if ((string) $row['panel_user'] !== ''): ?>
-                        <button type="submit" name="clear_training" value="1" class="text-slate-500 text-xs">Clear date</button>
+                        <button type="submit" name="clear_training" value="1" class="text-slate-500 text-xs" onclick="return confirm('Clear this training date?')">Clear date</button>
                     <?php endif; ?>
                 </div>
             </form>

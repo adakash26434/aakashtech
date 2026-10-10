@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         if (!$logo['ok']) {
             $err = $logo['error'];
         } else {
-            if (!empty($_POST['remove_logo'])) {
+            if (!empty($_POST['remove_logo']) && $logo['path'] === null) {
                 $dir = dirname(__DIR__, 2) . '/uploads';
                 foreach (glob($dir . '/site-logo.*') as $old) {
                     if (is_file($old)) {

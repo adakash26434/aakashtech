@@ -198,7 +198,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
             <input name="new_email" type="email" required maxlength="254" class="form-input" placeholder="Email">
             <input name="new_phone" required inputmode="numeric" class="form-input" placeholder="10-digit mobile">
             <input name="new_company" maxlength="120" class="form-input" placeholder="Company, optional">
-            <input name="new_password" type="text" required minlength="8" class="form-input" placeholder="Password, min 8 characters" autocomplete="off">
+            <input name="new_password" type="password" required minlength="8" maxlength="72" class="form-input" placeholder="Password, min 8 characters" autocomplete="new-password">
             <button type="submit" name="create_client" class="px-4 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl">Create account</button>
         </form>
     </div>
@@ -266,7 +266,7 @@ $clientFigures = sms_admin_client_figures($conn, $clientIds);
                         <tr class="hover:bg-slate-800/50 transition">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color']) ?>"><?= strtoupper(substr($cl['name'], 0, 1)) ?></div>
+                                    <div class="portal-avatar-letter w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm" style="background: <?= e($cl['avatar_color']) ?>"><?= mb_strtoupper(mb_substr($cl['name'], 0, 1, 'UTF-8'), 'UTF-8') ?></div>
                                     <div>
                                         <a href="client.php?id=<?= (int) $cl['id'] ?>" class="text-white text-sm font-medium hover:text-brand-300"><?= e($cl['name']) ?></a>
                                         <?php $clientEmail = filter_var($cl['email'], FILTER_VALIDATE_EMAIL) ? (string) $cl['email'] : ''; ?>
