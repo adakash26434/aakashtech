@@ -110,6 +110,15 @@ function password_reset_consume($conn, $token, $password)
         return 'This link has expired. Ask for a new one.';
     }
     $clientId = (int) $row['client_id'];
+    // Claim the token first. A second request with the same link finds it gone and changes nothing.
+    $claim = $conn->prepare('DELETE FROM password_resets WHERE token_hash = ?');
+    $claim->bind_param('s', $hash);
+    $claim->execute();
+    $claimed = billing_affected($conn) === 1;
+    $claim->close();
+    if (!$claimed) {
+        return 'This link has expired. Ask for a new one.';
+    }
     $passHash = password_hash((string) $password, PASSWORD_DEFAULT);
     $active = 'active';
     $update = $conn->prepare('UPDATE client_users SET password = ? WHERE id = ? AND status = ?');

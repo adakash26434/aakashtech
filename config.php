@@ -1,4 +1,6 @@
 <?php
+// Nepal time for every date, renewal and dedupe comparison, whatever the server's zone is.
+date_default_timezone_set('Asia/Kathmandu');
 /**
  * Aakash Technologies — Database Configuration & Auth
  * Compatible with PHP 7.4+ and PHP 8.x

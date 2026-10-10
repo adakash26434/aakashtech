@@ -139,7 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_sms'])) {
     } elseif (billing_posted($_POST, 'legal_accept') !== '1') {
         $err = 'Accept the declaration before this can be sent.';
     } else {
-        $_SESSION['sms_declared'] = $cid;
         $scheduled = trim($values['scheduled_at']);
         if ($scheduled !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $scheduled)) {
             $scheduled = '';
