@@ -188,5 +188,10 @@ $full = profile_checklist(array('address' => 'Pokhara', 'company' => 'Himal'), '
 check('profile: a complete account is 3 of 3', $full['done'] === 3 && $full['percent'] === 100);
 check('profile: a pending identity is not counted as done', profile_checklist(array('address' => 'x', 'company' => ''), 'pending')['done'] === 1);
 check('profile: password score rises with length and variety', profile_password_score('abc') === 0 && profile_password_score('abcdefgh') === 1 && profile_password_score('Himal2083') === 3 && profile_password_score('Correct-Horse-9!') === 4);
+// Renewal claim: two requests for the same period must not both charge
+$conn->query("INSERT INTO client_services (client_id, service_name, next_renewal) VALUES ($cid, 'Renew test', '2026-01-01')");
+$renewId = (int) $conn->insert_id;
+check('renewal claim: the first request takes the period', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === true);
+check('renewal claim: a second request for the same period is refused', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

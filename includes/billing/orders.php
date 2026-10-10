@@ -705,6 +705,19 @@ function billing_log_renewal($conn, $serviceId, $clientId, $amount, $result, $no
     $stmt->close();
 }
 
+// Moves next_renewal forward only if it still holds the value we read. Returns false when
+// another request already renewed this service for the same period.
+function billing_claim_renewal($conn, $serviceId, $expectedNext, $newNext)
+{
+    $stmt = $conn->prepare('UPDATE client_services SET next_renewal = ? WHERE id = ? AND next_renewal = ?');
+    $serviceId = (int) $serviceId;
+    $stmt->bind_param('sis', $newNext, $serviceId, $expectedNext);
+    $stmt->execute();
+    $ok = billing_affected($conn) === 1;
+    $stmt->close();
+    return $ok;
+}
+
 function billing_process_renewals($conn, $clientId = null)
 {
     $today = date('Y-m-d');
@@ -732,15 +745,20 @@ function billing_process_renewals($conn, $clientId = null)
         $ownerId = (int) $row['client_id'];
         $amount = (float) $row['price'];
         $cycle = (string) $row['billing_cycle'];
-        if (billing_wallet_debit($conn, $ownerId, $amount)) {
-            $base = (string) $row['next_renewal'];
-            if ($base < $today) {
-                $base = $today;
-            }
-            $next = billing_add_cycle($base, $cycle);
+        $base = (string) $row['next_renewal'];
+        if ($base < $today) {
+            $base = $today;
+        }
+        $next = billing_add_cycle($base, $cycle);
+
+        // Claim the period and debit the wallet in one transaction. If another tab or cron run
+        // already moved next_renewal, the claim fails and nothing is charged twice.
+        billing_tx($conn, 'begin');
+        $claimed = billing_claim_renewal($conn, $serviceId, (string) $row['next_renewal'], $next);
+        if ($claimed && billing_wallet_debit($conn, $ownerId, $amount)) {
             $active = 'active';
-            $update = $conn->prepare('UPDATE client_services SET status = ?, next_renewal = ?, end_date = ?, grace_until = NULL, last_attempt_on = ? WHERE id = ?');
-            $update->bind_param('ssssi', $active, $next, $next, $today, $serviceId);
+            $update = $conn->prepare('UPDATE client_services SET status = ?, end_date = ?, grace_until = NULL, last_attempt_on = ? WHERE id = ?');
+            $update->bind_param('sssi', $active, $next, $today, $serviceId);
             $update->execute();
             $update->close();
             $renewKind = (string) ($row['unit_kind'] ?? '');
@@ -751,12 +769,17 @@ function billing_process_renewals($conn, $clientId = null)
             }
             billing_record_entry($conn, $ownerId, $amount, 'debit', 'renewal', 'completed', 'wallet', (string) $row['service_name'], $serviceId);
             billing_log_renewal($conn, $serviceId, $ownerId, $amount, 'renewed', 'Renewed through ' . $next);
+            billing_tx($conn, 'commit');
             billing_mail_client_event($conn, $ownerId, 'renewed', array(
                 'service' => (string) $row['service_name'],
                 'amount' => billing_money($amount),
                 'next' => $next
             ));
             $stats['renewed']++;
+            continue;
+        }
+        billing_tx($conn, 'rollback');
+        if (!$claimed) {
             continue;
         }
 
