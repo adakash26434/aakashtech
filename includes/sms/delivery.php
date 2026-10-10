@@ -17,23 +17,6 @@ function sms_insert_campaign($conn, $clientId, $name, $text, $sender, $count, $s
     return $id;
 }
 
-function sms_insert_messages($conn, $clientId, $campaignId, $tokenId, $source, $sender, $text, $parts, $numbers)
-{
-    $status = 'queued';
-    $error = '';
-    $recipient = '';
-    $stmt = $conn->prepare('INSERT INTO sms_messages (client_id, campaign_id, token_id, source, sender_id, recipient, message_text, parts, status, error_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->bind_param('iiissssiss', $clientId, $campaignId, $tokenId, $source, $sender, $recipient, $text, $parts, $status, $error);
-    $ids = array();
-    foreach ($numbers as $number) {
-        $recipient = $number;
-        $stmt->execute();
-        $ids[] = (int) $conn->insert_id;
-    }
-    $stmt->close();
-    return $ids;
-}
-
 function sms_db_batch($conn, $step)
 {
     // Same nesting-aware transaction as the money code, so a batch inside a purchase never commits early.

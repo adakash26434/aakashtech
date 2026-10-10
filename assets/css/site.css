@@ -154,15 +154,6 @@ body.site-public textarea {
     color: var(--site-teal);
 }
 
-.brand-caption {
-    color: var(--site-muted);
-    font-size: var(--type-label);
-    font-weight: 600;
-    letter-spacing: 0.19em;
-    line-height: 1.2;
-    text-transform: uppercase;
-}
-
 .desktop-nav,
 .nav-actions {
     display: flex;
@@ -1466,17 +1457,6 @@ a.solution-row:focus-visible {
     font-size: var(--type-label);
 }
 
-.service-card-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 0;
-    padding-top: 0;
-    color: var(--site-teal-dark) !important;
-    font-size: var(--type-label);
-    font-weight: 700;
-}
-
 .service-card-link svg {
     width: 14px;
     height: 14px;
@@ -2399,10 +2379,6 @@ a.contact-method:hover strong {
     50% { transform: translateY(-8px); }
 }
 
-@keyframes button-sheen {
-    to { transform: translateX(130%); }
-}
-
 @keyframes word-in {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }
@@ -3097,10 +3073,6 @@ a.contact-method:hover strong {
     height: 1px !important;
     overflow: hidden !important;
     clip: rect(0, 0, 0, 0) !important;
-}
-
-.nav-chats--mobile {
-    margin: 4px 0 8px;
 }
 
 .nav-chats--mobile .guest-chat-link {

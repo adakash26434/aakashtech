@@ -4,22 +4,6 @@
  * Split from the old includes/sms-gateway.php. Functions are unchanged.
  */
 
-function sms_office_credit($conn, $clientId)
-{
-    sms_credit_columns($conn);
-    $clientId = (int) $clientId;
-    $bought = 'Bought from the wallet';
-    $stmt = $conn->prepare('SELECT id FROM sms_credit_notes WHERE client_id = ? AND credits > 0 AND note <> ? AND (reversed_at IS NULL OR reversed_at = \'\') LIMIT 1');
-    if (!$stmt) {
-        return false;
-    }
-    $stmt->bind_param('is', $clientId, $bought);
-    $stmt->execute();
-    $row = db_fetch_assoc($stmt);
-    $stmt->close();
-    return (bool) $row;
-}
-
 function sms_client_gate($conn, $clientId, $identityRequired = false)
 {
     $clientId = (int) $clientId;
