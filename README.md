@@ -201,6 +201,8 @@ public_html/
 
 `npm test` runs every PHP and Node suite above in one go and stops at the first failing one.
 
+The sign-up flow can also be checked in a real browser (`tests/e2e/signup-flow.js`, needs Playwright and a test server with `MAIL_OUTBOX_DIR` set; see the comment at the top of the file). Setting `MAIL_OUTBOX_DIR` writes outgoing mail to files instead of sending it, and is only for testing.
+
 ### Styling build (Tailwind)
 Pages use a pre-built `assets/css/tailwind.css` instead of the Tailwind CDN script (faster, works offline, no third-party script). After you add or change Tailwind classes in any `.php` file, rebuild it:
 ```bash
