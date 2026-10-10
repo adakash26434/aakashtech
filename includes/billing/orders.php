@@ -444,7 +444,8 @@ function billing_admin_add_service($conn, $clientId, $planCode, $quantity, $deta
     $name = $service['title'] . ' — ' . $plan['name'];
     $description = (string) $plan['summary'];
     $detail = billing_plain_line($detail, 180);
-    $price = ($needs === 'sms' || $needs === 'voice') ? '0.00' : billing_money(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0));
+    // Same rule as a client purchase: the stored and renewed amount includes 13% VAT.
+    $price = ($needs === 'sms' || $needs === 'voice') ? '0.00' : billing_money(billing_vat_bill(billing_selling_price($plan['price'], isset($plan['offer_price']) ? $plan['offer_price'] : 0))['total']);
     $brief = array('Added by' => 'the team', 'Payment' => 'Taken outside the wallet');
     if ($detail !== '') {
         $brief['Detail'] = $detail;
