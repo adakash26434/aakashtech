@@ -24,6 +24,12 @@ require __DIR__ . '/includes/services-actions.php';
     <button type="button" @click="tab='words'" :class="tab==='words' ? 'is-on' : ''">Words</button>
 </div>
 <div x-show="tab==='prices'">
+<div x-data="{ sub: 'sms' }" class="mb-6">
+<div class="portal-tabs" role="tablist" aria-label="Price groups">
+    <button type="button" role="tab" @click="sub='sms'" :class="sub==='sms' ? 'is-on' : ''" :aria-selected="sub==='sms'">SMS and voice</button>
+    <button type="button" role="tab" @click="sub='other'" :class="sub==='other' ? 'is-on' : ''" :aria-selected="sub==='other'">Domains, hosting, email, websites, training</button>
+</div>
+<div x-show="sub==='sms'">
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">SMS and voice, price each</h3>
@@ -85,7 +91,8 @@ require __DIR__ . '/includes/services-actions.php';
         <button type="submit" name="save_service_slabs" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save SMS and voice rates</button>
     </form>
 </section>
-
+</div>
+<div x-show="sub==='other'" x-cloak>
 <section class="dash-panel mb-6">
     <div class="dash-panel-header">
         <h3 class="font-heading font-semibold text-white">Domain, hosting, email, website, and training</h3>
@@ -124,6 +131,8 @@ require __DIR__ . '/includes/services-actions.php';
         <button type="submit" name="save_service_prices" value="1" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save service prices</button>
     </form>
 </section>
+</div>
+</div>
 </div>
 <div x-show="tab==='photos'" x-cloak>
 <div class="dash-panel mb-6">

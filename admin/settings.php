@@ -23,8 +23,10 @@ if (isset($_POST['save_homepage'])) {
     $settingsTab = 'legal';
 } elseif (isset($_POST['save_ai'])) {
     $settingsTab = 'assistant';
-} elseif (isset($_POST['update_settings']) || isset($_POST['change_password'])) {
+} elseif (isset($_POST['update_settings'])) {
     $settingsTab = 'site';
+} elseif (isset($_POST['change_password']) || isset($_POST['totp_action'])) {
+    $settingsTab = 'security';
 }
 ?>
 <div x-data="{ tab: '<?= e($settingsTab) ?>' }">
@@ -34,6 +36,7 @@ if (isset($_POST['save_homepage'])) {
     <button type="button" @click="tab='assistant'" :class="tab==='assistant' ? 'is-on' : ''">Assistant</button>
     <button type="button" @click="tab='home'" :class="tab==='home' ? 'is-on' : ''">Homepage</button>
     <button type="button" @click="tab='site'" :class="tab==='site' ? 'is-on' : ''">Site</button>
+    <button type="button" @click="tab='security'" :class="tab==='security' ? 'is-on' : ''">Security</button>
 </div>
 <div x-show="tab==='mail'">
 <div class="dash-panel mb-6">
@@ -344,6 +347,10 @@ if (isset($_POST['save_homepage'])) {
         </form>
     </div>
 
+</div>
+</div>
+<div x-show="tab==='security'" x-cloak>
+<div class="grid lg:grid-cols-2 gap-6">
     <!-- Change Password -->
     <div class="dash-panel">
         <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Change Password</h3></div>
