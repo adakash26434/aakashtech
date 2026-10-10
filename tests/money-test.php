@@ -278,5 +278,11 @@ $burstResults = array();
 for ($burst = 0; $burst < 7; $burst++) { $burstResults[] = auth_attempt_reserve($conn, $burstScope, 5, 3600); }
 check('rate limit: the first five requests go ahead and the sixth is refused', array_sum($burstResults) === 5 && $burstResults[4] === true && $burstResults[5] === false);
 
+// Per-account sign-in limit: failures follow the account, not the address, and a correct password clears them
+for ($guess = 0; $guess < 10; $guess++) { auth_note_attempt($conn, 'acct-777', 'account'); }
+check('account limit: ten failed passwords block that account from any address', auth_attempt_blocked($conn, 'acct-777', 10, 900, 'account') === true);
+auth_clear_attempts($conn, 'acct-777', 'account');
+check('account limit: a correct password clears the count', auth_attempt_blocked($conn, 'acct-777', 10, 900, 'account') === false);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

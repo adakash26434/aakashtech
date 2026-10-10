@@ -663,10 +663,10 @@ function db_fetch_assoc($stmt) {
     return $copy;
 }
 
-function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds) {
+function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds, $ipKey = null) {
     try {
         $scope = substr((string) $scope, 0, 20);
-        $ip = auth_client_ip();
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
         $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
         if (!$stmt) {
@@ -731,10 +731,10 @@ function auth_attempt_reserve($conn, $scope, $limit, $windowSeconds) {
     }
 }
 
-function auth_note_attempt($conn, $scope) {
+function auth_note_attempt($conn, $scope, $ipKey = null) {
     try {
         $scope = substr((string) $scope, 0, 20);
-        $ip = auth_client_ip();
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $now = date('Y-m-d H:i:s');
         $stmt = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
         if (!$stmt) {
@@ -756,10 +756,10 @@ function auth_note_attempt($conn, $scope) {
     }
 }
 
-function auth_clear_attempts($conn, $scope) {
+function auth_clear_attempts($conn, $scope, $ipKey = null) {
     try {
         $scope = substr((string) $scope, 0, 20);
-        $ip = auth_client_ip();
+        $ip = $ipKey !== null ? (string) $ipKey : auth_client_ip();
         $stmt = $conn->prepare('DELETE FROM login_attempts WHERE scope = ? AND ip = ?');
         if (!$stmt) {
             return;
