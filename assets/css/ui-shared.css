@@ -44,7 +44,6 @@ body form button[type=submit]:not([class*="bg-"]):not([class*="btn"]) { backgrou
 .guest-chat-link { box-shadow: 0 6px 16px rgba(16, 43, 53, .22); transition: transform .2s var(--ui-ease, ease), box-shadow .2s; }
 .guest-chat-link:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 10px 22px rgba(16, 43, 53, .28); }
 .nav-chats .guest-chat-link { width: 40px; min-height: 40px; height: 40px; }
-.guest-chat--dock .guest-chat-link { width: 48px; height: 48px; min-height: 48px; }
 
 /* Footer social: white icons on a clear outlined tile (the old pale-on-pale tile was unreadable) */
 .footer-social a { width: 44px; height: 44px; color: #fff !important; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .35); border-radius: var(--radius-md); }
@@ -59,14 +58,9 @@ body form button[type=submit]:not([class*="bg-"]):not([class*="btn"]) { backgrou
     .ask-open:hover, .ask-open:focus-visible { width: 236px; padding: 0 18px; gap: 10px; justify-content: flex-start; background: var(--brand-600); }
     .ask-open:hover .ask-open-label, .ask-open:focus-visible .ask-open-label { max-width: 190px; opacity: 1; }
 }
-.ask-dock { right: 18px; bottom: 18px; }
 
 /* Phones: smaller tiles, centred footer social, nothing sits under the bottom action bar */
 @media (max-width: 720px) {
-    .guest-chat--dock { left: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
-    .guest-chat--dock .guest-chat-link { width: 44px; height: 44px; min-height: 44px; }
-    .ask-dock { right: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: min(380px, calc(100vw - 24px)); }
-    .ask-open { width: 48px; min-width: 48px; height: 48px; min-height: 48px; }
     .footer-social { justify-content: center; gap: 12px; }
     .footer-social a { width: 46px; height: 46px; }
     .site-footer h2 { font-size: 18px; }
@@ -74,11 +68,13 @@ body form button[type=submit]:not([class*="bg-"]):not([class*="btn"]) { backgrou
 .site-footer .footer-column h2 { font-size: var(--text-lg, 18px); line-height: 1.35; letter-spacing: -0.01em; }
 
 /* ===== One corner for every way to reach us: WhatsApp, Messenger and "Ask" stacked bottom-right ===== */
+/* The assistant button sits in the same right-hand column; its panel opens above it. */
 .guest-chat--dock { position: fixed; left: auto; right: 18px; top: auto; bottom: 80px; z-index: 55; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .guest-chat--dock .guest-chat-link { display: inline-flex; flex-direction: row-reverse; align-items: center; justify-content: flex-start; gap: 0; width: 52px; min-width: 52px; height: 52px; min-height: 52px; padding: 0 15px; border-radius: 26px; overflow: hidden; white-space: nowrap; text-decoration: none; transition: width .3s var(--ui-ease, ease), gap .3s, transform .2s, box-shadow .2s; }
 .guest-chat--dock .guest-chat-link svg { width: 22px; height: 22px; flex: none; }
 .guest-chat--dock .guest-chat-link span { max-width: 0; opacity: 0; overflow: hidden; color: #fff; font-weight: 600; font-size: 15px; transition: max-width .3s var(--ui-ease, ease), opacity .2s; }
-.ask-dock { right: 18px; bottom: 18px; }
+.ask-dock { right: 18px; bottom: 18px; width: auto; display: flex; flex-direction: column-reverse; align-items: flex-end; }
+.ask-dock .ask-panel { width: min(380px, calc(100vw - 24px)); }
 .ask-open { flex-direction: row-reverse; justify-content: flex-start; padding: 0 15px; width: 52px; min-width: 52px; height: 52px; min-height: 52px; overflow: hidden; white-space: nowrap; }
 .ask-open svg { width: 22px; height: 22px; flex: none; }
 @media (hover: hover) {
@@ -90,6 +86,7 @@ body:has(.ask-open[aria-expanded="true"]) .guest-chat--dock { display: none; }
 @media (max-width: 720px) {
     .guest-chat--dock { left: auto; right: 12px; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
     .ask-dock { right: 12px; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+    .ask-dock .ask-panel { width: min(380px, calc(100vw - 24px)); }
     .guest-chat--dock .guest-chat-link, .ask-open { width: 48px; min-width: 48px; height: 48px; min-height: 48px; padding: 0 13px; border-radius: 24px; }
 }
 

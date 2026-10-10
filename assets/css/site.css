@@ -3066,8 +3066,7 @@ a.contact-method:hover strong {
     padding: 0;
 }
 
-.nav-chats .guest-chat-link span,
-.guest-chat--dock .guest-chat-link span {
+.nav-chats .guest-chat-link span {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;
@@ -3087,23 +3086,6 @@ a.contact-method:hover strong {
     height: auto !important;
     overflow: visible !important;
     clip: auto !important;
-}
-
-.guest-chat--dock {
-    position: fixed;
-    left: 18px;
-    bottom: 18px;
-    z-index: 40;
-    flex-direction: column;
-}
-
-.guest-chat--dock .guest-chat-link {
-    width: 52px;
-    height: 52px;
-    min-height: 52px;
-    padding: 0;
-    border-radius: 50%;
-    box-shadow: 0 10px 24px rgba(16, 43, 53, 0.2);
 }
 
 @media (max-width: 720px) {
