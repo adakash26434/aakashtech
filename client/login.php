@@ -68,9 +68,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             exit;
         } elseif ($error === '') {
             auth_note_attempt($conn, 'client');
-            $error = ($client && $client['status'] !== 'active')
-                ? 'Your account is suspended. Contact support.'
-                : 'Invalid email or password.';
+            if ($client && $client['status'] === 'pending' && $passwordMatches) {
+                $error = 'Confirm your email address first. Open the link we sent you. Use Send it again below if it did not arrive.';
+            } else {
+                $error = ($client && $client['status'] !== 'active')
+                    ? 'Your account is suspended. Contact support.'
+                    : 'Invalid email or password.';
+            }
         }
     }
 }
@@ -184,14 +188,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                     $error = 'The account could not be created. Refresh the page and try again.';
                 } else {
                     terms_record_acceptance($conn, $newId);
-                    billing_mail_client_event($conn, $newId, 'account');
-                    $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
-                    totp_open_gate($conn, 'client', array(
-                        'id' => $newId,
-                        'name' => $name,
-                        'email' => $email
-                    ), $next);
-                    header('Location: two-factor.php');
+                    // The account waits for the link sent to this address. It cannot sign in before that.
+                    $waiting = 'pending';
+                    $markPending = $conn->prepare('UPDATE client_users SET status = ? WHERE id = ?');
+                    $markPending->bind_param('si', $waiting, $newId);
+                    $markPending->execute();
+                    $markPending->close();
+                    email_verify_issue($conn, $newId, $email);
+                    flash('login_notice', 'Account created. We sent a confirmation link to ' . $email . '. Open it to activate the account, then sign in.');
+                    header('Location: login.php');
                     exit;
                 }
             }
@@ -284,6 +289,7 @@ try {
                     Sign In
                 </button>
                 <p class="text-slate-500 text-xs">The first sign-in adds this account in Google Authenticator. After that, every sign-in asks for the 6-digit code.</p>
+                <p class="text-slate-500 text-xs"><a href="resend-verify.php" class="text-brand-400 underline">Did not get the confirmation email? Send it again</a></p>
             </form>
             <p class="text-center text-slate-600 text-sm mt-6">
                 Don't have an account? <a href="?action=register" class="text-brand-400 hover:text-brand-300 font-medium">Register here</a><br>

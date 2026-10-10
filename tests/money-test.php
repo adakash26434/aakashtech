@@ -216,5 +216,21 @@ check('terms: the tick is recorded with the current version', terms_record_accep
 $stored = $conn->query("SELECT terms_version, terms_accepted_at FROM client_users WHERE id = $termsId")->fetch_assoc();
 check('terms: version and time are stored on the account', $stored['terms_version'] === TERMS_VERSION && $stored['terms_accepted_at'] !== '' && $stored['terms_accepted_at'] !== null);
 
+// Email verification: a pending account opens with its link once, and not after it expires
+email_verify_ensure_columns($conn);
+$emailToken = str_repeat('ab', 32);
+$emailHash = hash('sha256', $emailToken);
+$future = date('Y-m-d H:i:s', time() + 3600);
+$past = date('Y-m-d H:i:s', time() - 3600);
+$conn->query("INSERT INTO client_users (name,email,password,status,email_verify_hash,email_verify_expires) VALUES ('Mail','mail@example.com','x','pending','$emailHash','$future')");
+$mailId = (int) $conn->insert_id;
+check('email: a pending account is opened by its link', email_verify_consume($conn, $emailToken) === $mailId);
+check('email: the same link does not open it again', email_verify_consume($conn, $emailToken) === 0);
+check('email: the account is active after the link', (string) $conn->query("SELECT status FROM client_users WHERE id = $mailId")->fetch_assoc()['status'] === 'active');
+$oldToken = str_repeat('cd', 32);
+$conn->query("INSERT INTO client_users (name,email,password,status,email_verify_hash,email_verify_expires) VALUES ('Old','old@example.com','x','pending','" . hash('sha256', $oldToken) . "','$past')");
+check('email: an expired link does not open the account', email_verify_consume($conn, $oldToken) === 0);
+check('email: a malformed token is refused', email_verify_consume($conn, 'not-a-token') === 0);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
