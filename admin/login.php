@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $storedPassword = ($error === '' && $admin) ? (string) $admin['password'] : '';
         $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
         if ($passwordMatches && $admin && (int) $admin['is_active'] === 1) {
-            auth_clear_attempts($conn, 'admin');
+            // Failures are cleared only after the second factor passes (totp.php), not here.
             totp_open_gate($conn, 'admin', array(
                 'id' => (int) $admin['id'],
                 'name' => $admin['name'],

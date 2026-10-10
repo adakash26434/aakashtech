@@ -268,7 +268,7 @@ require __DIR__ . '/includes/sms-portal-actions.php';
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" class="px-4 py-3 text-slate-400 text-sm" x-show="reviewing" x-cloak @click="reviewing = false">Back</button>
                         <button type="button" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl" x-show="!reviewing" @click="openReview()">Review</button>
-                        <button type="submit" name="send_sms" class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="!reviewing" :aria-busy="sending" :class="sending ? 'opacity-60 cursor-progress' : ''" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
+                        <button type="submit" name="send_sms" <?= !$route['connected'] ? 'disabled' : '' ?> class="px-8 py-3 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl disabled:opacity-60" x-show="reviewing" x-cloak :disabled="!reviewing" :aria-busy="sending" :class="sending ? 'opacity-60 cursor-progress' : ''" x-text="sending ? 'Sending…' : (when ? ('Schedule ' + estimate().credits + ' SMS') : ('Send ' + estimate().credits + ' SMS'))">Send SMS</button>
                     </div>
                 </div>
             </form>

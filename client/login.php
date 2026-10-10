@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         $storedPassword = ($error === '' && $client) ? (string) $client['password'] : '';
         $passwordMatches = $error === '' && auth_password_matches($storedPassword, $password);
         if ($passwordMatches && $client && $client['status'] === 'active') {
-            auth_clear_attempts($conn, 'client');
+            // Failures are cleared only after the second factor passes (totp.php), not here.
             $next = isset($_SESSION['client_next']) ? client_safe_next($_SESSION['client_next']) : 'index.php';
             totp_open_gate($conn, 'client', array(
                 'id' => (int) $client['id'],

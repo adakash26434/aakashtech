@@ -93,7 +93,7 @@ function password_reset_consume($conn, $token, $password)
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
         return 'This link has expired. Ask for a new one.';
     }
-    if (strlen((string) $password) < 8) {
+    if (strlen((string) $password) < 8 || strlen((string) $password) > 72) {
         return 'Use a password of at least 8 characters.';
     }
     $hash = hash('sha256', $token);
