@@ -247,5 +247,15 @@ $conn->query("INSERT INTO client_services (client_id, service_name, plan_code, s
 $liveId = (int) $conn->insert_id;
 check('auto-renew: a service still in its term can be switched on', billing_set_auto_renew($conn, $subId, $liveId, true) === true);
 
+// Roles: staff are limited; owner and the existing admin role keep full access
+$_SESSION['admin_role'] = 'staff';
+check('roles: a staff admin is recognised', admin_is_staff() === true);
+$_SESSION['admin_role'] = 'owner';
+check('roles: an owner is not staff', admin_is_staff() === false);
+$_SESSION['admin_role'] = 'admin';
+check('roles: the existing admin role keeps full access', admin_is_staff() === false);
+unset($_SESSION['admin_role']);
+check('roles: no role set means full access, as before', admin_is_staff() === false);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

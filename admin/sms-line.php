@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_line'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['take_sms'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $reversed = sms_admin_reverse(
         $conn,
@@ -60,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['take_sms'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_sms'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $granted = sms_admin_grant(
         $conn,

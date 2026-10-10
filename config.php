@@ -200,6 +200,22 @@ function is_client_logged_in() {
     return isset($_SESSION['client_id']) && !empty($_SESSION['client_id']);
 }
 
+/**
+ * Roles: 'owner' and 'admin' have full access. 'staff' can work the queues but cannot move money,
+ * change an account's status or password, grant or take SMS credit, or open a client's portal.
+ */
+function admin_is_staff() {
+    return isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'staff';
+}
+
+function admin_deny_if_staff() {
+    if (admin_is_staff()) {
+        flash('admin_notice', 'Only the owner can make that change. Ask the owner to do it.');
+        header('Location: ' . (string) $_SERVER['REQUEST_URI']);
+        exit;
+    }
+}
+
 function require_admin() {
     global $conn;
     $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';

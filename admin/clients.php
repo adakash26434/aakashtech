@@ -34,6 +34,7 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_client'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $id = (int) ($_POST['client_id'] ?? 0);
     if ($id > 0) {
@@ -105,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_contact'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_authenticator'])) {
+    admin_deny_if_staff();
     verify_csrf();
     $id = (int) (isset($_POST['client_id']) ? $_POST['client_id'] : 0);
     if ($id > 0) {

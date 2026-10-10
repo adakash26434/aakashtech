@@ -25,11 +25,13 @@ $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     if (isset($_POST['approve_topup'])) {
+        admin_deny_if_staff();
         $msg = billing_approve_topup($conn, (int) $_POST['entry_id'])
             ? 'Top-up added to the client wallet.'
             : '';
         $err = $msg === '' ? 'That top-up could not be confirmed.' : '';
     } elseif (isset($_POST['manual_wallet'])) {
+        admin_deny_if_staff();
         $walletError = billing_admin_wallet_credit(
             $conn,
             isset($_POST['wallet_client']) ? (int) $_POST['wallet_client'] : 0,
@@ -46,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = $slabError === '' ? 'SMS and voice rates updated. A filled offer rate replaces that row until you clear it. The selected row is the Starts from price on the homepage.' : '';
         $err = $slabError;
     } elseif (isset($_POST['refund_domain'])) {
+        admin_deny_if_staff();
         $refundError = billing_refund_domain($conn, (int) $_POST['service_id']);
         $msg = $refundError === '' ? 'The domain amount is back in the client wallet, and that order will not renew.' : '';
         $err = $refundError;
