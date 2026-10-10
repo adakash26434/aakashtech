@@ -28,7 +28,7 @@ if (isset($_POST['save_homepage'])) {
 } elseif (isset($_POST['change_password']) || isset($_POST['totp_action'])) {
     $settingsTab = 'security';
 }
-?>
+
 // Admin accounts and roles: only the owner or an admin changes them, and nobody changes their own role.
 $roleMsg = '';
 $roleErr = '';
@@ -56,6 +56,7 @@ $adminList = $conn->query('SELECT id, name, email, role FROM admin_users ORDER B
 while ($adminList && ($adminRow = $adminList->fetch_assoc())) {
     $adminAccounts[] = $adminRow;
 }
+?>
 
 <div x-data="{ tab: '<?= e($settingsTab) ?>' }">
 <div class="portal-tabs" role="tablist">
