@@ -39,6 +39,12 @@ if (isset($_POST['save_homepage'])) {
     <button type="button" @click="tab='security'" :class="tab==='security' ? 'is-on' : ''">Security</button>
 </div>
 <div x-show="tab==='mail'">
+<div x-data="{ sub: 'requests' }">
+<div class="portal-tabs" role="tablist" aria-label="Mail settings">
+    <button type="button" role="tab" @click="sub='requests'" :class="sub==='requests' ? 'is-on' : ''" :aria-selected="sub==='requests'">Request emails</button>
+    <button type="button" role="tab" @click="sub='client'" :class="sub==='client' ? 'is-on' : ''" :aria-selected="sub==='client'">Mail the client receives</button>
+</div>
+<div x-show="sub==='requests'">
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Request emails</h3></div>
     <form method="POST" action="" class="p-5 space-y-4">
@@ -66,6 +72,8 @@ if (isset($_POST['save_homepage'])) {
     </form>
 </div>
 
+</div>
+<div x-show="sub==='client'" x-cloak>
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Mail the client receives</h3></div>
     <div class="p-5 space-y-4">
@@ -80,6 +88,8 @@ if (isset($_POST['save_homepage'])) {
     </div>
 </div>
 
+</div>
+</div>
 </div>
 <div x-show="tab==='legal'" x-cloak>
 <div class="dash-panel mb-6">
