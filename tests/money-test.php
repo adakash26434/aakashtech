@@ -1,6 +1,6 @@
 <?php
 // Run: php tests/money-test.php   (uses a throw-away SQLite file; exits non-zero on failure)
-putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . sys_get_temp_dir() . '/aakash-money-test.sqlite');
+putenv('DB_DRIVER=sqlite'); putenv('SQLITE_PATH=' . sys_get_temp_dir() . '/aakash-money-test.sqlite'); putenv('ESEWA_ID=9800000000');
 @unlink(sys_get_temp_dir() . '/aakash-money-test.sqlite');
 $_SERVER['HTTP_HOST'] = 'localhost';
 chdir(dirname(__DIR__));
@@ -201,5 +201,12 @@ $firstRefund = billing_refund_domain($conn, $domId);
 $secondRefund = billing_refund_domain($conn, $domId);
 check('domain refund: the first return credits the wallet once', $firstRefund === '' && bal($conn, $cid) == $before + 2000.0);
 check('domain refund: a second return is refused and credits nothing', $secondRefund !== '' && bal($conn, $cid) == $before + 2000.0);
+// Top-up: one payment reference cannot be sent twice (case and spaces ignored)
+$topMethods = billing_payment_methods($conn);
+$topMethod = $topMethods[0]['code'];
+$firstTop = billing_request_topup($conn, $cid, 500, $topMethod, 'REF 98765');
+$dupeTop = billing_request_topup($conn, $cid, 500, $topMethod, ' ref98765 ');
+check('top-up: the first reference is accepted', $firstTop === '');
+check('top-up: the same reference again is refused, even with other case or spaces', $dupeTop !== '');
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

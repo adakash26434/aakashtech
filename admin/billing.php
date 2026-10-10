@@ -212,7 +212,7 @@ if (isset($_POST['save_slabs']) || isset($_POST['save_prices'])) {
                                 <form method="POST" class="flex gap-2">
                                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="entry_id" value="<?= (int) $row['id'] ?>">
-                                    <button type="submit" name="approve_topup" value="1" class="text-brand-400 text-sm">Confirm</button>
+                                    <button type="submit" name="approve_topup" value="1" class="text-brand-400 text-sm" onclick="return confirm('Confirm this payment and credit the client wallet? Check the reference in your bank or eSewa/Khalti first.')">Confirm</button>
                                     <button type="submit" name="reject_topup" value="1" class="text-red-400 text-sm" onclick="return confirm('Reject this payment? The client wallet is not credited.')">Reject</button>
                                 </form>
                             </td>

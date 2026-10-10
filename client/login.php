@@ -255,7 +255,7 @@ try {
             <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($loginNotice) ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-            <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+            <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
         <?php endif; ?>
 
         <?php if (!$showRegister): ?>
@@ -263,15 +263,15 @@ try {
             <form method="POST" action="" class="bg-dark-900/70 backdrop-blur-xl border border-dark-800 rounded-2xl p-8 space-y-5">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <div>
-                    <label class="block text-slate-300 text-sm font-medium mb-2">Email Address</label>
-                    <input type="email" name="email" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
+                    <label for="login-email" class="block text-slate-300 text-sm font-medium mb-2">Email Address</label>
+                    <input type="email" id="login-email" name="email" value="<?= e($_POST['email'] ?? '') ?>" required autofocus autocomplete="username" class="form-input" placeholder="you@example.com">
                 </div>
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-2">
-                        <label class="block text-slate-300 text-sm font-medium">Password</label>
+                        <label for="login-password" class="block text-slate-300 text-sm font-medium">Password</label>
                         <a href="forgot-password.php" class="text-brand-400 text-sm">Forgot password?</a>
                     </div>
-                    <input type="password" name="password" required autocomplete="current-password" class="form-input" placeholder="••••••••">
+                    <input type="password" id="login-password" name="password" required autocomplete="current-password" class="form-input" placeholder="••••••••">
                     <p class="text-slate-500 text-xs mt-2">Reset sends a link to this email. The link works for 30 minutes.</p>
                 </div>
                 <button type="submit" name="login" class="w-full py-3.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-brand-500/25 hover:-translate-y-0.5">

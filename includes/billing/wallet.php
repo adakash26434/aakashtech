@@ -264,6 +264,17 @@ function billing_request_topup($conn, $clientId, $amount, $method, $reference)
     if (strlen($reference) < 4 || strlen($reference) > 80) {
         return 'Enter the payment reference (4–80 characters).';
     }
+    // One payment proof can fund one top-up. Compare ignoring case and spaces, and ignore
+    // rejected requests so a refused reference can be sent again with the right details.
+    $normalized = strtoupper(preg_replace('/\s+/', '', $reference));
+    $dupe = $conn->prepare("SELECT id FROM wallet_entries WHERE kind = 'topup' AND status <> 'rejected' AND UPPER(REPLACE(reference_note, ' ', '')) = ? LIMIT 1");
+    $dupe->bind_param('s', $normalized);
+    $dupe->execute();
+    $seen = db_fetch_assoc($dupe);
+    $dupe->close();
+    if ($seen) {
+        return 'This payment reference was already sent for a top-up. If it was a mistake, contact support instead of sending it again.';
+    }
     billing_record_entry($conn, (int) $clientId, $amount, 'credit', 'topup', 'pending', $method, $reference, 0);
     billing_notify($conn, 'Wallet top-up waiting', array(
         'A wallet top-up is waiting for confirmation.',

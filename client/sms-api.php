@@ -186,7 +186,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
                                     <form method="POST">
                                         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                                         <input type="hidden" name="token_id" value="<?= (int) $token['id'] ?>">
-                                        <button type="submit" name="revoke_token" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer">Revoke</button>
+                                        <button type="submit" name="revoke_token" class="text-red-400 text-xs bg-transparent border-0 cursor-pointer" onclick="return confirm('Revoke this token? Any system using it will stop sending right away.')">Revoke</button>
                                     </form>
                                 <?php endif; ?>
                             </div>
