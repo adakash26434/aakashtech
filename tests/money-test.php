@@ -193,5 +193,13 @@ $conn->query("INSERT INTO client_services (client_id, service_name, next_renewal
 $renewId = (int) $conn->insert_id;
 check('renewal claim: the first request takes the period', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === true);
 check('renewal claim: a second request for the same period is refused', billing_claim_renewal($conn, $renewId, '2026-01-01', '2026-02-01') === false);
+// Domain refund: a repeated "Return to wallet" must credit the wallet once
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, detail_label) VALUES ($cid, 'Domain test', 'domain-com', 'active', 2000, 'acme.com')");
+$domId = (int) $conn->insert_id;
+$before = bal($conn, $cid);
+$firstRefund = billing_refund_domain($conn, $domId);
+$secondRefund = billing_refund_domain($conn, $domId);
+check('domain refund: the first return credits the wallet once', $firstRefund === '' && bal($conn, $cid) == $before + 2000.0);
+check('domain refund: a second return is refused and credits nothing', $secondRefund !== '' && bal($conn, $cid) == $before + 2000.0);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

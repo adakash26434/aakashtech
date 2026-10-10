@@ -597,9 +597,11 @@ function billing_refund_domain($conn, $serviceId)
         return 'That order has no amount to return.';
     }
     $clientId = (int) $row['client_id'];
-    billing_wallet_credit($conn, $clientId, $price);
     $note = 'Domain not available' . ($row['detail_label'] !== '' ? ': ' . $row['detail_label'] : '');
-    billing_record_entry($conn, $clientId, $price, 'credit', 'refund', 'completed', 'wallet', $note, $serviceId);
+
+    // Close the order first, guarded on status = 'active'. Only the request that wins that
+    // update credits the wallet, so two submits cannot refund the same order twice.
+    billing_tx($conn, 'begin');
     $status = 'refunded';
     $update = $conn->prepare("UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND status = 'active'");
     $update->bind_param('si', $status, $serviceId);
@@ -607,8 +609,12 @@ function billing_refund_domain($conn, $serviceId)
     $saved = billing_affected($conn) === 1;
     $update->close();
     if (!$saved) {
-        return 'The wallet was credited, but the order status could not be changed. Check this order before trying again.';
+        billing_tx($conn, 'rollback');
+        return 'That domain order is no longer active.';
     }
+    billing_wallet_credit($conn, $clientId, $price);
+    billing_record_entry($conn, $clientId, $price, 'credit', 'refund', 'completed', 'wallet', $note, $serviceId);
+    billing_tx($conn, 'commit');
     billing_mail_client_event($conn, $clientId, 'refund', array(
         'amount' => $price,
         'note' => $note
@@ -641,29 +647,13 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     if (!is_array($brief) || !isset($brief['Added by']) || $brief['Added by'] !== 'the team') {
         return array('error' => 'This service was paid from the wallet. It is not an office add, so it stays.', 'message' => '');
     }
-    $extra = '';
-    $creditNote = isset($brief['Credit note']) ? (int) $brief['Credit note'] : 0;
-    $kind = (string) $row['unit_kind'];
-    $quantity = (int) $row['unit_quantity'];
-    if ($creditNote > 0 && function_exists('sms_admin_reverse')) {
-        $reversed = sms_admin_reverse($conn, $clientId, $creditNote);
-        if ($reversed['error'] !== '' && strpos($reversed['error'], 'already sent') === false && strpos($reversed['error'], 'already taken') === false) {
-            return array('error' => $reversed['error'], 'message' => '');
-        }
-        $extra = $reversed['error'] !== '' ? $reversed['error'] : $reversed['message'];
-    } elseif (($kind === 'sms' || $kind === 'voice_calls') && $quantity > 0) {
-        $left = (int) billing_unit_balances($conn, $clientId)[$kind];
-        $take = $left < $quantity ? $left : $quantity;
-        if ($take > 0 && !billing_take_units($conn, $clientId, $kind, $take)) {
-            return array('error' => 'The credits could not be taken back. The balance changed while this was saving.', 'message' => '');
-        }
-        if ($take < $quantity) {
-            $extra = number_format($quantity - $take) . ' were already used, so ' . number_format($take) . ' were taken back.';
-        }
-    }
+    // Close the service first, guarded on its open status. Only the request that wins this
+    // update takes credits back, so two take-backs cannot both remove them.
+    billing_tx($conn, 'begin');
     $closed = 'expired';
     $update = $conn->prepare('UPDATE client_services SET status = ?, auto_renew = 0, next_renewal = NULL WHERE id = ? AND client_id = ? AND status IN (\'active\', \'booked\')');
     if (!$update) {
+        billing_tx($conn, 'rollback');
         return array('error' => 'The service could not be closed.', 'message' => '');
     }
     $update->bind_param('sii', $closed, $serviceId, $clientId);
@@ -671,8 +661,33 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     $closedOk = billing_affected($conn) === 1;
     $update->close();
     if (!$closedOk) {
+        billing_tx($conn, 'rollback');
         return array('error' => 'That service is already closed.', 'message' => '');
     }
+
+    $extra = '';
+    $creditNote = isset($brief['Credit note']) ? (int) $brief['Credit note'] : 0;
+    $kind = (string) $row['unit_kind'];
+    $quantity = (int) $row['unit_quantity'];
+    if ($creditNote > 0 && function_exists('sms_admin_reverse')) {
+        $reversed = sms_admin_reverse($conn, $clientId, $creditNote);
+        if ($reversed['error'] !== '' && strpos($reversed['error'], 'already sent') === false && strpos($reversed['error'], 'already taken') === false) {
+            billing_tx($conn, 'rollback');
+            return array('error' => $reversed['error'], 'message' => '');
+        }
+        $extra = $reversed['error'] !== '' ? $reversed['error'] : $reversed['message'];
+    } elseif (($kind === 'sms' || $kind === 'voice_calls') && $quantity > 0) {
+        $left = (int) billing_unit_balances($conn, $clientId)[$kind];
+        $take = $left < $quantity ? $left : $quantity;
+        if ($take > 0 && !billing_take_units($conn, $clientId, $kind, $take)) {
+            billing_tx($conn, 'rollback');
+            return array('error' => 'The credits could not be taken back. The balance changed while this was saving.', 'message' => '');
+        }
+        if ($take < $quantity) {
+            $extra = number_format($quantity - $take) . ' were already used, so ' . number_format($take) . ' were taken back.';
+        }
+    }
+    billing_tx($conn, 'commit');
     $message = 'Service taken back. It will not renew.';
     if ($extra !== '') {
         $message .= ' ' . $extra;
