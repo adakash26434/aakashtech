@@ -844,6 +844,11 @@ a.solution-row:focus-visible {
     gap: 16px;
 }
 
+/* A lone last card (7 services in 3 columns) spans the row instead of leaving a hole beside it. */
+.service-grid > .service-card:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+}
+
 .service-card {
     min-height: 286px;
     display: flex;
@@ -2471,6 +2476,14 @@ a.contact-method:hover strong {
 
     .service-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .service-grid > .service-card:last-child:nth-child(3n + 1) {
+        grid-column: auto;
+    }
+
+    .service-grid > .service-card:last-child:nth-child(2n + 1) {
+        grid-column: 1 / -1;
     }
 
     .process-layout {
