@@ -58,3 +58,28 @@
 .sms-upload-tips { margin: 14px 0 0; padding-left: 18px; color: #4d675f; font-size: 12px; line-height: 1.55; list-style: disc; }
 .sms-upload-samples { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e3ece8; font-size: 13px; color: #4d675f; }
 .sms-upload-samples a { color: #075e54; font-weight: 700; }
+
+/* Before-you-send card: one box for every limit, instead of stacked banners */
+.sms-notes { margin-bottom: 20px; padding: 14px 16px; border: 1px solid #f0d78a; border-radius: 14px; background: #fffaeb; color: #6b4f00; font-size: 14px; line-height: 1.5; }
+.sms-notes-title { margin: 0 0 4px; color: #5c4300; font-size: 13px; font-weight: 700; }
+.sms-notes ul { margin: 0; padding-left: 18px; list-style: disc; }
+.sms-notes a { color: #075e54; font-weight: 700; }
+
+/* Numbers: the typed-entry row and the list read as one control */
+.sms-field { display: flex; flex-direction: column; border: 1px solid #cfe0d9; border-radius: 14px; background: #fff; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
+.sms-field:focus-within { border-color: #128c7e; box-shadow: 0 0 0 3px rgba(18, 140, 126, 0.15); }
+.sms-field-add { width: 100%; min-height: 44px; padding: 10px 14px; border: 0; border-bottom: 1px solid #e3ece8; background: #fbfdfc; color: #183b31; font-size: 14px; }
+.sms-field-add:focus { outline: none; }
+.portal-shell .sms-field textarea.sms-numbers { border: 0; border-radius: 0; box-shadow: none; resize: vertical; padding: 12px 14px; min-height: 8.5rem; }
+.portal-shell .sms-field textarea.sms-numbers:focus { outline: none; }
+
+/* Message box keeps the same border as the numbers field */
+.portal-shell textarea.sms-message { min-height: 8.5rem; border-radius: 14px; }
+
+/* Sample picker sits under the message, not in the step header */
+.sms-tools-under { margin: 10px 0 0; }
+.sms-tools-label { color: #4d675f; font-size: 13px; font-weight: 600; }
+.sms-tools-under .sms-tool-select { flex: 1 1 12rem; min-width: 0; max-width: none; }
+@media (max-width: 640px) {
+    .sms-field-add { font-size: 16px; }
+}

@@ -39,7 +39,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 /* SMS composer: calmer numbers box, clearer send button, safer sticky bar */
 .portal-shell .sms-actionbar { box-shadow: 0 -12px 30px rgba(16,43,53,.1); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 .portal-shell #sms-send button[name="send_sms"], .portal-shell #sms-send button[type="submit"] { box-shadow: 0 10px 24px rgba(11,139,122,.28); }
-.portal-shell textarea.sms-numbers, .portal-shell #sms-text { min-height: 11rem; }
+.portal-shell textarea.sms-numbers, .portal-shell #sms-text { min-height: 8.5rem; }
 .portal-shell .sms-count-chip { font-variant-numeric: tabular-nums; }
 
 /* Safe-area and small screens */
@@ -69,3 +69,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .portal-shell section.dash-panel[id] :is(li, p) { line-height: 1.85; font-size: 15px; max-width: 78ch; }
 .portal-shell section.dash-panel[id] :is(ol, ul) { padding-bottom: 4px; }
 .portal-shell section.dash-panel[id] code { background: var(--surface-wash, #f1f7f5); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+
+/* Office view banner: the Back to admin button needs its own dark fill on the light portal */
+.portal-shell .office-back { background: #5c4300; color: #fff; border: 0; cursor: pointer; }
+.portal-shell .office-back:hover { background: #3f2e00; }

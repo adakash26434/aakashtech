@@ -111,7 +111,7 @@ $portalPage = isset($navItems[$currentPage]) ? $navItems[$currentPage][0] : 'Men
                 <p>Office view of <?= e(get_client_name()) ?>. The client is not signed in here. Their password and authenticator were not used.</p>
                 <form method="POST" action="logout.php">
                     <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm rounded-xl">Back to admin</button>
+                    <button type="submit" class="office-back px-4 py-2 text-sm font-semibold rounded-xl">Back to admin</button>
                 </form>
             </div>
         <?php endif; ?>
