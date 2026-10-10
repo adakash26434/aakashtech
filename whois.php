@@ -124,14 +124,14 @@ if ($record && isset($record['domain'], $record['tld']) && $record['status'] ===
                         </select>
                         <label for="human_check">What is <?= site_escape(auth_math_prompt('whois-check')) ?>?</label>
                         <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
-                        <button class="button button--primary" type="submit" name="check_whois" value="1">Check the record</button>
+                        <button class="btn btn-lg btn-primary" type="submit" name="check_whois" value="1">Check the record</button>
                     </form>
                 </div>
                 </div>
                 <?php if ($record && $record['status'] === 'free'): ?>
                     <div class="whois-sheet">
                         <p class="domain-result domain-result--free"><?= site_escape($record['domain']) ?> has no public record. It can be requested.</p>
-                        <a class="button button--primary" href="<?= site_escape($registerHref) ?>">Request this name</a>
+                        <a class="btn btn-lg btn-primary" href="<?= site_escape($registerHref) ?>">Request this name</a>
                     </div>
                 <?php elseif ($record && $record['status'] === 'registered'): ?>
                     <?php

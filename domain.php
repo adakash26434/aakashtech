@@ -299,7 +299,7 @@ if (!isset($accountPhone)) {
                     </select>
                         <label for="human_check">What is <?= site_escape(auth_math_prompt('domain-check')) ?>?</label>
                         <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
-                        <button class="button button--primary" type="submit" name="check_domain" value="1">Check availability</button>
+                        <button class="btn btn-lg btn-primary" type="submit" name="check_domain" value="1">Check availability</button>
                     </form>
                     <?php if ($offer && $offer['status'] === 'taken'): ?>
                         <p class="domain-result domain-result--taken"><?= site_escape($offer['domain']) ?> is already registered. Choose another name.</p>
@@ -362,7 +362,7 @@ if (!isset($accountPhone)) {
                             </div>
                         </div>
                         <p class="domain-note">Sending the request does not take the payment. If the wallet does not cover this year, the next page asks for that amount. After it is confirmed, pay the bill under My domains.</p>
-                        <button class="button button--primary" type="submit" name="request_domain" value="1">Send registration request</button>
+                        <button class="btn btn-lg btn-primary" type="submit" name="request_domain" value="1">Send registration request</button>
                     </form>
                 </div>
             <?php endif; ?>

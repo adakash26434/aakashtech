@@ -26,9 +26,9 @@ $noticeAlt = $noticeTitle !== '' ? $noticeTitle : 'Notice';
         <?php endif; ?>
         <div class="site-notice-actions">
             <?php if ($noticeLink !== ''): ?>
-                <a class="button button--primary" href="<?= site_escape($noticeLink) ?>" target="_blank" rel="noopener noreferrer"><?= site_escape($noticeLabel) ?></a>
+                <a class="btn btn-lg btn-primary" href="<?= site_escape($noticeLink) ?>" target="_blank" rel="noopener noreferrer"><?= site_escape($noticeLabel) ?></a>
             <?php endif; ?>
-            <button type="button" class="button button--outline" data-notice-close>Close</button>
+            <button type="button" class="btn btn-lg btn-secondary" data-notice-close>Close</button>
         </div>
         </div>
     </div>

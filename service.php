@@ -121,10 +121,10 @@ $navBase = 'index.php';
                     <h1 class="font-heading"><?= service_escape($service['title']) ?></h1>
                     <p class="detail-lead"><?= service_escape($page['lead']) ?></p>
                     <?php if ($slug === 'domain-registration'): ?>
-                        <a class="button button--primary detail-cta" href="domain.php">Check a name</a>
+                        <a class="btn btn-lg btn-primary detail-cta" href="domain.php">Check a name</a>
                         <a class="detail-back" href="whois.php">WHOIS check up</a>
                     <?php else: ?>
-                        <a class="button button--primary detail-cta" href="#buy"><?= service_escape($service['action']) ?></a>
+                        <a class="btn btn-lg btn-primary detail-cta" href="#buy"><?= service_escape($service['action']) ?></a>
                     <?php endif; ?>
                     <?php if (!empty($guide['includes'])): ?>
                         <h2 class="detail-subhead font-heading">Included</h2>
@@ -254,7 +254,7 @@ $navBase = 'index.php';
                                         $planAction = 'Check this name';
                                     }
                                     ?>
-                                    <a class="button button--small button--primary" href="<?= service_escape($planHref) ?>"><?= service_escape($planAction) ?></a>
+                                    <a class="btn btn-sm btn-primary" href="<?= service_escape($planHref) ?>"><?= service_escape($planAction) ?></a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

@@ -98,14 +98,20 @@ body:has(.ask-open[aria-expanded="true"]) .guest-chat--dock { display: none; }
 .footer-company div { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .footer-company dt { color: rgba(255, 255, 255, .62); } .footer-company dd { margin: 0; color: #fff; font-weight: 600; }
 
-/* ===== Buttons: one set for the portal, admin and public pages ===== */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 18px; border-radius: 12px; font-size: 14px; font-weight: 600; line-height: 1; border: 1px solid transparent; cursor: pointer; text-decoration: none; transition: background-color .15s, border-color .15s, color .15s; white-space: nowrap; }
-.btn:focus-visible { outline: 2px solid var(--brand-600); outline-offset: 2px; }
-.btn.btn-primary, .portal-shell form .btn.btn-primary { background: var(--brand-500); color: #fff; }
-.btn.btn-primary:hover, .portal-shell form .btn.btn-primary:hover { background: var(--brand-600); }
-.btn.btn-secondary, .portal-shell form .btn.btn-secondary { background: #fff; color: var(--ink-700); border-color: #c7d6d1; }
-.btn.btn-secondary:hover, .portal-shell form .btn.btn-secondary:hover { border-color: var(--brand-500); color: var(--brand-600); }
+/* ===== Buttons: one component for the portal, admin and public pages =====
+   .btn is the base. Pick one variant (btn-primary, btn-secondary, btn-danger-quiet) and a size
+   (btn-sm, btn-lg). Public pages use btn-lg for the main calls to action. */
+.btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 42px; padding: 0 18px; border: 1px solid transparent; border-radius: 12px; font-size: 14px; font-weight: 600; line-height: 1.2; cursor: pointer; text-decoration: none; overflow: hidden; white-space: nowrap; transition: transform 160ms ease, box-shadow 160ms ease, background-color .15s, border-color .15s, color .15s; }
+.btn > * { position: relative; z-index: 1; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: 2px solid var(--brand-600); outline-offset: 3px; }
+.btn.btn-primary, .portal-shell form .btn.btn-primary, .site-main .btn.btn-primary { color: #fff; background: linear-gradient(135deg, #0a7d6e 0%, #08705f 50%, #065a50 100%); box-shadow: 0 8px 18px rgba(9, 122, 109, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.btn.btn-primary:hover, .portal-shell form .btn.btn-primary:hover { background: linear-gradient(135deg, var(--brand-600) 0%, #054d45 100%); box-shadow: 0 12px 24px rgba(9, 122, 109, 0.3); }
+.btn.btn-secondary, .portal-shell form .btn.btn-secondary { color: var(--ink-700); background: rgba(255, 255, 255, 0.72); border-color: #c7d6d1; }
+.btn.btn-secondary:hover, .portal-shell form .btn.btn-secondary:hover { background: #fff; border-color: var(--brand-500); color: var(--brand-600); }
 /* Destructive row actions: quiet until hovered, so they do not compete with the main action */
 .btn.btn-danger-quiet, .portal-shell form .btn.btn-danger-quiet { min-height: 34px; padding: 0 12px; background: transparent; color: #b42318; border-color: #f1c4bf; font-size: 13px; }
 .btn.btn-danger-quiet:hover, .portal-shell form .btn.btn-danger-quiet:hover { background: #fdecea; border-color: #b42318; }
-.btn-sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.btn.btn-sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.btn.btn-lg { min-height: 52px; padding: 0 22px; font-size: 16px; border-radius: 12px; }

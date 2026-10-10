@@ -260,11 +260,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         <?= site_escape($publicSite['home_lede']) ?>
                     </p>
                     <div class="hero-actions reveal">
-                        <a class="button button--primary" href="#services">
+                        <a class="btn btn-lg btn-primary" href="#services">
                             See the rates
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </a>
-                        <a class="button button--outline" href="client/shop.php">
+                        <a class="btn btn-lg btn-secondary" href="client/shop.php">
                             Buy or book
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </a>
@@ -376,10 +376,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             <?php site_render_service_price(array($card['slug'] => $card['price']), $card['slug'], true); ?>
                             <div class="service-card-actions">
                                 <?php if ($card['slug'] === 'domain-registration'): ?>
-                                    <a class="button button--small button--primary" href="domain.php">Check a name</a>
-                                    <a class="button button--small" href="whois.php">WHOIS</a>
+                                    <a class="btn btn-sm btn-primary" href="domain.php">Check a name</a>
+                                    <a class="btn btn-sm btn-secondary" href="whois.php">WHOIS</a>
                                 <?php else: ?>
-                                    <a class="button button--small button--primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>"><?= site_escape($card['action']) ?></a>
+                                    <a class="btn btn-sm btn-primary" href="service.php?slug=<?= site_escape(rawurlencode($card['slug'])) ?>"><?= site_escape($card['action']) ?></a>
                                 <?php endif; ?>
                             </div>
                         </article>
@@ -564,7 +564,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                             <input id="human_check" name="human_check" type="text" inputmode="numeric" maxlength="2" required autocomplete="off" placeholder="Answer">
                         </div>
 
-                        <button class="button button--primary form-submit" type="submit" name="submit_contact" value="1">
+                        <button class="btn btn-lg btn-primary form-submit" type="submit" name="submit_contact" value="1">
                             Send your message
                             <i data-lucide="arrow-right" aria-hidden="true"></i>
                         </button>
