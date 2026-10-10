@@ -216,3 +216,87 @@
     });
     document.addEventListener('keydown', function (e) { if (!box.hidden && e.key === 'Escape') { close(); } });
 })();
+
+/* Identity form as steps: one section at a time with tabs and Back / Next. Every field stays in the
+   form, so nothing is lost. Next checks the current section first, and submit opens the first section
+   that still needs an answer. */
+(function () {
+    var form = document.getElementById('kyc-form');
+    if (!form) { return; }
+    var sections = Array.prototype.slice.call(form.querySelectorAll('fieldset.kyc-section'));
+    if (sections.length < 2) { return; }
+    var current = 0;
+
+    var bar = document.createElement('div');
+    bar.className = 'kyc-tabs';
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', 'Form sections');
+    sections.forEach(function (s, i) {
+        var t = document.createElement('button');
+        t.type = 'button';
+        t.className = 'kyc-tab';
+        t.setAttribute('role', 'tab');
+        t.id = 'kyc-tab-' + i;
+        var legend = s.querySelector('legend');
+        t.textContent = (i + 1) + '. ' + (legend ? legend.textContent.replace(/^\s*\d+\s*/, '').trim() : 'Section ' + (i + 1));
+        t.addEventListener('click', function () { show(i); });
+        bar.appendChild(t);
+    });
+    sections[0].parentNode.insertBefore(bar, sections[0]);
+
+    var nav = document.createElement('div');
+    nav.className = 'kyc-stepnav';
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'btn btn-secondary';
+    back.textContent = 'Back';
+    back.addEventListener('click', function () { show(current - 1); });
+    var next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'btn btn-primary';
+    next.textContent = 'Next';
+    next.addEventListener('click', function () {
+        if (!sectionValid(current)) { return; }
+        show(current + 1);
+    });
+    nav.appendChild(back);
+    nav.appendChild(next);
+    sections[sections.length - 1].parentNode.insertBefore(nav, sections[sections.length - 1].nextSibling);
+
+    function sectionValid(i) {
+        var bad = null;
+        Array.prototype.forEach.call(sections[i].querySelectorAll('input, select, textarea'), function (c) {
+            if (!bad && !c.disabled && !c.checkValidity()) { bad = c; }
+        });
+        if (bad) {
+            show(i);
+            bad.reportValidity();
+            bad.focus();
+            return false;
+        }
+        return true;
+    }
+
+    function show(i) {
+        if (i < 0 || i >= sections.length) { return; }
+        current = i;
+        sections.forEach(function (s, k) { s.hidden = k !== i; });
+        Array.prototype.forEach.call(bar.children, function (t, k) {
+            t.setAttribute('aria-selected', k === i ? 'true' : 'false');
+            t.classList.toggle('is-on', k === i);
+        });
+        back.disabled = i === 0;
+        next.hidden = i === sections.length - 1;
+        sections[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // On submit, open the first section that still has a problem, so the browser can show its message.
+    form.addEventListener('submit', function (e) {
+        for (var i = 0; i < sections.length; i++) {
+            var bad = sections[i].querySelector('input:invalid:not(:disabled), select:invalid:not(:disabled), textarea:invalid:not(:disabled)');
+            if (bad) { show(i); return; }
+        }
+    }, true);
+
+    show(0);
+})();

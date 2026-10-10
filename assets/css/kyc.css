@@ -96,3 +96,12 @@
 /* Date of birth: the date and the calendar choice stack, so neither is cut off in a narrow column */
 .kyc-date { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .kyc-date input, .kyc-date select { min-width: 0; width: 100%; }
+
+/* Identity steps: tabs for each section and Back / Next under the open section */
+.kyc-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 14px; margin: 0 0 6px; }
+.kyc-tab { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-700); font-size: 14px; font-weight: 600; cursor: pointer; }
+.kyc-tab.is-on, .kyc-tab[aria-selected="true"] { background: var(--brand-500); border-color: var(--brand-500); color: #fff; }
+.kyc-tab:focus-visible { outline: 2px solid var(--brand-600); outline-offset: 2px; }
+.kyc-section[hidden] { display: none; }
+.kyc-stepnav { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0; }
+.kyc-stepnav .btn:disabled { opacity: .5; cursor: default; transform: none; }
