@@ -232,5 +232,20 @@ $conn->query("INSERT INTO client_users (name,email,password,status,email_verify_
 check('email: an expired link does not open the account', email_verify_consume($conn, $oldToken) === 0);
 check('email: a malformed token is refused', email_verify_consume($conn, 'not-a-token') === 0);
 
+// Auto-renew: an ended term cannot be switched back on (no surprise charge); a lapsed one expires
+$conn->query("INSERT INTO client_users (name,email,password,status) VALUES ('Sub','sub@example.com','x','active')");
+$subId = (int) $conn->insert_id;
+billing_ensure_wallet($conn, $subId);
+$endedDate = date('Y-m-d', strtotime('-10 days'));
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, billing_cycle, auto_renew, next_renewal) VALUES ($subId, 'Ended plan', 'email-1', 'active', 2000, 'yearly', 0, '$endedDate')");
+$endedId = (int) $conn->insert_id;
+check('auto-renew: an ended term cannot be switched on', billing_set_auto_renew($conn, $subId, $endedId, true) === false);
+billing_process_renewals($conn, $subId);
+check('auto-renew: a lapsed service with auto-renew off is marked expired', (string) $conn->query("SELECT status FROM client_services WHERE id = $endedId")->fetch_assoc()['status'] === 'expired');
+$futureDate = date('Y-m-d', strtotime('+60 days'));
+$conn->query("INSERT INTO client_services (client_id, service_name, plan_code, status, price, billing_cycle, auto_renew, next_renewal) VALUES ($subId, 'Live plan', 'email-1', 'active', 2000, 'yearly', 0, '$futureDate')");
+$liveId = (int) $conn->insert_id;
+check('auto-renew: a service still in its term can be switched on', billing_set_auto_renew($conn, $subId, $liveId, true) === true);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

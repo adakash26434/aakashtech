@@ -696,11 +696,27 @@ function billing_admin_take_service($conn, $clientId, $serviceId)
     return array('error' => '', 'message' => $message);
 }
 
+/**
+ * Turns auto-renew on or off. Turning it on for a term that has already ended is refused: the
+ * client renews that service by buying it again, so no charge happens without a fresh order.
+ * Returns true when the change is saved.
+ */
 function billing_set_auto_renew($conn, $clientId, $serviceId, $enabled)
 {
     $clientId = (int) $clientId;
     $serviceId = (int) $serviceId;
     $enabled = $enabled ? 1 : 0;
+    if ($enabled) {
+        $today = date('Y-m-d');
+        $check = $conn->prepare("SELECT next_renewal FROM client_services WHERE id = ? AND client_id = ? AND billing_cycle IN ('monthly', 'yearly') LIMIT 1");
+        $check->bind_param('ii', $serviceId, $clientId);
+        $check->execute();
+        $term = db_fetch_assoc($check);
+        $check->close();
+        if ($term && (string) $term['next_renewal'] !== '' && (string) $term['next_renewal'] < $today) {
+            return false;
+        }
+    }
     $stmt = $conn->prepare("UPDATE client_services SET auto_renew = ? WHERE id = ? AND client_id = ? AND billing_cycle IN ('monthly', 'yearly')");
     $stmt->bind_param('iii', $enabled, $serviceId, $clientId);
     $stmt->execute();
@@ -738,6 +754,17 @@ function billing_process_renewals($conn, $clientId = null)
 {
     $today = date('Y-m-d');
     $stats = array('renewed' => 0, 'waiting' => 0, 'suspended' => 0);
+    // Recurring services whose term ended without auto-renew are expired, not left looking active.
+    if ($clientId) {
+        $lapse = $conn->prepare("UPDATE client_services SET status = 'expired' WHERE client_id = ? AND auto_renew = 0 AND billing_cycle IN ('monthly', 'yearly') AND status = 'active' AND next_renewal IS NOT NULL AND next_renewal <> '' AND next_renewal < ?");
+        $lapseClient = (int) $clientId;
+        $lapse->bind_param('is', $lapseClient, $today);
+    } else {
+        $lapse = $conn->prepare("UPDATE client_services SET status = 'expired' WHERE auto_renew = 0 AND billing_cycle IN ('monthly', 'yearly') AND status = 'active' AND next_renewal IS NOT NULL AND next_renewal <> '' AND next_renewal < ?");
+        $lapse->bind_param('s', $today);
+    }
+    $lapse->execute();
+    $lapse->close();
     if ($clientId) {
         $clientId = (int) $clientId;
         $stmt = $conn->prepare("SELECT * FROM client_services WHERE client_id = ? AND auto_renew = 1 AND billing_cycle IN ('monthly', 'yearly') AND status IN ('active', 'past_due', 'suspended') AND next_renewal IS NOT NULL AND next_renewal != '' AND next_renewal <= ?");

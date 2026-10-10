@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_auto_renew'])) {
     $enabled = isset($_POST['enabled']) && $_POST['enabled'] === '1';
     $toggleMessage = billing_set_auto_renew($conn, $cid, $serviceId, $enabled)
         ? ($enabled ? 'Auto-renew is on. This service continues as long as your wallet can cover it.' : 'Auto-renew is off. This service will not renew by itself.')
-        : 'Auto-renew could not be changed for that service.';
+        : 'Auto-renew could not be turned on. If this service\'s term has ended, buy it again to continue.';
 }
 
 $services = $conn->prepare('SELECT * FROM client_services WHERE client_id = ? ORDER BY id DESC');
