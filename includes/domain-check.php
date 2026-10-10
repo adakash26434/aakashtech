@@ -477,16 +477,14 @@ function domain_store_document($clientId, $file)
         }
         $ext = $imageTypes[$image[2]];
     }
-    $dir = dirname(__DIR__) . '/uploads/domains/' . $clientId;
-    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+    // Customer documents live outside the web root, like KYC files, so no server setting can expose them.
+    $dir = billing_kyc_root() . '/domains/' . $clientId;
+    if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
         return array('ok' => false, 'error' => 'The document folder could not be created.');
     }
-    $guard = dirname(__DIR__) . '/uploads/domains/.htaccess';
-    if (!is_file($guard)) {
-        file_put_contents($guard, "Require all denied\nDeny from all\n");
-    }
-    $relative = 'uploads/domains/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!move_uploaded_file($file['tmp_name'], dirname(__DIR__) . '/' . $relative)) {
+    $relative = 'domains/' . $clientId . '/' . bin2hex(random_bytes(16)) . '.' . $ext;
+    $moved = !empty($GLOBALS['KYC_TEST_UPLOADS']) ? copy($file['tmp_name'], billing_kyc_root() . '/' . $relative) : move_uploaded_file($file['tmp_name'], billing_kyc_root() . '/' . $relative);
+    if (!$moved) {
         return array('ok' => false, 'error' => 'The document could not be saved.');
     }
     return array('ok' => true, 'path' => $relative);
@@ -496,10 +494,15 @@ function domain_safe_file($clientId, $relative)
 {
     $clientId = (int) $clientId;
     $relative = str_replace('\\', '/', (string) $relative);
-    if (!preg_match('#^uploads/domains/' . $clientId . '/[a-f0-9]{32}\.(pdf|jpg|png|webp)$#', $relative)) {
+    $ext = '\.(pdf|jpg|png|webp)$';
+    // New uploads: private storage. Older uploads still sit in uploads/domains/ and stay readable through this check.
+    if (preg_match('#^domains/' . $clientId . '/[a-f0-9]{32}' . $ext . '#', $relative)) {
+        $full = billing_kyc_root() . '/' . $relative;
+    } elseif (preg_match('#^uploads/domains/' . $clientId . '/[a-f0-9]{32}' . $ext . '#', $relative)) {
+        $full = dirname(__DIR__) . '/' . $relative;
+    } else {
         return '';
     }
-    $full = dirname(__DIR__) . '/' . $relative;
     return is_file($full) ? $full : '';
 }
 
