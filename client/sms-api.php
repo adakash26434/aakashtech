@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_token'])) {
     }
 }
 
+$msg = flash('api_notice');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_sms'])) {
     verify_csrf();
     $phoneStmt = $conn->prepare('SELECT phone FROM client_users WHERE id = ?');
@@ -65,7 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_sms'])) {
             'source' => 'dashboard'
         ));
         if (!empty($tested['ok'])) {
-            $msg = 'A test code was sent to ' . $ownMobile . '. One credit was used. Check SMS logs if it does not arrive.';
+            // Redirect so a reload cannot send another test code and spend another credit.
+            flash('api_notice', 'A test code was sent to ' . $ownMobile . '. One credit was used. Check SMS logs if it does not arrive.');
+            header('Location: sms-api.php');
+            exit;
         } else {
             $err = $tested['error'];
         }

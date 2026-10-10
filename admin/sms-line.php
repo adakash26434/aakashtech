@@ -92,8 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $err === '' && $msg !== '' && (isset($_POST['grant_sms']) || isset($_POST['take_sms']) || isset($_POST['decision']) || isset($_POST['save_line']))) {
-    $doneTab = isset($_POST['decision']) ? 'names' : (isset($_POST['save_line']) ? 'line' : 'credits');
+// A test SMS or a balance check must not be sent again by a reload, so its result is shown after a redirect.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $err === '' && $msg !== '' && (isset($_POST['grant_sms']) || isset($_POST['take_sms']) || isset($_POST['decision']) || isset($_POST['save_line']) || isset($_POST['test_line']) || isset($_POST['check_balance']))) {
+    $doneTab = isset($_POST['decision']) ? 'names' : ((isset($_POST['save_line']) || isset($_POST['test_line']) || isset($_POST['check_balance'])) ? 'line' : 'credits');
     flash('sms_line_notice', $msg);
     header('Location: sms-line.php?tab=' . $doneTab);
     exit;
@@ -340,7 +341,7 @@ if ($line['provider'] === 'aakash' && $endpoint !== '' && strpos($endpoint, '/sm
                 <input type="checkbox" name="refund_undelivered" value="1" <?= sms_refund_undelivered_on($conn) ? 'checked' : '' ?> class="mt-1">
                 <span class="block text-slate-300 text-sm leading-relaxed"><b>Return credits when the phone network says a message was not delivered.</b> Clients are never charged for a message that did not arrive. Needs delivery reports from your provider (see the README). Messages the SMS line refuses are always returned.</span>
             </label>
-            <button type="submit" name="save_line" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition">Save line</button>
+            <button type="submit" name="save_line" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition" onclick="var p=document.getElementById('sms_line_provider'); if (p && p.value==='') { return confirm('Disconnect the SMS line? Saving Not connected removes the stored bulk key, and every client send stops until you connect again.'); }">Save line</button>
         </form>
     </div>
     <div class="space-y-6">

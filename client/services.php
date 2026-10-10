@@ -207,9 +207,9 @@ foreach ($serviceRows as $row) {
                             </button>
                         </form>
                     <?php endif; ?>
-                </div>
             </article>
         <?php endforeach; ?>
+        <?php if (!$visibleRows): ?><p class="shop-empty">Nothing in this group yet. Try another filter above.</p><?php endif; ?>
     </div>
 <?php else: ?>
     <div class="shop-empty"><h2>You have no services yet</h2><p>Buy SMS credits to send messages today, or a domain, hosting, email or website. Everything you buy appears here.</p><a href="shop.php" class="shop-btn">Browse services</a></div>
