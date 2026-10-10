@@ -151,11 +151,11 @@ function sms_api_input()
             $input = $json;
         }
     }
-    foreach (array($_POST, $_GET) as $bag) {
-        foreach ($bag as $key => $value) {
-            if (!isset($input[$key])) {
-                $input[$key] = $value;
-            }
+    // Only the POST body and a JSON body are read. The URL query string is ignored, so a
+    // message or token in a link never reaches access logs, referrers or prefetchers.
+    foreach ($_POST as $key => $value) {
+        if (!isset($input[$key])) {
+            $input[$key] = $value;
         }
     }
     $header = '';
@@ -280,8 +280,8 @@ function sms_api_receipt($conn, $clientId, $campaignId)
 
 function sms_api_token_row($conn)
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
-        sms_api_json(405, array('error' => true, 'message' => 'Use POST or GET.', 'data' => array()));
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sms_api_json(405, array('error' => true, 'message' => 'Use POST. Sending by GET is no longer accepted.', 'data' => array()));
     }
     $input = sms_api_input();
     $token = isset($input['auth_token']) ? trim((string) $input['auth_token']) : '';
@@ -293,6 +293,43 @@ function sms_api_token_row($conn)
         sms_api_json(401, array('error' => true, 'message' => 'The provided auth token is not valid.', 'data' => array()));
     }
     return array($row, $input);
+}
+
+// A client_ref names one send. If the same ref comes again, the earlier receipt is returned
+// and nothing is sent or charged. Refs are scoped to the token that sent them.
+function sms_api_replay($conn, $clientId, $tokenId, $ref)
+{
+    $key = (int) $tokenId . ':' . $ref;
+    $stmt = $conn->prepare('SELECT id FROM sms_campaigns WHERE client_id = ? AND api_ref = ? ORDER BY id ASC');
+    $stmt->bind_param('is', $clientId, $key);
+    $stmt->execute();
+    $found = db_fetch_all($stmt);
+    $stmt->close();
+    if (!$found) {
+        return null;
+    }
+    $valid = array();
+    $invalid = array();
+    $credits = 0;
+    foreach ($found as $campaign) {
+        $receipt = sms_api_receipt($conn, $clientId, (int) $campaign['id']);
+        $valid = array_merge($valid, $receipt['valid']);
+        $invalid = array_merge($invalid, $receipt['invalid']);
+        $credits += (int) $receipt['credits'];
+    }
+    $balance = billing_unit_balances($conn, $clientId);
+    $balance = (int) $balance['sms'];
+    return array(
+        'count' => count($valid),
+        'failed' => count($invalid),
+        'credits_used' => 0,
+        'balance' => $balance,
+        'available_credit' => $balance,
+        'valid' => $valid,
+        'invalid' => $invalid,
+        'replayed' => true,
+        'original_credits_used' => $credits
+    );
 }
 
 function sms_api_send($conn)
@@ -378,6 +415,16 @@ function sms_api_send($conn)
     }
     $clientId = (int) $row['client_id'];
     $tokenId = (int) $row['id'];
+    $ref = isset($input['client_ref']) ? trim((string) $input['client_ref']) : '';
+    if ($ref !== '') {
+        if (!preg_match('/^[A-Za-z0-9_.-]{1,64}$/', $ref)) {
+            sms_api_json(400, array('error' => true, 'message' => 'client_ref can use letters, numbers, dot, dash and underscore, up to 64 characters.', 'data' => array()));
+        }
+        $replay = sms_api_replay($conn, $clientId, $tokenId, $ref);
+        if ($replay !== null) {
+            sms_api_json(200, array('error' => false, 'message' => 'This client_ref was already sent. Nothing was sent or charged again.', 'data' => $replay));
+        }
+    }
     $name = (isset($input['name']) && trim((string) $input['name']) !== '') ? (string) $input['name'] : 'API';
     $sender = isset($input['from']) ? (string) $input['from'] : '';
     $valid = array();
@@ -407,6 +454,14 @@ function sms_api_send($conn)
             'source' => 'api',
             'token_id' => $tokenId
         ));
+        if ($ref !== '' && !empty($result['campaign_id'])) {
+            $refKey = $tokenId . ':' . $ref;
+            $tag = $conn->prepare('UPDATE sms_campaigns SET api_ref = ? WHERE id = ? AND client_id = ?');
+            $campaignForRef = (int) $result['campaign_id'];
+            $tag->bind_param('sii', $refKey, $campaignForRef, $clientId);
+            $tag->execute();
+            $tag->close();
+        }
         if (isset($result['balance'])) {
             $balance = (int) $result['balance'];
         }

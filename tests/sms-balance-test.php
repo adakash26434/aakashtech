@@ -111,5 +111,8 @@ check('scheduled: cancelling returns every credit', credits($conn, $cid) === $be
 $left = credits($conn, $cid);
 $used = (int) $conn->query("SELECT COALESCE(SUM(parts),0) AS n FROM sms_messages WHERE client_id = $cid AND status IN ('sent','queued','sending') AND NOT (delivery = 'failed' AND error_text = 'refunded')")->fetch_assoc()['n'];
 check('books balance: 100 bought = credits left + messages that left (' . $left . ' + ' . $used . ')', 100 === $left + $used);
+// Timeouts are unconfirmed (never retried), real refusals keep their own code
+check('vendor: no answer means unconfirmed, a refusal keeps its code', sms_unsure_code(array('ok' => false, 'status' => 0, 'body' => ''), 'line-rejected') === 'unconfirmed' && sms_unsure_code(array('ok' => false, 'status' => 500, 'body' => ''), 'line-rejected') === 'line-rejected');
+check('retry: unconfirmed rows are excluded from the retry query', strpos(file_get_contents(__DIR__ . '/../includes/sms/logs.php'), "error_text <> 'unconfirmed'") !== false);
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

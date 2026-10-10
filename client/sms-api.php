@@ -204,7 +204,7 @@ $apiBalance = billing_unit_balances($conn, $cid);
 <div class="dash-panel mb-6">
     <div class="dash-panel-header"><h3 class="font-heading font-semibold text-white">Send SMS</h3></div>
     <div class="p-5 space-y-4 text-sm text-slate-300">
-        <p>Put this token in a website, app, or office software. Three fields send the SMS. POST and GET both work. A JSON body works too. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
+        <p>Put this token in a website, app, or office software. Three fields send the SMS. Send it as POST only: GET is refused, and anything in the web address is ignored, so keep the token in the body or the header. A JSON body works too. Add an optional <code class="text-brand-300">client_ref</code> (letters, numbers, dot, dash or underscore, up to 64 characters) when you might retry: the same ref returns the first result and sends nothing or charges nothing again. <a class="text-brand-400" href="manual.php#api">नेपाली चरण</a></p>
         <p class="text-slate-400 break-all">URL <?= e($sendUrl) ?></p>
         <div class="overflow-x-auto">
             <table class="w-full text-left">

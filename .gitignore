@@ -10,3 +10,7 @@ cpanel-config.local.php
 *.bak
 *.old
 node_modules/
+
+# Customer documents must never be committed (they are served only through the app)
+uploads/kyc/
+uploads/domains/

@@ -30,7 +30,7 @@ function sms_line_secret($conn)
 {
     $line = sms_line($conn);
     $endpoint = trim(billing_setting($conn, 'sms_line_endpoint'));
-    if ($endpoint !== '' && !preg_match('#^https?://[A-Za-z0-9.-]+(?::\d+)?/[A-Za-z0-9_./-]*$#', $endpoint)) {
+    if ($endpoint !== '' && !preg_match('#^https://[A-Za-z0-9.-]+(?::\d+)?/[A-Za-z0-9_./-]*$#', $endpoint)) {
         $endpoint = '';
     }
     $line['token'] = billing_setting($conn, 'sms_line_token');
@@ -224,6 +224,13 @@ function sms_aakash_rejected($json, $numbers)
     return $out;
 }
 
+// A request that got no answer (timeout, connection cut) may still have been accepted by the
+// provider. Mark it unconfirmed so the retry link never sends those numbers again.
+function sms_unsure_code($response, $fallback)
+{
+    return isset($response['status']) && (int) $response['status'] === 0 ? 'unconfirmed' : $fallback;
+}
+
 function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
 {
     // Test seam: tests install a fake SMS line here. Never set in production.
@@ -252,7 +259,7 @@ function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
                 $rejected = sms_aakash_rejected(array('data' => array('invalid' => $invalid, 'valid' => array())), $numbers);
                 return array('code' => '', 'rejected' => is_array($rejected) ? $rejected : array());
             }
-            return array('code' => $problem !== '' ? $problem : 'line-rejected', 'rejected' => array());
+            return array('code' => $problem !== '' ? $problem : sms_unsure_code($response, 'line-rejected'), 'rejected' => array());
         }
         $url = $custom !== '' ? $custom : 'https://sms.aakashsms.com/sms/v3/send/';
         $response = sms_http_form($url, array(
@@ -269,9 +276,9 @@ function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
         if (strpos($message, 'balance') !== false || strpos($message, 'credit') !== false) {
             return array('code' => 'line-empty', 'rejected' => array());
         }
-        return array('code' => 'line-rejected', 'rejected' => array());
+        return array('code' => sms_unsure_code($response, 'line-rejected'), 'rejected' => array());
     }
-    $url = $line['endpoint'] !== '' ? $line['endpoint'] : 'http://api.sparrowsms.com/v2/sms/';
+    $url = $line['endpoint'] !== '' ? $line['endpoint'] : 'https://api.sparrowsms.com/v2/sms/';
     $response = sms_http_form($url, array(
         'token' => $line['token'],
         'from' => $sender,
@@ -289,7 +296,7 @@ function sms_vendor_send($conn, $numbers, $text, $sender, $timeout = 25)
     if ($code === 1012 || $code === 1013) {
         return array('code' => 'line-empty', 'rejected' => array());
     }
-    return array('code' => 'line-rejected', 'rejected' => array());
+    return array('code' => sms_unsure_code($response, 'line-rejected'), 'rejected' => array());
 }
 
 function sms_find_balance($value)
@@ -330,7 +337,7 @@ function sms_line_balance($conn)
             $response = sms_http_form('https://sms.aakashsms.com/sms/v1/credit', array('auth_token' => $line['token']));
         }
     } else {
-        $response = sms_http_form('http://api.sparrowsms.com/v2/credit/', array('token' => $line['token']));
+        $response = sms_http_form('https://api.sparrowsms.com/v2/credit/', array('token' => $line['token']));
     }
     $json = json_decode($response['body'], true);
     if (!is_array($json) || !empty($json['error'])) {
@@ -445,7 +452,7 @@ function sms_save_line($conn, $post)
         $mode = 'fixed';
     }
     $endpoint = trim(isset($post['sms_line_endpoint']) ? (string) $post['sms_line_endpoint'] : '');
-    if ($endpoint !== '' && !preg_match('#^https?://[A-Za-z0-9.-]+(?::\d+)?/[A-Za-z0-9_./-]*$#', $endpoint)) {
+    if ($endpoint !== '' && !preg_match('#^https://[A-Za-z0-9.-]+(?::\d+)?/[A-Za-z0-9_./-]*$#', $endpoint)) {
         return 'The send address has to be an http or https URL, or leave it empty.';
     }
     $token = trim(isset($post['sms_line_token']) ? (string) $post['sms_line_token'] : '');

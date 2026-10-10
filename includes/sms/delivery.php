@@ -428,7 +428,8 @@ function sms_deliver_campaign($conn, $campaignId, $budgetSeconds = 0)
                 $result = sms_vendor_send($conn, $chunkNumbers, $groupText, $sender);
             } catch (Throwable $exception) {
                 error_log('SMS line error: ' . $exception->getMessage());
-                $result = array('code' => 'line-error', 'rejected' => array());
+                // An exception can come after the provider already accepted the batch.
+                $result = array('code' => 'unconfirmed', 'rejected' => array());
             }
             billing_tx($conn, 'begin');
             try {

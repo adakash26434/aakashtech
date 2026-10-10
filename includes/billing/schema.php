@@ -400,6 +400,7 @@ function billing_add_campaign_columns($conn)
             'recipients_list' => "TEXT DEFAULT ''",
             'declaration_text' => "TEXT DEFAULT ''",
             'language' => "TEXT DEFAULT ''",
+            'api_ref' => 'TEXT DEFAULT NULL',
             'updated_at' => 'TEXT DEFAULT CURRENT_TIMESTAMP'
         );
     } else {
@@ -410,6 +411,7 @@ function billing_add_campaign_columns($conn)
             'recipients_list' => 'MEDIUMTEXT',
             'declaration_text' => 'TEXT',
             'language' => "VARCHAR(20) DEFAULT ''",
+            'api_ref' => 'VARCHAR(160) DEFAULT NULL',
             'updated_at' => 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP'
         );
     }
