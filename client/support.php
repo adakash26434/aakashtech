@@ -151,7 +151,7 @@ $shownRows = array_values(array_filter($ticketRows, function ($row) use ($show) 
     <div class="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm"><?= e($msg) ?></div>
 <?php endif; ?>
 <?php if ($err): ?>
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
+    <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($err) ?></div>
 <?php endif; ?>
 
 <?php $startOnForm = ($err !== '' && isset($_POST['create_ticket'])) || isset($_GET['new']); ?>

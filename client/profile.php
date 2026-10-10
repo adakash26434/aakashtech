@@ -49,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         $err = 'Current password is incorrect.';
     } elseif (strlen($new) < 8) {
         $err = 'New password must be at least 8 characters.';
+    } elseif (strlen($new) > 72) {
+        $err = 'New password must be 72 characters or fewer.';
     } elseif ($new !== $confirm) {
         $err = 'Passwords do not match.';
     } else {

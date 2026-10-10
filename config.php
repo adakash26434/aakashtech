@@ -379,7 +379,8 @@ function auth_password_still_current($conn, $kind)
         : 'SELECT password FROM client_users WHERE id = ?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        return true;
+        // Fail closed: if the password can't be checked, the session is not trusted.
+        return false;
     }
     $stmt->bind_param('i', $id);
     $stmt->execute();

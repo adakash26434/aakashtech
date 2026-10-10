@@ -39,7 +39,7 @@ $portalPage = isset($navItems[$navHere]) ? $navItems[$navHere][0] : 'Menu';
 ?>
 <!-- Sidebar -->
 <aside class="fixed top-0 left-0 z-40 h-screen w-64 bg-dark-900 border-r border-dark-800 flex flex-col transition-transform duration-300 lg:translate-x-0"
-       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" id="admin-sidebar">
+       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full invisible lg:visible'" id="admin-sidebar">
     <!-- Logo -->
     <?php $identity = site_portal_identity($conn); ?>
     <div class="h-20 flex items-center gap-3 px-5 border-b border-dark-800">

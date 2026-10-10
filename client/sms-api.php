@@ -369,10 +369,15 @@ document.querySelectorAll('pre[class~="bg-slate-900/70"]').forEach(function (blo
     button.className = 'sms-code-copy';
     button.textContent = 'Copy';
     button.addEventListener('click', function () {
-        if (!navigator.clipboard) return;
-        navigator.clipboard.writeText(block.textContent).then(function () {
-            button.textContent = 'Copied';
+        var label = function (text) {
+            button.textContent = text;
             setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+        };
+        if (!navigator.clipboard) { label('Copy not supported'); return; }
+        navigator.clipboard.writeText(block.textContent).then(function () {
+            label('Copied');
+        }, function () {
+            label('Copy failed');
         });
     });
     wrap.appendChild(button);

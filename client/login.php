@@ -153,6 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $error = 'Enter a 10-digit mobile number.';
     } elseif (strlen($password) < 8) {
         $error = 'Password must be at least 8 characters.';
+    } elseif (strlen($password) > 72) {
+        // bcrypt ignores everything after 72 bytes, so a longer password would be silently cut.
+        $error = 'Password must be 72 characters or fewer.';
     } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
     } else {

@@ -560,7 +560,8 @@ function billing_kyc_send($conn, $clientId, $slot)
     header('Content-Type: ' . $types[$ext]);
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: private, no-store');
-    $showHere = $ext !== 'pdf' || (isset($_GET['inline']) && $_GET['inline'] === '1');
+    // PDFs can carry active content, so they are always downloaded, never rendered on this site.
+    $showHere = $ext !== 'pdf';
     header('Content-Disposition: ' . ($showHere ? 'inline' : 'attachment') . '; filename="identity-document.' . $ext . '"');
     header('Content-Length: ' . (string) filesize($full));
     readfile($full);

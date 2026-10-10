@@ -68,7 +68,7 @@ try {
             </div>
         <?php else: ?>
             <?php if ($error): ?>
-                <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
+                <div role="alert" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"><?= e($error) ?></div>
             <?php endif; ?>
             <form method="POST" class="bg-dark-900 border border-dark-800 rounded-2xl p-8 space-y-4">
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
