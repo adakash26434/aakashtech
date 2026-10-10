@@ -99,10 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_domain'])) {
         }
     }
     $clientId = $loggedIn ? (int) get_client_id() : 0;
-    if ($error === '' && !$loggedIn && $conn && auth_attempt_blocked($conn, 'domain-request', 5, 3600)) {
+    if ($error === '' && !$loggedIn && $conn && !auth_attempt_reserve($conn, 'domain-request', 5, 3600)) {
         $error = 'Too many domain requests from this connection. Try again in an hour.';
-    } elseif ($error === '' && !$loggedIn && $conn) {
-        auth_note_attempt($conn, 'domain-request');
     }
     if ($error === '' && !$loggedIn) {
         $email = $accountEmail;

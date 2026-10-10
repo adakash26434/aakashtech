@@ -9,10 +9,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string) (isset($_POST['email']) ? $_POST['email'] : ''));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Enter the email address you signed up with.';
-    } elseif (auth_attempt_blocked($conn, 'verify-resend', 5, 3600)) {
+    } elseif (!auth_attempt_reserve($conn, 'verify-resend', 5, 3600)) {
         $error = 'Too many requests from this connection. Try again in an hour.';
     } else {
-        auth_note_attempt($conn, 'verify-resend');
         $stmt = $conn->prepare('SELECT id FROM client_users WHERE email = ? AND status = ? LIMIT 1');
         $waiting = 'pending';
         $stmt->bind_param('ss', $email, $waiting);

@@ -272,5 +272,11 @@ check('audit: passwords and tokens are never logged', isset($auditRow[0]) && str
 $_POST = array();
 unset($_SESSION['admin_id'], $_SESSION['admin_role']);
 
+// Rate limit that counts every request: the limit holds even when the requests come in a burst
+$burstScope = 'test-burst';
+$burstResults = array();
+for ($burst = 0; $burst < 7; $burst++) { $burstResults[] = auth_attempt_reserve($conn, $burstScope, 5, 3600); }
+check('rate limit: the first five requests go ahead and the sixth is refused', array_sum($burstResults) === 5 && $burstResults[4] === true && $burstResults[5] === false);
+
 echo $fail ? "\n$fail failed\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

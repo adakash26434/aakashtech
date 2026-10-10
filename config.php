@@ -682,6 +682,55 @@ function auth_attempt_blocked($conn, $scope, $limit, $windowSeconds) {
     }
 }
 
+/**
+ * For endpoints where every request counts (a domain request, a resend). Counting and recording
+ * happen under one lock per scope and address, so a burst of parallel requests cannot all pass the
+ * check before any of them is recorded. Returns true when the request may go ahead (and records it).
+ * On SQLite there is no named lock; the check and insert still run in one request.
+ */
+function auth_attempt_reserve($conn, $scope, $limit, $windowSeconds) {
+    try {
+        $scope = substr((string) $scope, 0, 20);
+        $ip = auth_client_ip();
+        $lockName = substr('aakash:' . $scope . ':' . $ip, 0, 60);
+        $locked = false;
+        if (DB_DRIVER !== 'sqlite') {
+            $lock = $conn->prepare('SELECT GET_LOCK(?, 5) AS got');
+            $lock->bind_param('s', $lockName);
+            $lock->execute();
+            $got = db_fetch_assoc($lock);
+            $lock->close();
+            $locked = $got && (string) $got['got'] === '1';
+            if (!$locked) {
+                return false;
+            }
+        }
+        $since = date('Y-m-d H:i:s', time() - (int) $windowSeconds);
+        $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE scope = ? AND ip = ? AND attempted_at >= ?');
+        $stmt->bind_param('sss', $scope, $ip, $since);
+        $stmt->execute();
+        $row = db_fetch_assoc($stmt);
+        $stmt->close();
+        $allowed = !$row || (int) $row['c'] < (int) $limit;
+        if ($allowed) {
+            $now = date('Y-m-d H:i:s');
+            $insert = $conn->prepare('INSERT INTO login_attempts (scope, ip, attempted_at) VALUES (?, ?, ?)');
+            $insert->bind_param('sss', $scope, $ip, $now);
+            $insert->execute();
+            $insert->close();
+        }
+        if ($locked) {
+            $release = $conn->prepare('SELECT RELEASE_LOCK(?)');
+            $release->bind_param('s', $lockName);
+            $release->execute();
+            $release->close();
+        }
+        return $allowed;
+    } catch (Throwable $exception) {
+        return true;
+    }
+}
+
 function auth_note_attempt($conn, $scope) {
     try {
         $scope = substr((string) $scope, 0, 20);
